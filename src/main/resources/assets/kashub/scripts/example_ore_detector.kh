@@ -1,0 +1,41 @@
+// ===================================
+// Kashub Script - Ore Detector
+// ===================================
+// Scans for valuable ores and plays sounds when found
+// Run this script while mining!
+
+print "🔍 Ore Detector started!"
+print "Scanning for ores every 500ms..."
+print "Press Stop to disable"
+
+// Main detection loop
+loop {
+    // Scan for ores in 8 block radius
+    scan ores 8
+    
+    // Check for diamonds
+    if ($scan_diamond_count > 0) {
+        sound play ding 1.0 2.0
+        print "💎 DIAMOND found! $scan_diamond_count blocks at $scan_valuable_x, $scan_valuable_y, $scan_valuable_z"
+    }
+    
+    // Check for emeralds
+    if ($scan_emerald_count > 0) {
+        sound play chime 1.0 1.5
+        print "💚 EMERALD found! $scan_emerald_count blocks"
+    }
+    
+    // Check for ancient debris
+    if ($scan_ancient_debris_count > 0) {
+        sound play bell 1.0 0.5
+        print "🟤 ANCIENT DEBRIS found! $scan_ancient_debris_count blocks"
+    }
+    
+    // Check for gold
+    if ($scan_gold_count > 0) {
+        sound play note 18 harp
+    }
+    
+    // Wait before next scan
+    wait 500
+}

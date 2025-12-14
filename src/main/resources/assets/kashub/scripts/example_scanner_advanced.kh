@@ -1,0 +1,65 @@
+// Example: Advanced Scanner Script
+// Powerful block and entity scanning
+
+// ========== Block Scanning ==========
+
+print "=== Block Scanner Demo ==="
+
+// Scan for valuable ores in deep caves
+print "Scanning for ores..."
+scanner blocks diamond_ore,ancient_debris,emerald_ore radius=48 yMin=-64 yMax=0 sortBy=distance limit=10
+
+print "Found $scanner_count valuable ores"
+
+if ($scanner_found == true) {
+    print "Nearest ore: $scanner_nearest_block"
+    print "  Location: $scanner_nearest_x, $scanner_nearest_y, $scanner_nearest_z"
+    print "  Distance: $scanner_nearest_dist blocks"
+}
+
+// Scan for chests
+print ""
+print "Scanning for chests..."
+scanner blocks chest,trapped_chest,barrel radius=32 sortBy=distance
+
+if ($scanner_found == true) {
+    print "Found $scanner_count containers nearby"
+}
+
+// ========== Entity Scanning ==========
+
+print ""
+print "=== Entity Scanner Demo ==="
+
+// Scan for hostile mobs
+print "Scanning for hostile mobs..."
+scanner entities hostile radius=30 sortBy=distance
+
+print "Found $scanner_entity_count hostile entities"
+
+if ($scanner_entity_found == true) {
+    print "Nearest threat: $scanner_nearest_entity_type"
+    print "  Distance: $scanner_nearest_entity_dist blocks"
+}
+
+// Scan for villagers with good health
+print ""
+print "Scanning for healthy villagers..."
+scanner entities villager,wandering_trader radius=50 healthMin=15 hasAI=true
+
+print "Found $scanner_entity_count merchants"
+
+// Scan for all living entities
+print ""
+print "Scanning all living entities..."
+scanner entities living radius=20 limit=5
+
+for (i = 0; i < 5; i = i + 1) {
+    // Note: Variables are dynamically named
+    print "Entity $i: type at distance"
+}
+
+// Clear cache when done
+scanner cache clear
+print ""
+print "Scan complete!"

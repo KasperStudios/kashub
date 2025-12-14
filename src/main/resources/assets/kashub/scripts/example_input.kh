@@ -1,0 +1,58 @@
+// ===================================
+// Kashub Script - Input API Example
+// ===================================
+// Demonstrates high-level input control
+
+// Basic movement
+print "Testing movement controls..."
+
+// Jump
+input jump
+wait 500
+
+// Sprint forward
+input sprint true
+input move forward true
+wait 2000
+input move forward false
+input sprint false
+
+wait 500
+
+// Sneak
+print "Sneaking..."
+input sneak true
+wait 1000
+input sneak false
+
+// Hotbar control
+print "Cycling through hotbar..."
+for (i = 0; i < 9; i++) {
+    input hotbar $i
+    wait 200
+}
+
+// Look around
+print "Looking around..."
+input lookRelative 45 0
+wait 300
+input lookRelative 45 0
+wait 300
+input lookRelative 45 0
+wait 300
+input lookRelative 45 0
+
+// Use item
+print "Using item in hand..."
+input use
+
+wait 500
+
+// Attack
+print "Attacking..."
+input attack
+
+// Stop all movement
+input stop
+
+print "Input example complete!"

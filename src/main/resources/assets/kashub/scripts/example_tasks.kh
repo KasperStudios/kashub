@@ -1,0 +1,36 @@
+// ===================================
+// Kashub Script - Task Manager Example
+// ===================================
+// Demonstrates script task management
+
+// Show current tasks
+print "Current running tasks:"
+scripts list
+
+wait 1000
+
+// Show task statistics
+scripts stats
+
+wait 1000
+
+// Example: Start a background task
+// This would be done from another script or the editor
+
+// Pause all tasks
+// scripts pauseAll
+
+// Resume all tasks  
+// scripts resumeAll
+
+// Stop specific task by ID
+// scripts stop 1
+
+// Stop tasks by tag
+// scripts stopByTag farm
+
+// Get info about a task
+// scripts info 1
+
+print "Task manager example complete!"
+print "Use /script tasks in chat to see running tasks"

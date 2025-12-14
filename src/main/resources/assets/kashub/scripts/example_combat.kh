@@ -1,0 +1,43 @@
+// ===================================
+// Kashub Script - Auto Combat
+// ===================================
+// Automated combat and survival script
+
+// Auto-heal when low health
+onEvent onDamage {
+    if ($PLAYER_HEALTH < 10) {
+        print "Low health! Eating..."
+        eat golden_apple
+    }
+}
+
+// Combat function
+function attackNearby() {
+    attack 5 hostile 3
+    wait 500
+}
+
+// Main combat loop
+print "Combat mode activated!"
+print "Press Z to stop"
+
+while (true) {
+    // Check health with else if chain
+    if ($PLAYER_HEALTH < 6) {
+        print "Critical health! Retreating..."
+        run ~-10 ~ ~-10
+        wait 2000
+        eat
+        wait 2000
+    } else if ($PLAYER_HEALTH < 12) {
+        print "Low health, being careful..."
+        eat
+        wait 1000
+    } else {
+        // Health is good, attack!
+        attackNearby()
+    }
+    
+    // Small delay between attacks
+    wait 200
+}

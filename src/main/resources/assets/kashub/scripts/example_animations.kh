@@ -1,0 +1,35 @@
+// ===================================
+// Kashub Script - Animations Example
+// ===================================
+// Demonstrates custom player animation
+
+// List available animation
+animation list
+
+wait 1000
+
+// Play wave animation
+print "Waving..."
+animation play wave
+wait 2500
+
+// Play dance animation with looping
+print "Dancing..."
+animation play dance loop=true
+wait 5000
+animation stop dance
+
+// Play celebrate animation
+print "Celebrating!"
+animation play celebrate
+wait 3500
+
+// Play glow effect
+print "Glowing..."
+animation play glow
+wait 5000
+
+// Stop all animation
+animation stopAll
+
+print "Animation demo complete!"

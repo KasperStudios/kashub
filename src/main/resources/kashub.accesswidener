@@ -1,0 +1,11 @@
+accessWidener v2 named
+
+# Kashub Access Widener for 1.21.1
+# Allows access to internal Minecraft classes for advanced scripting features
+
+# KeyBinding access for input simulation
+accessible field net/minecraft/client/option/KeyBinding pressed Z
+mutable field net/minecraft/client/option/KeyBinding pressed Z
+
+# Screen rendering internals
+accessible method net/minecraft/client/gui/DrawContext fill (IIIII)V

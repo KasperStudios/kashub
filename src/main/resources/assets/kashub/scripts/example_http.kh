@@ -1,0 +1,33 @@
+// ===================================
+// Kashub Script - HTTP API Example
+// ===================================
+// Demonstrates HTTP requests and remote script loading
+// NOTE: Requires allowHttpRequests=true in config
+
+// Simple GET request
+print "Fetching data from API..."
+http get https://api.github.com/zen
+
+// Wait for response
+wait 2000
+
+// Check result
+if ($http_status == "success") {
+    print "GitHub Zen: $http_body"
+} else {
+    print "Request failed: $http_error"
+}
+
+wait 1000
+
+// Example: Load and execute remote script
+// NOTE: Requires allowRemoteScripts=true and whitelisted domain
+// loadscript fromUrl https://raw.githubusercontent.com/user/repo/main/script.kh
+
+// Example: Execute inline script
+loadscript "print Hello from inline script!"
+
+// POST request example (commented - needs valid endpoint)
+// http post https://api.example.com/data {"action": "test"}
+
+print "HTTP example complete!"

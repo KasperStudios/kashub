@@ -1,0 +1,51 @@
+// ===================================
+// Kashub Script - Strip Mining
+// ===================================
+// Automated strip mining script
+
+// Configuration
+mineLength = 50
+torchInterval = 8
+
+// Mining function - mines forward
+function mineForward() {
+    // Break blocks in front (2 high tunnel)
+    break ~1 ~ ~
+    wait 100
+    break ~1 ~1 ~
+    wait 100
+    
+    // Move forward
+    run ~1 ~ ~
+    wait 200
+}
+
+// Place torch function
+function placeTorch() {
+    selectSlot item torch
+    wait 100
+    place ~ ~1 ~-1
+    wait 100
+}
+
+// Main mining loop
+print "Starting strip mining..."
+print "Mining length: $mineLength blocks"
+
+for (i = 0; i < $mineLength; i++) {
+    mineForward()
+    
+    // Place torch every N blocks
+    if ($i % $torchInterval == 0) {
+        placeTorch()
+        print "Placed torch at block $i"
+    }
+    
+    // Check for low health
+    if ($PLAYER_HEALTH < 8) {
+        print "Low health, stopping..."
+        break
+    }
+}
+
+print "Mining complete! Mined $mineLength blocks"

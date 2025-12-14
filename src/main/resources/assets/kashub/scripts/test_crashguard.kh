@@ -1,0 +1,78 @@
+// Test CrashGuard - Тестовые сценарии для проверки защиты
+// ВНИМАНИЕ: Эти тесты могут вызвать предупреждения CrashGuard!
+
+print "=== CrashGuard Test Suite ==="
+print ""
+
+// Показать текущий статус
+crashGuard status
+print "Current strictness: $crashGuard_strictness"
+print ""
+
+// ============================================
+// Тест 1: CPU Burner (должен быть прерван)
+// ============================================
+print "Test 1: CPU Burner"
+print "  This should trigger CPU limit warning..."
+
+// Раскомментируйте для теста:
+// loop { x = x + 1 }
+
+print "  [SKIPPED - uncomment to test]"
+print ""
+
+// ============================================
+// Тест 2: Action Spam (должен быть throttled)
+// ============================================
+print "Test 2: Action Spam"
+print "  This should trigger action rate limit..."
+
+// Раскомментируйте для теста:
+// for (i = 0; i < 100; i = i + 1) {
+//     input attack
+// }
+
+print "  [SKIPPED - uncomment to test]"
+print ""
+
+// ============================================
+// Тест 3: Safe Loop (должен работать)
+// ============================================
+print "Test 3: Safe Loop with sleep"
+print "  This should work fine..."
+
+counter = 0
+while (counter < 5) {
+    print "  Iteration: $counter"
+    counter = counter + 1
+    wait 100
+}
+
+print "  [PASSED]"
+print ""
+
+// ============================================
+// Тест 4: Scanner with cache
+// ============================================
+print "Test 4: Scanner with caching"
+
+scanner blocks stone radius=16 limit=5
+print "  Found $scanner_count blocks"
+print "  [PASSED]"
+print ""
+
+// ============================================
+// Тест 5: Check CrashGuard report
+// ============================================
+print "Test 5: CrashGuard Report"
+crashGuard report
+print ""
+
+// ============================================
+// Финальный статус
+// ============================================
+print "=== All safe tests completed ==="
+print "CPU Total: $crashGuard_cpuTotal ms"
+print "Actions Total: $crashGuard_actionsTotal /sec"
+print ""
+print "To test dangerous scenarios, uncomment the relevant sections."

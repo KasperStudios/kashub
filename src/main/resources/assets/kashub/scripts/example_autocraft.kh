@@ -1,0 +1,43 @@
+// Example: Auto-Crafting Script
+// Automatically crafts items from inventory
+
+// Check what we can craft
+print "Checking craftable items..."
+
+// Check if we can craft a diamond pickaxe
+autoCraft check diamond_pickaxe
+
+if ($autoCraft_canCraft == true) {
+    print "Can craft diamond pickaxe! Max: $autoCraft_maxCraftable"
+    
+    // Craft 1 pickaxe
+    autoCraft recipe diamond_pickaxe 1
+    
+    wait 2000
+    
+    if ($autoCraft_success == true) {
+        print "Crafted $autoCraft_crafted diamond pickaxe(s)!"
+    }
+} else {
+    print "Cannot craft diamond pickaxe"
+    
+    // Show what's missing
+    autoCraft missing diamond_pickaxe
+    
+    if ($autoCraft_hasMissing == true) {
+        print "Missing $autoCraft_missingCount items"
+    }
+}
+
+// List all craftable items containing "pickaxe"
+print "Available pickaxe recipes:"
+autoCraft list pickaxe
+
+// Craft iron pickaxes if possible
+autoCraft check iron_pickaxe
+if ($autoCraft_canCraft == true) {
+    print "Crafting iron pickaxes..."
+    autoCraft recipe iron_pickaxe 3
+    wait 3000
+    print "Done! Crafted: $autoCraft_crafted"
+}

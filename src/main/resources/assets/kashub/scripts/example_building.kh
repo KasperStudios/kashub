@@ -1,0 +1,73 @@
+// ===================================
+// Kashub Script - Auto Building
+// ===================================
+// Automated building patterns
+
+// Build a wall
+function buildWall(length, height) {
+    for (x = 0; x < $length; x++) {
+        for (y = 0; y < $height; y++) {
+            place ~$x ~$y ~0
+            wait 100
+        }
+    }
+}
+
+// Build a floor
+function buildFloor(width, length) {
+    for (x = 0; x < $width; x++) {
+        for (z = 0; z < $length; z++) {
+            place ~$x ~0 ~$z
+            wait 100
+        }
+    }
+}
+
+// Build a simple house frame
+function buildHouseFrame() {
+    print "Building house frame..."
+    
+    // Floor (5x5)
+    selectSlot item oak_planks
+    buildFloor(5, 5)
+    
+    // Walls (4 high)
+    wait 500
+    
+    // Front wall (skip door at x=2, y=1-2)
+    for (x = 0; x < 5; x++) {
+        for (y = 1; y < 4; y++) {
+            // Skip door position
+            if ($x != 2) {
+                place ~$x ~$y ~0
+                wait 50
+            }
+        }
+    }
+    
+    // Back wall
+    for (x = 0; x < 5; x++) {
+        for (y = 1; y < 4; y++) {
+            place ~$x ~$y ~4
+            wait 50
+        }
+    }
+    
+    // Side walls
+    for (z = 1; z < 4; z++) {
+        for (y = 1; y < 4; y++) {
+            place ~0 ~$y ~$z
+            place ~4 ~$y ~$z
+            wait 50
+        }
+    }
+    
+    print "House frame complete!"
+}
+
+// Main
+print "Auto-Builder Script"
+print "Make sure you have building materials!"
+
+// Build the house
+buildHouseFrame()

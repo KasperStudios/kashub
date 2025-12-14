@@ -1,0 +1,26 @@
+.gradle
+bin
+build
+.idea
+.vscode
+.gradle
+.gradlew
+.gradlew.bat
+.gradlew.bat
+
+.cursorrules
+kashub_tree.txt
+.idea
+.github
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fabric
+run/
+logs/
+
+# Compiled
+*.class
+out/

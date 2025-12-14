@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "kasperstudios.kashub.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+	],
+	"client": [
+		"KeyBindingMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

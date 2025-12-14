@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "kashub",
+	"version": "${version}",
+	"name": "Kashub",
+	"description": "Next-gen scripting mod with modern UI. Automate gameplay with KHScript - featuring Vision API, HTTP integration, runtime task manager, and a stunning code editor with 15+ themes.",
+	"authors": [
+		"KasperStudios"
+	],
+	"contact": {
+		"homepage": "https://github.com/kasperenok/kashub",
+		"sources": "https://github.com/kasperenok/kashub",
+		"issues": "https://github.com/kasperenok/kashub/issues"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/kashub/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"kasperstudios.kashub.Kashub"
+		],
+		"client": [
+			"kasperstudios.kashub.client.KashubClient"
+		]
+	},
+	"mixins": [
+		"kashub.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": ">=0.100.0"
+	}
+}

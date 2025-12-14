@@ -1,0 +1,558 @@
+package kasperstudios.kashub.gui.editor;
+
+import kasperstudios.kashub.Kashub;
+import kasperstudios.kashub.algorithm.ScriptInterpreter;
+import kasperstudios.kashub.config.KashubConfig;
+import kasperstudios.kashub.gui.theme.EditorTheme;
+import kasperstudios.kashub.gui.theme.ThemeManager;
+import kasperstudios.kashub.gui.widgets.ModernButton;
+import kasperstudios.kashub.gui.widgets.ModernTextArea;
+import kasperstudios.kashub.gui.widgets.FilePanel;
+import kasperstudios.kashub.gui.widgets.ConsolePanel;
+import kasperstudios.kashub.gui.widgets.TaskManagerPanel;
+import kasperstudios.kashub.gui.widgets.SettingsPanel;
+import kasperstudios.kashub.runtime.ScriptTaskManager;
+import kasperstudios.kashub.runtime.ScriptType;
+import kasperstudios.kashub.util.ScriptManager;
+import kasperstudios.kashub.util.ScriptLogger;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.text.Text;
+
+import java.util.List;
+
+public class ModernEditorScreen extends Screen {
+    // Layout constants
+    private static final int LEFT_PANEL_WIDTH = 220;
+    private static final int RIGHT_PANEL_WIDTH = 280;
+    private static final int TOOLBAR_HEIGHT = 44;
+    private static final int STATUS_BAR_HEIGHT = 26;
+    private static final int TAB_HEIGHT = 32;
+    
+    // Widgets
+    private ModernTextArea codeArea;
+    private FilePanel filePanel;
+    private ConsolePanel consolePanel;
+    private TaskManagerPanel taskManagerPanel;
+    private SettingsPanel settingsPanel;
+    private TextFieldWidget searchField;
+    
+    // State
+    private String currentFile = null;
+    private boolean hasUnsavedChanges = false;
+    private EditorTheme theme;
+    private int animationTick = 0;
+    
+    // Right panel tabs
+    private enum RightPanelTab { CONSOLE, TASKS, SETTINGS }
+    private RightPanelTab currentTab = RightPanelTab.CONSOLE;
+    private float tabTransition = 0f;
+    
+    // Static console instance for global access
+    private static ConsolePanel globalConsole;
+    
+    public ModernEditorScreen() {
+        super(Text.literal("Kashub Editor"));
+        this.theme = ThemeManager.getCurrentTheme();
+    }
+    
+    public static ConsolePanel getGlobalConsole() {
+        return globalConsole;
+    }
+    
+    @Override
+    protected void init() {
+        super.init();
+        
+        // Calculate layout
+        int editorX = LEFT_PANEL_WIDTH;
+        int editorY = TOOLBAR_HEIGHT;
+        int editorWidth = this.width - LEFT_PANEL_WIDTH - RIGHT_PANEL_WIDTH;
+        int editorHeight = this.height - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT;
+        
+        int rightPanelX = this.width - RIGHT_PANEL_WIDTH;
+        int rightPanelY = TOOLBAR_HEIGHT + TAB_HEIGHT;
+        int rightPanelHeight = this.height - TOOLBAR_HEIGHT - TAB_HEIGHT - STATUS_BAR_HEIGHT;
+        
+        // Initialize file panel (left)
+        filePanel = new FilePanel(0, TOOLBAR_HEIGHT, LEFT_PANEL_WIDTH, 
+            this.height - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT, this::loadFile);
+        
+        // Initialize code area (center)
+        codeArea = new ModernTextArea(
+            this.textRenderer,
+            editorX, editorY,
+            editorWidth, editorHeight,
+            theme
+        );
+        
+        // Initialize right panel widgets
+        consolePanel = new ConsolePanel(
+            rightPanelX, rightPanelY,
+            RIGHT_PANEL_WIDTH, rightPanelHeight,
+            theme
+        );
+        globalConsole = consolePanel;
+        
+        taskManagerPanel = new TaskManagerPanel(
+            rightPanelX, rightPanelY,
+            RIGHT_PANEL_WIDTH, rightPanelHeight,
+            theme
+        );
+        
+        settingsPanel = new SettingsPanel(
+            rightPanelX, rightPanelY,
+            RIGHT_PANEL_WIDTH, rightPanelHeight,
+            theme
+        );
+        
+        // Add toolbar buttons
+        int buttonX = LEFT_PANEL_WIDTH + 12;
+        int buttonY = 10;
+        int buttonSpacing = 88;
+        
+        addDrawableChild(new ModernButton(buttonX, buttonY, 76, 24, Text.literal("▶ Run"), 
+            button -> runScript(), theme.accentColor));
+        
+        addDrawableChild(new ModernButton(buttonX + buttonSpacing, buttonY, 76, 24, Text.literal("⏹ Stop"),
+            button -> stopScript(), 0xFFE74C3C));
+        
+        addDrawableChild(new ModernButton(buttonX + buttonSpacing * 2, buttonY, 76, 24, Text.literal("💾 Save"),
+            button -> saveScript(), theme.buttonColor));
+        
+        addDrawableChild(new ModernButton(buttonX + buttonSpacing * 3, buttonY, 76, 24, Text.literal("🎨 Theme"),
+            button -> cycleTheme(), theme.buttonColor));
+        
+        // Load file list
+        filePanel.refreshFiles();
+        
+        // Load last opened file
+        String lastFile = KashubConfig.getInstance().lastOpenedScript;
+        if (lastFile != null && !lastFile.isEmpty()) {
+            loadFile(lastFile);
+        }
+        
+        // Welcome message
+        consolePanel.log("Kashub Editor v3.0 ready", ConsolePanel.LogLevel.SUCCESS);
+        consolePanel.log("Press F5 to run, Ctrl+S to save", ConsolePanel.LogLevel.INFO);
+    }
+    
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        animationTick++;
+        
+        // Draw solid background first (no blur)
+        context.fill(0, 0, this.width, this.height, theme.backgroundColor);
+        
+        // Draw gradient background for editor area
+        renderEditorBackground(context);
+        
+        // Draw left panel (file browser)
+        renderLeftPanel(context, mouseX, mouseY, delta);
+        
+        // Draw toolbar
+        renderToolbar(context, mouseX, mouseY);
+        
+        // Draw code area
+        codeArea.render(context, mouseX, mouseY, delta);
+        
+        // Draw right panel with tabs
+        renderRightPanel(context, mouseX, mouseY, delta);
+        
+        // Draw status bar
+        renderStatusBar(context);
+        
+        // Draw separators
+        renderSeparators(context);
+        
+        // Render only drawable children (buttons), skip parent's background blur
+        for (var child : this.children()) {
+            if (child instanceof net.minecraft.client.gui.Drawable drawable) {
+                drawable.render(context, mouseX, mouseY, delta);
+            }
+        }
+    }
+    
+    private void renderEditorBackground(DrawContext context) {
+        // Gradient background for editor area only
+        int editorX = LEFT_PANEL_WIDTH;
+        int editorWidth = this.width - LEFT_PANEL_WIDTH - RIGHT_PANEL_WIDTH;
+        
+        int color1 = theme.backgroundColor;
+        int color2 = adjustBrightness(theme.backgroundColor, -15);
+        
+        for (int y = 0; y < this.height; y++) {
+            float ratio = (float) y / this.height;
+            int color = interpolateColor(color1, color2, ratio);
+            context.fill(editorX, y, editorX + editorWidth, y + 1, color);
+        }
+    }
+    
+    private void renderLeftPanel(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Background
+        context.fill(0, 0, LEFT_PANEL_WIDTH, this.height, theme.sidebarColor);
+        
+        // Logo header
+        renderLogo(context);
+        
+        // File panel
+        filePanel.render(context, mouseX, mouseY, delta);
+    }
+    
+    private void renderLogo(DrawContext context) {
+        int logoY = 12;
+        float pulse = (float) (Math.sin(animationTick * 0.08) * 0.4 + 0.6);
+        int glowAlpha = (int) (pulse * 80);
+        
+        // Glow effect
+        int glowColor = (glowAlpha << 24) | (theme.accentColor & 0x00FFFFFF);
+        context.fill(10, logoY - 4, LEFT_PANEL_WIDTH - 10, logoY + 22, glowColor);
+        
+        // Logo text with shadow
+        context.drawText(this.textRenderer, "⚡ KASHUB", 16, logoY, theme.accentColor, true);
+        context.drawText(this.textRenderer, "v3.0", LEFT_PANEL_WIDTH - 40, logoY + 4, theme.textDimColor, false);
+        
+        // Separator
+        context.fill(10, TOOLBAR_HEIGHT - 2, LEFT_PANEL_WIDTH - 10, TOOLBAR_HEIGHT - 1, theme.accentColor & 0x44FFFFFF);
+    }
+    
+    private void renderToolbar(DrawContext context, int mouseX, int mouseY) {
+        // Background
+        context.fill(LEFT_PANEL_WIDTH, 0, this.width - RIGHT_PANEL_WIDTH, TOOLBAR_HEIGHT, theme.toolbarColor);
+        
+        // Right panel toolbar
+        context.fill(this.width - RIGHT_PANEL_WIDTH, 0, this.width, TOOLBAR_HEIGHT, theme.toolbarColor);
+        
+        // Title in right panel
+        context.drawText(this.textRenderer, "📊 PANELS", this.width - RIGHT_PANEL_WIDTH + 12, 16, theme.textColor, true);
+    }
+    
+    private void renderRightPanel(DrawContext context, int mouseX, int mouseY, float delta) {
+        int panelX = this.width - RIGHT_PANEL_WIDTH;
+        int tabY = TOOLBAR_HEIGHT;
+        
+        // Panel background
+        context.fill(panelX, TOOLBAR_HEIGHT, this.width, this.height - STATUS_BAR_HEIGHT, theme.sidebarColor);
+        
+        // Tab bar background
+        context.fill(panelX, tabY, this.width, tabY + TAB_HEIGHT, adjustBrightness(theme.sidebarColor, 5));
+        
+        // Render tabs
+        int tabWidth = RIGHT_PANEL_WIDTH / 3;
+        renderTab(context, panelX, tabY, tabWidth, "Console", RightPanelTab.CONSOLE, mouseX, mouseY);
+        renderTab(context, panelX + tabWidth, tabY, tabWidth, "Tasks", RightPanelTab.TASKS, mouseX, mouseY);
+        renderTab(context, panelX + tabWidth * 2, tabY, tabWidth, "Settings", RightPanelTab.SETTINGS, mouseX, mouseY);
+        
+        // Tab separator
+        context.fill(panelX, tabY + TAB_HEIGHT - 1, this.width, tabY + TAB_HEIGHT, theme.accentColor & 0x66FFFFFF);
+        
+        // Active tab indicator
+        int activeTabX = panelX + (currentTab.ordinal() * tabWidth);
+        context.fill(activeTabX + 4, tabY + TAB_HEIGHT - 3, activeTabX + tabWidth - 4, tabY + TAB_HEIGHT, theme.accentColor);
+        
+        // Render active panel content
+        switch (currentTab) {
+            case CONSOLE -> consolePanel.render(context, mouseX, mouseY, delta);
+            case TASKS -> taskManagerPanel.render(context, mouseX, mouseY, delta);
+            case SETTINGS -> settingsPanel.render(context, mouseX, mouseY, delta);
+        }
+    }
+    
+    private void renderTab(DrawContext context, int x, int y, int width, String label, RightPanelTab tab, int mouseX, int mouseY) {
+        boolean isActive = currentTab == tab;
+        boolean isHovered = mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + TAB_HEIGHT;
+        
+        // Background
+        if (isActive) {
+            context.fill(x, y, x + width, y + TAB_HEIGHT, theme.buttonHoverColor);
+        } else if (isHovered) {
+            context.fill(x, y, x + width, y + TAB_HEIGHT, theme.buttonColor);
+        }
+        
+        // Icon
+        String icon = switch (tab) {
+            case CONSOLE -> "⌨";
+            case TASKS -> "📋";
+            case SETTINGS -> "⚙";
+        };
+        
+        int textColor = isActive ? theme.accentColor : (isHovered ? theme.textColor : theme.textDimColor);
+        int textWidth = this.textRenderer.getWidth(icon + " " + label);
+        int textX = x + (width - textWidth) / 2;
+        context.drawText(this.textRenderer, icon + " " + label, textX, y + 10, textColor, isActive);
+    }
+    
+    private void renderStatusBar(DrawContext context) {
+        int y = this.height - STATUS_BAR_HEIGHT;
+        context.fill(0, y, this.width, this.height, theme.statusBarColor);
+        
+        // File info
+        String fileInfo = currentFile != null ? "📄 " + currentFile : "📄 No file";
+        if (hasUnsavedChanges) fileInfo += " ●";
+        context.drawText(this.textRenderer, fileInfo, 12, y + 8, hasUnsavedChanges ? theme.consoleWarnColor : theme.textDimColor, false);
+        
+        // Cursor position
+        String cursorInfo = String.format("Ln %d, Col %d", codeArea.getCurrentLine(), codeArea.getCurrentColumn());
+        int cursorInfoWidth = this.textRenderer.getWidth(cursorInfo);
+        context.drawText(this.textRenderer, cursorInfo, this.width - cursorInfoWidth - 12, y + 8, theme.textDimColor, false);
+        
+        // Theme name (center)
+        String themeInfo = "🎨 " + theme.name;
+        int themeInfoWidth = this.textRenderer.getWidth(themeInfo);
+        context.drawText(this.textRenderer, themeInfo, (this.width - themeInfoWidth) / 2, y + 8, theme.accentColor, false);
+        
+        // Running scripts count
+        int runningCount = ScriptTaskManager.getInstance().getActiveCount();
+        if (runningCount > 0) {
+            String runningInfo = "▶ " + runningCount + " running";
+            context.drawText(this.textRenderer, runningInfo, LEFT_PANEL_WIDTH + 12, y + 8, theme.consoleSuccessColor, false);
+        }
+    }
+    
+    private void renderSeparators(DrawContext context) {
+        // Left panel separator
+        int leftSepX = LEFT_PANEL_WIDTH;
+        context.fill(leftSepX - 1, 0, leftSepX, this.height, theme.accentColor & 0x33FFFFFF);
+        context.fill(leftSepX, 0, leftSepX + 1, this.height, theme.accentColor & 0x66FFFFFF);
+        
+        // Right panel separator
+        int rightSepX = this.width - RIGHT_PANEL_WIDTH;
+        context.fill(rightSepX - 1, 0, rightSepX, this.height, theme.accentColor & 0x33FFFFFF);
+        context.fill(rightSepX, 0, rightSepX + 1, this.height, theme.accentColor & 0x66FFFFFF);
+    }
+    
+    private void loadFile(String filename) {
+        if (hasUnsavedChanges) {
+            // TODO: Show save dialog
+        }
+        
+        String content = ScriptManager.loadScript(filename);
+        if (content != null) {
+            currentFile = filename;
+            codeArea.setText(content);
+            hasUnsavedChanges = false;
+            consolePanel.log("Loaded: " + filename, ConsolePanel.LogLevel.INFO);
+        } else {
+            consolePanel.log("Failed to load: " + filename, ConsolePanel.LogLevel.ERROR);
+        }
+    }
+    
+    private void saveScript() {
+        if (currentFile == null) {
+            currentFile = "untitled.kh";
+        }
+        
+        String content = codeArea.getText();
+        if (ScriptManager.saveScript(currentFile, content)) {
+            hasUnsavedChanges = false;
+            consolePanel.log("Saved: " + currentFile, ConsolePanel.LogLevel.SUCCESS);
+            filePanel.refreshFiles();
+        } else {
+            consolePanel.log("Failed to save: " + currentFile, ConsolePanel.LogLevel.ERROR);
+        }
+    }
+    
+    private void runScript() {
+        String code = codeArea.getText();
+        if (code.isEmpty()) {
+            consolePanel.log("No code to run", ConsolePanel.LogLevel.WARN);
+            return;
+        }
+        
+        consolePanel.log("Starting script...", ConsolePanel.LogLevel.INFO);
+        
+        try {
+            String name = currentFile != null ? currentFile : "untitled";
+            ScriptTaskManager.getInstance().startScript(name, code, null, ScriptType.USER);
+            consolePanel.log("Script started: " + name, ConsolePanel.LogLevel.SUCCESS);
+            
+            // Switch to Tasks tab to show running script
+            currentTab = RightPanelTab.TASKS;
+        } catch (Exception e) {
+            consolePanel.log("Error: " + e.getMessage(), ConsolePanel.LogLevel.ERROR);
+        }
+    }
+    
+    private void stopScript() {
+        ScriptTaskManager.getInstance().stopAll();
+        consolePanel.log("All scripts stopped", ConsolePanel.LogLevel.WARN);
+    }
+    
+    private void cycleTheme() {
+        theme = ThemeManager.nextTheme();
+        codeArea.setTheme(theme);
+        consolePanel.setTheme(theme);
+        taskManagerPanel.setTheme(theme);
+        settingsPanel.setTheme(theme);
+        consolePanel.log("Theme: " + theme.name, ConsolePanel.LogLevel.INFO);
+        
+        // Save theme preference
+        KashubConfig.getInstance().editorTheme = theme.id;
+        KashubConfig.getInstance().save();
+        
+        // Reinitialize to apply new button colors
+        this.clearChildren();
+        this.init();
+    }
+    
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Ctrl+S to save
+        if (keyCode == 83 && (modifiers & 2) != 0) {
+            saveScript();
+            return true;
+        }
+        
+        // F5 to run
+        if (keyCode == 294) {
+            runScript();
+            return true;
+        }
+        
+        // Ctrl+N for new file
+        if (keyCode == 78 && (modifiers & 2) != 0) {
+            newScript();
+            return true;
+        }
+        
+        // Escape to close
+        if (keyCode == 256) {
+            this.close();
+            return true;
+        }
+        
+        // Tab switching: Ctrl+1/2/3
+        if ((modifiers & 2) != 0) {
+            if (keyCode == 49) { currentTab = RightPanelTab.CONSOLE; return true; }
+            if (keyCode == 50) { currentTab = RightPanelTab.TASKS; return true; }
+            if (keyCode == 51) { currentTab = RightPanelTab.SETTINGS; return true; }
+        }
+        
+        // Pass to code area
+        if (codeArea.keyPressed(keyCode, scanCode, modifiers)) {
+            hasUnsavedChanges = true;
+            return true;
+        }
+        
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    
+    private void newScript() {
+        if (hasUnsavedChanges) {
+            // TODO: Show save dialog
+        }
+        
+        currentFile = null;
+        codeArea.setText("// New Kashub Script\n// Press F5 or click Run to execute\n\nprint \"Hello, World!\"\nwait 1000\nprint \"Script finished!\"\n");
+        hasUnsavedChanges = false;
+        consolePanel.log("New script created", ConsolePanel.LogLevel.INFO);
+    }
+    
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (codeArea.charTyped(chr, modifiers)) {
+            hasUnsavedChanges = true;
+            return true;
+        }
+        return super.charTyped(chr, modifiers);
+    }
+    
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Check tab clicks
+        int panelX = this.width - RIGHT_PANEL_WIDTH;
+        int tabY = TOOLBAR_HEIGHT;
+        int tabWidth = RIGHT_PANEL_WIDTH / 3;
+        
+        if (mouseY >= tabY && mouseY < tabY + TAB_HEIGHT && mouseX >= panelX) {
+            int tabIndex = (int) ((mouseX - panelX) / tabWidth);
+            if (tabIndex >= 0 && tabIndex < RightPanelTab.values().length) {
+                currentTab = RightPanelTab.values()[tabIndex];
+                return true;
+            }
+        }
+        
+        // Check file panel
+        if (filePanel.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        
+        // Check code area
+        if (codeArea.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        
+        // Check right panel
+        switch (currentTab) {
+            case CONSOLE -> { if (consolePanel.mouseClicked(mouseX, mouseY, button)) return true; }
+            case TASKS -> { if (taskManagerPanel.mouseClicked(mouseX, mouseY, button)) return true; }
+            case SETTINGS -> { if (settingsPanel.mouseClicked(mouseX, mouseY, button)) return true; }
+        }
+        
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+    
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        // Left panel
+        if (mouseX < LEFT_PANEL_WIDTH) {
+            return filePanel.mouseScrolled(mouseX, mouseY, verticalAmount);
+        }
+        
+        // Right panel
+        if (mouseX >= this.width - RIGHT_PANEL_WIDTH) {
+            return switch (currentTab) {
+                case CONSOLE -> consolePanel.mouseScrolled(mouseX, mouseY, verticalAmount);
+                case TASKS -> taskManagerPanel.mouseScrolled(mouseX, mouseY, verticalAmount);
+                case SETTINGS -> settingsPanel.mouseScrolled(mouseX, mouseY, verticalAmount);
+            };
+        }
+        
+        // Code area
+        return codeArea.mouseScrolled(mouseX, mouseY, verticalAmount);
+    }
+    
+    @Override
+    public void close() {
+        if (currentFile != null) {
+            KashubConfig.getInstance().lastOpenedScript = currentFile;
+            KashubConfig.getInstance().save();
+        }
+        super.close();
+    }
+    
+    @Override
+    public boolean shouldPause() {
+        return false;
+    }
+    
+    // Utility methods
+    private int interpolateColor(int color1, int color2, float ratio) {
+        int a1 = (color1 >> 24) & 0xFF;
+        int r1 = (color1 >> 16) & 0xFF;
+        int g1 = (color1 >> 8) & 0xFF;
+        int b1 = color1 & 0xFF;
+        
+        int a2 = (color2 >> 24) & 0xFF;
+        int r2 = (color2 >> 16) & 0xFF;
+        int g2 = (color2 >> 8) & 0xFF;
+        int b2 = color2 & 0xFF;
+        
+        int a = (int) (a1 + (a2 - a1) * ratio);
+        int r = (int) (r1 + (r2 - r1) * ratio);
+        int g = (int) (g1 + (g2 - g1) * ratio);
+        int b = (int) (b1 + (b2 - b1) * ratio);
+        
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+    
+    private int adjustBrightness(int color, int amount) {
+        int a = (color >> 24) & 0xFF;
+        int r = Math.max(0, Math.min(255, ((color >> 16) & 0xFF) + amount));
+        int g = Math.max(0, Math.min(255, ((color >> 8) & 0xFF) + amount));
+        int b = Math.max(0, Math.min(255, (color & 0xFF) + amount));
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+}

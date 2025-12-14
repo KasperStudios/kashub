@@ -1,0 +1,51 @@
+// ===================================
+// Kashub Script - Music Player
+// ===================================
+// Demonstrates sound and music capabilities
+
+print "🎵 Music Player Demo"
+
+// Play a simple melody (C major scale)
+print "Playing C major scale..."
+sound music C4,D4,E4,F4,G4,A4,B4,C5 harp 250
+
+wait 2500
+
+// Play with different instrument
+print "Playing with xylophone..."
+sound music C4,E4,G4,C5,G4,E4,C4 xylophone 200
+
+wait 2000
+
+// Play a simple tune (Twinkle Twinkle)
+print "Playing Twinkle Twinkle..."
+sound music C4,C4,G4,G4,A4,A4,G4 harp 300
+wait 2400
+sound music F4,F4,E4,E4,D4,D4,C4 harp 300
+
+wait 2500
+
+// Play chord-like sounds
+print "Playing chords..."
+sound note 0 harp
+sound note 4 harp
+sound note 7 harp
+wait 500
+
+sound note 5 harp
+sound note 9 harp
+sound note 12 harp
+wait 500
+
+sound note 7 harp
+sound note 11 harp
+sound note 14 harp
+wait 500
+
+// Broadcast sound (other players can hear)
+print "Broadcasting sound to nearby players..."
+sound broadcast bell 1.0 1.0
+
+wait 1000
+
+print "🎵 Music demo complete!"

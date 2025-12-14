@@ -1,0 +1,40 @@
+// Example: Auto-Trading Script
+// Automatically finds and trades with villagers
+
+// Configure trading parameters
+autoTrade config 32 20 cheapest
+
+// Set items we want to buy
+autoTrade target diamond,enchanted_book,mending,silk_touch
+
+// Scan for nearby merchants
+print "Scanning for villagers..."
+autoTrade scan
+
+if ($autoTrade_merchantCount > 0) {
+    print "Found $autoTrade_merchantCount merchants!"
+    
+    // Show available trades
+    autoTrade offers
+    
+    // If we found offers, try to buy
+    if ($autoTrade_offersCount > 0) {
+        print "Available trades: $autoTrade_offersCount"
+        
+        // Buy first available trade
+        autoTrade buy 0 1
+        
+        if ($autoTrade_buySuccess == true) {
+            print "Successfully bought: $autoTrade_buyItem"
+        } else {
+            print "Trade failed: $autoTrade_error"
+        }
+    }
+} else {
+    print "No merchants found nearby"
+}
+
+// Alternative: Start continuous auto-trading
+// autoTrade start
+// wait 30000
+// autoTrade stop

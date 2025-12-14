@@ -1,0 +1,45 @@
+// ===================================
+// Kashub Script - Event Handlers
+// ===================================
+// Demonstrates event-driven scripting
+
+// On tick event (every second)
+onEvent onTick {
+    // Log current time
+    log debug "Tick at $event_time"
+}
+
+// On damage event
+onEvent onDamage {
+    print "Took $event_damage damage! Health: $event_health"
+    
+    if ($event_health < 5) {
+        chat "I need help! Low health!"
+    }
+}
+
+// On heal event
+onEvent onHeal {
+    print "Healed $event_healed HP"
+}
+
+// On hunger change
+onEvent onHunger {
+    if ($event_food < 6) {
+        print "Getting hungry..."
+        eat
+    }
+}
+
+// On chat message
+onEvent onChat {
+    log info "Chat: $event_sender: $event_message"
+}
+
+print "Event handlers registered!"
+print "Available events:"
+print "- onTick: Every second"
+print "- onDamage: When taking damage"
+print "- onHeal: When healing"
+print "- onHunger: When hunger changes"
+print "- onChat: When receiving chat"

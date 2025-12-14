@@ -1,0 +1,37 @@
+// ===================================
+// Kashub Script - Vision API Example
+// ===================================
+// Demonstrates the Vision API for raycasting and entity detection
+
+// Get what player is looking at
+vision target
+
+// Check the result - use lowercase comparison
+print "Looking at block: $target_block_id"
+print "Position: $target_block_x, $target_block_y, $target_block_z"
+print "Looking at entity: $target_entity_type"
+
+wait 1000
+
+// Find nearest living entity
+vision nearest living 20
+print "Found $nearest_type at $nearest_x, $nearest_y, $nearest_z"
+print "Health: $nearest_health"
+
+wait 1000
+
+// Count all mobs in range
+vision count all 30
+print "Total mobs in 30 block radius: $mob_count"
+
+// Count hostile mobs
+vision count hostile 20
+print "Hostile mobs in 20 block radius: $mob_count"
+
+// Scan entities in radius
+vision scan 15
+print "Entities in 15 block radius: $scan_count"
+
+// Check if looking at specific block
+vision isLookingAt block chest 5
+print "You're looking at a chest!"

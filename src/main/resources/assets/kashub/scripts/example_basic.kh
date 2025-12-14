@@ -1,0 +1,20 @@
+// ===================================
+// Kashub Script - Basic Example
+// ===================================
+// This script demonstrates basic commands
+
+// Print a message to chat
+print "Hello from Kashub Script!"
+
+// Wait for 1 second
+wait 1000
+
+// Make the player jump 3 times
+jump 3
+
+// Print player position
+print "Player position: $PLAYER_X, $PLAYER_Y, $PLAYER_Z"
+
+// Wait and print health
+wait 500
+print "Player health: $PLAYER_HEALTH"

@@ -1,0 +1,31 @@
+// ===================================
+// Kashub Script - Auto Farming
+// ===================================
+// Automated farming script
+
+// Define farming function
+function farm() {
+    // Break block in front
+    break ~ ~-1 ~1
+    wait 500
+    
+    // Place seeds
+    selectSlot item wheat_seeds
+    place ~ ~-1 ~1
+    wait 200
+    
+    // Move forward
+    run ~0 ~ ~1
+    wait 300
+}
+
+// Main farming loop
+print "Starting auto-farm..."
+
+// Farm 10 blocks
+for (i = 0; i < 10; i++) {
+    farm()
+    print "Farmed block $i"
+}
+
+print "Farming complete!"

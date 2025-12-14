@@ -1,0 +1,59 @@
+// ========================================
+// Area Clearer Script
+// Clears a rectangular area (4 blocks high)
+// ========================================
+// Configuration - edit these values:
+// Width of area to clear (X direction)
+// $area_width = 10
+// Length of area to clear (Z direction)  
+// $area_length = 10
+
+print Starting Area Clearer...
+print Will clear 4-high area from current position
+
+// Get starting position
+vision player
+// Store start coords in variables
+// $start_x = $player_x
+// $start_y = $player_y
+// $start_z = $player_z
+
+print Position: $player_x, $player_y, $player_z
+print Select pickaxe in slot 1 before running!
+wait 2000
+
+// Main clearing loop
+// This script demonstrates the concept
+// For full automation, pathfind command is needed
+
+print Starting to mine...
+print Use WASD to move, script will break blocks in front
+
+// Continuous mining loop
+loop 100
+    // Look down slightly to hit blocks at feet level
+    lookat rel 0 -1 3
+    break
+    wait 100
+    
+    // Look straight ahead
+    lookat rel 0 0 3
+    break
+    wait 100
+    
+    // Look up for higher blocks
+    lookat rel 0 1 3
+    break
+    wait 100
+    
+    // Look up more for 4th block
+    lookat rel 0 2 3
+    break
+    wait 100
+    
+    // Small delay before next cycle
+    wait 200
+end
+
+print Area clearing cycle complete!
+print Run again to continue clearing

@@ -1,0 +1,69 @@
+// ========================================
+// Deepslate Miner Script
+// Mines deepslate ores with inventory check
+// ========================================
+// Requirements:
+// - Pickaxe in slot 1
+// - Torches in slot 2 (optional)
+// - Be at Y level -50 to -10
+// - Set home position at your storage chest
+
+print 🪨 Deepslate Miner starting...
+print Make sure you have a pickaxe in slot 1!
+print Setting home position here...
+wait 1000
+
+// Save starting position as home
+pathfind sethome
+print Home set at $home_x, $home_y, $home_z
+
+selectslot 1
+
+// Main mining loop
+loop 200
+    // Check inventory first
+    inventory check
+    
+    // If inventory is full, go deposit
+    // Note: This is a simplified check
+    // $inv_empty_slots < 5 means almost full
+    print Inventory: $inv_used_slots slots used, $inv_empty_slots empty
+    
+    // Scan for valuable ores nearby
+    scan ores 8
+    
+    // Check if we found anything
+    print Scanning... Found $scan_ore_count ores
+    print Diamonds: $scan_diamond_count, Gold: $scan_gold_count
+    
+    // Mine forward pattern (strip mining)
+    // Look ahead and mine
+    lookat rel 0 0 2
+    break
+    wait 150
+    
+    // Mine block above
+    lookat rel 0 1 2
+    break
+    wait 150
+    
+    // Move forward
+    input forward 200
+    wait 300
+    
+    // Check sides for ores
+    lookat rel 1 0 1
+    scan view 3
+    break
+    wait 100
+    
+    lookat rel -1 0 1
+    scan view 3
+    break
+    wait 100
+    
+    wait 200
+end
+
+print Mining session complete!
+print Use 'pathfind home' to return to base

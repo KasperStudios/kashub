@@ -1,0 +1,56 @@
+// Example: Advanced Pathfinding Script
+// Navigate safely avoiding dangers
+
+// Configure pathfinding
+pathfind config avoidDanger true
+pathfind config allowParkour false
+pathfind config maxFall 3
+pathfind config sprint true
+pathfind config swim true
+
+// Save current position as home
+pathfind sethome
+print "Home set at: $home_x, $home_y, $home_z"
+
+// Scan for diamond ore
+print "Scanning for diamonds..."
+scanner blocks diamond_ore,deepslate_diamond_ore radius=32 yMin=-64 yMax=16
+
+if ($scanner_found == true) {
+    print "Found $scanner_count diamond ore(s)!"
+    print "Nearest at: $scanner_nearest_x, $scanner_nearest_y, $scanner_nearest_z"
+    
+    // Navigate to nearest diamond
+    pathfind $scanner_nearest_x $scanner_nearest_y $scanner_nearest_z avoidDanger=true
+    
+    // Wait for pathfinding to complete
+    while ($pathfind_active == true) {
+        wait 500
+        print "Navigating... Progress: $pathfind_length nodes"
+    }
+    
+    if ($pathfind_complete == true) {
+        print "Arrived at diamond ore!"
+        
+        // Mine it
+        breakBlock
+        wait 2000
+        
+        // Return home
+        print "Returning home..."
+        pathfind home
+        
+        while ($pathfind_active == true) {
+            wait 500
+        }
+        
+        print "Back home!"
+    } else {
+        print "Could not reach diamond ore"
+    }
+} else {
+    print "No diamond ore found in range"
+}
+
+// Clear path cache when done
+pathfind cache clear
