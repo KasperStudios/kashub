@@ -2,7 +2,7 @@
 
 All notable changes to Kashub will be documented in this file.
 
-## [2.1.0] - 2024-12-05
+## [v0.2.1 beta] - 2025-12-05
 
 ### Added
 
@@ -67,7 +67,7 @@ All notable changes to Kashub will be documented in this file.
 - KashubClient integrates all new services in tick loop
 - ScriptCommand extended with task management subcommands
 
-## [2.0.0] - 2024-12-05
+## [v0.2.0 beta] - 2025-12-05
 
 ### Added
 
@@ -148,7 +148,7 @@ All notable changes to Kashub will be documented in this file.
 - Command parsing edge cases
 - Memory leaks in async commands
 
-## [1.4.0] - Previous Version
+## [v0.1.4 beta] - Previous Version
 
 ### Features
 - Basic script editor
@@ -156,22 +156,3 @@ All notable changes to Kashub will be documented in this file.
 - Variable support
 - Control flow (if, while, for)
 - Function definitions
-
----
-
-## Upgrade Guide
-
-### From 1.x to 2.0
-
-1. **Backup your scripts** from `config/kashub/scripts/`
-2. Update the mod JAR file
-3. Launch Minecraft - new config will be created
-4. Your scripts should work without changes
-5. Explore new features in the improved editor!
-
-### New Keybinds
-- `K` - Open editor (unchanged)
-- `Z` - Stop scripts (unchanged)
-- `F9` - Toggle breakpoint (new)
-- `F5` - Run/Continue (new)
-- `F10` - Step over in debug (new)
