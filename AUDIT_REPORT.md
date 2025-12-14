@@ -1,6 +1,6 @@
 # KHScript Audit Report & Development Plan
 
-**Дата:** Декабрь 2024  
+**Дата:** Декабрь 2025
 **Версия проекта:** Kashub для Minecraft 1.21+ Fabric  
 **Автор аудита:** AI Assistant
 
@@ -347,7 +347,7 @@ scanner.entities({
 
 ---
 
-## Следующие шаги (рекомендации)
+## Следующие шаги
 
 1. **Тестирование в игре** — проверить все новые команды в Minecraft 1.21+
 2. **Unit-тесты** — добавить тесты для TypeChecker, PathfindCommand
