@@ -26,7 +26,7 @@
 
 ## 📦 Installation
 
-1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.16.5
+1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.1
 2. Download [Fabric API](https://www.curseforge.com/minecraft/mc-mods/fabric-api)
 3. Download the latest Kashub release
 4. Place both `.jar` files in your `mods` folder
@@ -339,7 +339,7 @@ This project is licensed under CC0-1.0 - see the [LICENSE](LICENSE) file for det
 
 ## 👤 Author
 
-**KasperStudios** - [GitHub](https://github.com/kasperenok)
+**KasperStudios** - [GitHub](https://github.com/KasperStudios)
 
 ---
 
