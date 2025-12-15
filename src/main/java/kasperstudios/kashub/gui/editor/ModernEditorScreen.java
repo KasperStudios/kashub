@@ -21,7 +21,7 @@ import net.minecraft.text.Text;
 
 /**
  * Modern fullscreen code editor for Kashub scripts
- * v3.1 - Simplified UI: No console panel, no right tabs
+ * v0.6.0 Beta - Simplified UI: No console panel, no right tabs
  * Editor takes 100% of available space (minus file panel)
  */
 public class ModernEditorScreen extends Screen {
@@ -67,63 +67,54 @@ public class ModernEditorScreen extends Screen {
             theme
         );
         
-        // Add toolbar buttons - adaptive layout
+        // Add toolbar buttons - icon-only layout for better fit
         int buttonY = 10;
-        int availableWidth = this.width - LEFT_PANEL_WIDTH - 24; // 12px padding on each side
-        int buttonCount = 9; // Run, Stop, Save, Key, Docs, Tasks, Settings, Theme, Close
-        int minButtonWidth = 55;
-        int maxButtonWidth = 75;
+        int buttonSize = 28; // Square icon buttons
         int buttonSpacing = 4;
-        
-        // Calculate button width based on available space
-        int totalSpacing = buttonSpacing * (buttonCount - 1);
-        int buttonWidth = Math.min(maxButtonWidth, Math.max(minButtonWidth, (availableWidth - totalSpacing) / buttonCount));
-        int actualSpacing = (availableWidth - buttonWidth * buttonCount) / (buttonCount - 1);
-        
         int buttonX = LEFT_PANEL_WIDTH + 12;
         
-        // Run button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("▶ Run"), 
+        // Run button (green accent)
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("▶"), 
             button -> runScript(), theme.accentColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
-        // Stop button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("⏹ Stop"),
+        // Stop button (red)
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("⏹"),
             button -> stopScript(), 0xFFE74C3C));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
         // Save button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("💾 Save"),
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("💾"),
             button -> saveScript(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
         // Keybind button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("⌨ Key"),
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("⌨"),
             button -> openKeybindDialog(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
-        // Docs button (opens documentation)
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("📚 Docs"),
+        // Docs button
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("📚"),
             button -> openDocs(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
-        // Tasks button (opens modal)
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("📊 Tasks"),
+        // Tasks button
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("📊"),
             button -> openTaskManager(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
-        // Settings button (opens modal)
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("⚙ Set"),
+        // Settings button
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("⚙"),
             button -> openSettings(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
         // Theme button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("🎨"),
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("🎨"),
             button -> cycleTheme(), theme.buttonColor));
-        buttonX += buttonWidth + actualSpacing;
+        buttonX += buttonSize + buttonSpacing;
         
         // Close button
-        addDrawableChild(new ModernButton(buttonX, buttonY, buttonWidth, 24, Text.literal("❌"),
+        addDrawableChild(new ModernButton(buttonX, buttonY, buttonSize, 24, Text.literal("✕"),
             button -> this.close(), 0xFF666666));
         
         // Load file list
@@ -136,7 +127,7 @@ public class ModernEditorScreen extends Screen {
         }
         
         // Log startup
-        ScriptLogger.getInstance().info("Kashub Editor v3.1 ready");
+        ScriptLogger.getInstance().info("Kashub Editor v0.6.0 Beta ready");
     }
     
     @Override
@@ -194,7 +185,7 @@ public class ModernEditorScreen extends Screen {
         
         // Logo text
         context.drawText(this.textRenderer, "⚡ KASHUB", 16, logoY, theme.accentColor, true);
-        context.drawText(this.textRenderer, "v3.1", LEFT_PANEL_WIDTH - 40, logoY + 4, theme.textDimColor, false);
+        context.drawText(this.textRenderer, "v0.6.0 Beta", LEFT_PANEL_WIDTH - 40, logoY + 4, theme.textDimColor, false);
         
         // Separator
         context.fill(10, TOOLBAR_HEIGHT - 2, LEFT_PANEL_WIDTH - 10, TOOLBAR_HEIGHT - 1, theme.accentColor & 0x44FFFFFF);
@@ -330,6 +321,12 @@ public class ModernEditorScreen extends Screen {
     private void openSettings() {
         SettingsDialog dialog = new SettingsDialog(this);
         dialog.setOnThemeChange(this::applyThemeChange);
+        dialog.setOnClose(() -> {
+            // Refresh file panel when settings dialog closes (in case hideSystemScripts changed)
+            if (filePanel != null) {
+                filePanel.refreshFiles();
+            }
+        });
         MinecraftClient.getInstance().setScreen(dialog);
     }
     

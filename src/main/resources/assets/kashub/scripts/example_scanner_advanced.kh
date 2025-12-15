@@ -54,7 +54,7 @@ print ""
 print "Scanning all living entities..."
 scanner entities living radius=20 limit=5
 
-for (i = 0; i < 5; i = i + 1) {
+for (i = 0; i < 5; i++) {
     // Note: Variables are dynamically named
     print "Entity $i: type at distance"
 }

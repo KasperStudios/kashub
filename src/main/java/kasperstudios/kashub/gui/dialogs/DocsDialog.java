@@ -80,20 +80,35 @@ public class DocsDialog extends Screen {
             "KHScript is a scripting language for Minecraft automation.",
             "",
             "## Features",
-            "• Variables: $name = value",
-            "• Control flow: if, for, while, loop",
+            "• Variables: let x = 5, const MAX = 100, or x = 5 (legacy)",
+            "• Control flow: if, for, while, loop (Rust-style & legacy)",
             "• Commands: 40+ built-in commands",
             "• Environment variables: $PLAYER_X, etc.",
             "",
+            "## Syntax Styles",
+            "KHScript supports both Legacy and Rust-style syntax:",
+            "",
+            "### Legacy Style",
+            "x = 5",
+            "if (x > 3) { ... }",
+            "while (counter < 10) { ... }",
+            "",
+            "### Rust-style",
+            "let x = 5",
+            "if x > 3 { ... }",
+            "while counter < 10 { ... }",
+            "",
             "## Quick Start",
-            "print \"Hello World!\"",
+            "let message = \"Hello World!\"",
+            "print $message",
             "wait 1000",
             "lookAt entity zombie",
             "",
             "## Tips",
             "• Use Ctrl+Space for autocomplete",
             "• Use F5 to run script",
-            "• Use search below to find commands"
+            "• Use search below to find commands",
+            "• Variables in conditions work with or without $ prefix"
         )));
         
         // Group commands by category
@@ -554,7 +569,7 @@ public class DocsDialog extends Screen {
         context.disableScissor();
         
         // Scrollbar
-        int totalHeight = section.lines.size() * lineHeight + 24;
+        int totalHeight = calculateSectionHeight(section) + 48;
         if (totalHeight > contentHeight) {
             int scrollbarHeight = Math.max(20, (contentHeight * contentHeight) / totalHeight);
             int maxScroll = totalHeight - contentHeight;
@@ -572,6 +587,24 @@ public class DocsDialog extends Screen {
             len--;
         }
         return text.substring(0, Math.max(0, len));
+    }
+    
+    /**
+     * Calculate actual height of section content including header spacing
+     */
+    private int calculateSectionHeight(DocSection section) {
+        int lineHeight = 12;
+        int height = 12; // Initial offset
+        for (String line : section.lines) {
+            if (line.startsWith("# ")) {
+                height += lineHeight + 4; // Extra space after H1
+            } else if (line.startsWith("## ")) {
+                height += lineHeight + 4; // Extra space before H2
+            } else {
+                height += lineHeight;
+            }
+        }
+        return height;
     }
     
     @Override
@@ -625,7 +658,8 @@ public class DocsDialog extends Screen {
             List<DocSection> displaySections = filteredSections.isEmpty() ? sections : filteredSections;
             if (selectedSection < displaySections.size()) {
                 DocSection section = displaySections.get(selectedSection);
-                int totalHeight = section.lines.size() * 12 + 24;
+                // Calculate total height accounting for header spacing
+                int totalHeight = calculateSectionHeight(section) + 48; // Extra padding at bottom
                 int maxScroll = Math.max(0, totalHeight - contentHeight);
                 scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 36)));
             }

@@ -24,12 +24,12 @@ public class RunToCommand implements Command {
 
   @Override
   public String getDescription() {
-    return "Заставляет игрока бежать к указанным координатам";
+    return "Makes player run to specified coordinates";
   }
 
   @Override
   public String getParameters() {
-    return "<x> <y> <z> - координаты назначения";
+    return "<x> <y> <z> - destination coordinates";
   }
 
   @Override

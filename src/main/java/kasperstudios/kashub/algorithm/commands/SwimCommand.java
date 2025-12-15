@@ -22,12 +22,12 @@ public class SwimCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Заставляет игрока плыть";
+        return "Makes player swim";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] или up/down/forward - направление плавания";
+        return "[duration_ms] or up/down/forward - swimming direction";
     }
 
     @Override

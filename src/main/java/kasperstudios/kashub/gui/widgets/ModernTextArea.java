@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.minecraft.client.MinecraftClient;
+import com.mojang.blaze3d.systems.RenderSystem;
 
 public class ModernTextArea {
     private final TextRenderer textRenderer;
@@ -51,8 +52,8 @@ public class ModernTextArea {
     
     // Syntax highlighting patterns
     private static final Set<String> KEYWORDS = Set.of(
-        "if", "else", "while", "for", "loop", "function", "return", "break", "continue",
-        "true", "false", "null", "and", "or", "not", "in", "end"
+        "if", "else", "while", "for", "loop", "function", "fn", "return", "break", "continue",
+        "true", "false", "null", "and", "or", "not", "in", "end", "let", "const"
     );
     
     // Dynamic command set - populated from CommandRegistry
@@ -163,9 +164,22 @@ public class ModernTextArea {
                 context.drawText(textRenderer, "⚠", x + 4, lineY, 0xFFFF4444, false);
             }
             
-            // Code with syntax highlighting
+            // Code with syntax highlighting (with clipping to prevent overflow)
             String line = lines.get(i);
+            // Enable scissor to clip text within editor bounds
+            int codeAreaX = x + LINE_NUMBER_WIDTH;
+            int codeAreaWidth = width - LINE_NUMBER_WIDTH - 8; // Leave space for scrollbar
+            MinecraftClient mc = MinecraftClient.getInstance();
+            double scale = mc.getWindow().getScaleFactor();
+            int scaledX = (int)(codeAreaX * scale);
+            int scaledY = (int)(y * scale);
+            int scaledW = (int)(codeAreaWidth * scale);
+            int scaledH = (int)(height * scale);
+            // Flip Y for OpenGL coordinate system
+            int windowHeight = mc.getWindow().getFramebufferHeight();
+            RenderSystem.enableScissor(scaledX, windowHeight - scaledY - scaledH, scaledW, scaledH);
             renderHighlightedLine(context, line, x + LINE_NUMBER_WIDTH + PADDING - scrollX, lineY);
+            RenderSystem.disableScissor();
         }
         
         // Cursor
@@ -996,13 +1010,18 @@ public class ModernTextArea {
     private void validateSyntax() {
         lineErrors.clear();
         
-        // First pass: collect user-defined functions
+        // First pass: collect user-defined functions (support both "function" and "fn")
         Set<String> userFunctions = new HashSet<>();
         for (String line : lines) {
             String trimmed = line.trim();
+            String rest = null;
             if (trimmed.startsWith("function ")) {
-                // Extract function name: "function name() {" or "function name {"
-                String rest = trimmed.substring(9).trim();
+                rest = trimmed.substring(9).trim();
+            } else if (trimmed.startsWith("fn ")) {
+                rest = trimmed.substring(3).trim();
+            }
+            if (rest != null) {
+                // Extract function name: "function name() {" or "fn name {"
                 int parenIdx = rest.indexOf('(');
                 int braceIdx = rest.indexOf('{');
                 int endIdx = parenIdx > 0 ? parenIdx : (braceIdx > 0 ? braceIdx : rest.length());
@@ -1040,12 +1059,21 @@ public class ModernTextArea {
                 continue;
             }
             
-            // Check for control flow statements
-            if (line.startsWith("if") || line.startsWith("while") || line.startsWith("for")) {
-                // Check for parentheses
-                if (!line.contains("(") || !line.contains(")")) {
-                    lineErrors.put(i, "Missing parentheses in condition");
+            // Check for control flow statements - support both legacy (parentheses) and Rust-style (no parentheses)
+            if (line.startsWith("if ") || line.startsWith("if(") ||
+                line.startsWith("while ") || line.startsWith("while(") ||
+                line.startsWith("for ") || line.startsWith("for(")) {
+                // Both styles are valid: "if (cond) {" and "if cond {"
+                // Only check that block opens with { or condition is present
+                if (!line.contains("{") && !line.endsWith("{")) {
+                    // Allow single-line style without braces for simple cases
                 }
+                continue;
+            }
+            
+            // Check for else if
+            if (line.startsWith("else if ") || line.startsWith("} else if ") || 
+                line.startsWith("else if(") || line.startsWith("} else if(")) {
                 continue;
             }
             
@@ -1054,13 +1082,15 @@ public class ModernTextArea {
                 continue;
             }
             
-            // Check for variable assignment
-            if (line.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*")) {
+            // Check for variable assignment - support let, const, and legacy styles
+            if (line.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*") ||
+                line.matches("^let\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*") ||
+                line.matches("^const\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*")) {
                 continue;
             }
             
-            // Check for function definition
-            if (line.startsWith("function ")) {
+            // Check for function definition - support both "function" and "fn"
+            if (line.startsWith("function ") || line.startsWith("fn ")) {
                 continue;
             }
             

@@ -67,6 +67,15 @@ public class KashubConfig {
     public int openEditorKey = 75; // K
     public int stopScriptsKey = 90; // Z
     public int toggleScriptingKey = 293; // F6
+    public boolean hideSystemScripts = false; // Hide system/example scripts in file panel
+    
+    // Hot-reload settings
+    public boolean hotReload = false; // Automatically reload scripts when files change
+    public int hotReloadCheckInterval = 1000; // Check interval in milliseconds (default 1 second)
+    
+    // Autorun settings
+    public boolean autorunEnabled = false; // Enable autorun on startup
+    public List<String> autorunScripts = new ArrayList<>(); // List of scripts to auto-run on startup
 
     // Настройки логирования
     public boolean enableLogging = true;

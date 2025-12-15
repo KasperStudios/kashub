@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
- * Команда для атаки ближайших мобов
- * Синтаксис: attack [range] [type] [count]
+ * Command for attacking nearest mobs
+ * Syntax: attack [range] [type] [count]
  */
 public class AttackCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -36,12 +36,12 @@ public class AttackCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Атакует ближайших мобов в указанном радиусе";
+        return "Attacks nearest mobs within specified radius";
     }
 
     @Override
     public String getParameters() {
-        return "[range] [type] [count] - радиус поиска, тип моба (hostile/passive/player/all), количество атак";
+        return "[range] [type] [count] - search radius, mob type (hostile/passive/player/all), attack count";
     }
 
     @Override

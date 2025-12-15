@@ -18,12 +18,12 @@ public class ChatCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Отправляет сообщение в чат игры";
+        return "Sends message to game chat";
     }
 
     @Override
     public String getParameters() {
-        return "<message> - текст сообщения для отправки в чат";
+        return "<message> - message text to send to chat";
     }
 
     @Override

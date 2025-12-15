@@ -30,12 +30,12 @@ public class LoadScriptCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Загружает и выполняет .kh скрипт из строки или URL";
+        return "Loads and executes .kh script from string or URL";
     }
 
     @Override
     public String getParameters() {
-        return "<code> или fromUrl <url> - код скрипта или URL";
+        return "<code> or fromUrl <url> - script code or URL";
     }
 
     @Override

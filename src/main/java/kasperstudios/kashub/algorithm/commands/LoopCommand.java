@@ -19,12 +19,12 @@ public class LoopCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Выполняет команды указанное количество раз";
+        return "Executes commands specified number of times";
     }
 
     @Override
     public String getParameters() {
-        return "<count> { <commands> } - количество повторений и блок команд";
+        return "<count> { <commands> } - number of repetitions and command block";
     }
 
     @Override

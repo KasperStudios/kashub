@@ -6,8 +6,8 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Команда для телепортации игрока
- * Синтаксис: tp x y z или tp ~dx ~dy ~dz
+ * Command for teleporting player
+ * Syntax: tp x y z or tp ~dx ~dy ~dz
  */
 public class TeleportCommand implements Command {
 
@@ -18,12 +18,12 @@ public class TeleportCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Телепортирует игрока к указанным координатам";
+        return "Teleports player to specified coordinates";
     }
 
     @Override
     public String getParameters() {
-        return "<x> <y> <z> - абсолютные или относительные (~) координаты";
+        return "<x> <y> <z> - absolute or relative (~) coordinates";
     }
 
     @Override

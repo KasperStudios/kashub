@@ -19,12 +19,12 @@ public class JumpCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Заставляет игрока прыгнуть указанное количество раз";
+        return "Makes player jump specified number of times";
     }
 
     @Override
     public String getParameters() {
-        return "<count> - количество прыжков";
+        return "<count> - number of jumps";
     }
 
     @Override

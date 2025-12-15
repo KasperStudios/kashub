@@ -4,7 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Менеджер истории изменений для редактора (Undo/Redo)
+ * Change history manager for editor (Undo/Redo)
  */
 public class UndoManager {
     
@@ -15,30 +15,30 @@ public class UndoManager {
     
     private String lastSavedContent = "";
     private long lastChangeTime = 0;
-    private static final long MERGE_THRESHOLD = 500; // мс - объединять быстрые изменения
+    private static final long MERGE_THRESHOLD = 500; // ms - merge rapid changes
     
     /**
-     * Записывает состояние редактора для возможности отмены
+     * Record editor state for undo capability
      */
     public void recordState(String content, int cursorPosition) {
         long now = System.currentTimeMillis();
         
-        // Объединяем быстрые последовательные изменения
+        // Merge rapid consecutive changes
         if (!undoStack.isEmpty() && (now - lastChangeTime) < MERGE_THRESHOLD) {
-            // Обновляем последнее состояние вместо добавления нового
+            // Update last state instead of adding new one
             EditorState last = undoStack.peek();
             if (last != null && isSimilarChange(last.content, content)) {
                 undoStack.pop();
             }
         }
         
-        // Добавляем новое состояние
+        // Add new state
         undoStack.push(new EditorState(content, cursorPosition, now));
         
-        // Очищаем redo при новом изменении
+        // Clear redo on new change
         redoStack.clear();
         
-        // Ограничиваем размер истории
+        // Limit history size
         while (undoStack.size() > MAX_HISTORY_SIZE) {
             ((ArrayDeque<EditorState>) undoStack).removeLast();
         }
@@ -47,53 +47,53 @@ public class UndoManager {
     }
     
     /**
-     * Отменяет последнее изменение (Ctrl+Z)
-     * @return предыдущее состояние или null если история пуста
+     * Undo last change (Ctrl+Z)
+     * @return previous state or null if history is empty
      */
     public EditorState undo(String currentContent, int currentCursor) {
         if (undoStack.isEmpty()) {
             return null;
         }
         
-        // Сохраняем текущее состояние в redo
+        // Save current state to redo
         redoStack.push(new EditorState(currentContent, currentCursor, System.currentTimeMillis()));
         
-        // Возвращаем предыдущее состояние
+        // Return previous state
         return undoStack.pop();
     }
     
     /**
-     * Повторяет отменённое изменение (Ctrl+Y / Ctrl+Shift+Z)
-     * @return следующее состояние или null если redo пуст
+     * Redo undone change (Ctrl+Y / Ctrl+Shift+Z)
+     * @return next state or null if redo is empty
      */
     public EditorState redo(String currentContent, int currentCursor) {
         if (redoStack.isEmpty()) {
             return null;
         }
         
-        // Сохраняем текущее состояние в undo
+        // Save current state to undo
         undoStack.push(new EditorState(currentContent, currentCursor, System.currentTimeMillis()));
         
-        // Возвращаем следующее состояние
+        // Return next state
         return redoStack.pop();
     }
     
     /**
-     * Проверяет, можно ли отменить
+     * Check if undo is possible
      */
     public boolean canUndo() {
         return !undoStack.isEmpty();
     }
     
     /**
-     * Проверяет, можно ли повторить
+     * Check if redo is possible
      */
     public boolean canRedo() {
         return !redoStack.isEmpty();
     }
     
     /**
-     * Очищает историю
+     * Clear history
      */
     public void clear() {
         undoStack.clear();
@@ -102,44 +102,44 @@ public class UndoManager {
     }
     
     /**
-     * Отмечает текущее состояние как сохранённое
+     * Mark current state as saved
      */
     public void markSaved(String content) {
         lastSavedContent = content;
     }
     
     /**
-     * Проверяет, есть ли несохранённые изменения
+     * Check if there are unsaved changes
      */
     public boolean hasUnsavedChanges(String currentContent) {
         return !currentContent.equals(lastSavedContent);
     }
     
     /**
-     * Получает количество шагов в истории undo
+     * Get undo history step count
      */
     public int getUndoCount() {
         return undoStack.size();
     }
     
     /**
-     * Получает количество шагов в истории redo
+     * Get redo history step count
      */
     public int getRedoCount() {
         return redoStack.size();
     }
     
     /**
-     * Проверяет, похожи ли изменения (для объединения)
+     * Check if changes are similar (for merging)
      */
     private boolean isSimilarChange(String old, String current) {
-        // Объединяем, если изменение небольшое (1-3 символа)
+        // Merge if change is small (1-3 characters)
         int diff = Math.abs(old.length() - current.length());
         return diff <= 3;
     }
     
     /**
-     * Состояние редактора
+     * Editor state
      */
     public static class EditorState {
         public final String content;

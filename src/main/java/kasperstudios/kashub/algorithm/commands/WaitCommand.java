@@ -16,12 +16,12 @@ public class WaitCommand implements Command {
 
   @Override
   public String getDescription() {
-    return "Ожидает указанное количество миллисекунд";
+    return "Waits for specified number of milliseconds";
   }
 
   @Override
   public String getParameters() {
-    return "<time_in_ms> - время ожидания в миллисекундах";
+    return "<time_in_ms> - wait time in milliseconds";
   }
 
   @Override

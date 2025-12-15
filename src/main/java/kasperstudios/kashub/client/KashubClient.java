@@ -9,6 +9,7 @@ import kasperstudios.kashub.gui.editor.ModernEditorScreen;
 import kasperstudios.kashub.network.AnimationManager;
 import kasperstudios.kashub.runtime.ScriptTaskManager;
 import kasperstudios.kashub.services.HttpService;
+import kasperstudios.kashub.util.ScriptFileWatcher;
 import kasperstudios.kashub.util.ScriptLogger;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -25,6 +26,7 @@ public class KashubClient implements ClientModInitializer {
     
     private static long lastKeyPress = 0;
     private static final long KEY_COOLDOWN = 200;
+    private static boolean autorunExecuted = false;
     
     @Override
     public void onInitializeClient() {
@@ -34,8 +36,19 @@ public class KashubClient implements ClientModInitializer {
         CommandRegistry.initialize();
         
         // Load config
-        KashubConfig.getInstance();
+        KashubConfig config = KashubConfig.getInstance();
         ScriptLogger.getInstance().info("Kashub Client v3.0 starting...");
+        
+        // Start file watcher for hot-reload
+        ScriptFileWatcher.getInstance().start();
+        
+        // Run autorun scripts after world is loaded (only once)
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            if (!autorunExecuted && client.player != null && config.autorunEnabled && !config.autorunScripts.isEmpty()) {
+                autorunExecuted = true;
+                runAutorunScripts();
+            }
+        });
         
         // Register keybindings
         openEditorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -107,6 +120,27 @@ public class KashubClient implements ClientModInitializer {
         });
         
         ScriptLogger.getInstance().success("Kashub Client initialized!");
+    }
+    
+    /**
+     * Run autorun scripts configured in config
+     */
+    private static void runAutorunScripts() {
+        KashubConfig config = KashubConfig.getInstance();
+        if (!config.autorunEnabled || config.autorunScripts.isEmpty()) {
+            return;
+        }
+        
+        ScriptLogger.getInstance().info("Running autorun scripts: " + config.autorunScripts.size());
+        
+        for (String scriptName : config.autorunScripts) {
+            try {
+                ScriptTaskManager.getInstance().startScriptFromFile(scriptName);
+                ScriptLogger.getInstance().info("Autorun: Started " + scriptName);
+            } catch (Exception e) {
+                ScriptLogger.getInstance().error("Autorun: Failed to start " + scriptName + ": " + e.getMessage());
+            }
+        }
     }
     
     private static final java.util.Set<Integer> pressedKeys = new java.util.HashSet<>();

@@ -48,7 +48,7 @@ public class AutoCraftCommand implements Command {
     
     @Override
     public String getDescription() {
-        return "Автоматический крафт предметов";
+        return "Automated crafting of items";
     }
     
     @Override

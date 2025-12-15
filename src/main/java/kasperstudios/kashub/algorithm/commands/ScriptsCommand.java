@@ -28,7 +28,7 @@ public class ScriptsCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Управление запущенными скриптами";
+        return "Manage running scripts";
     }
 
     @Override

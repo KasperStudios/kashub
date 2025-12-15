@@ -51,7 +51,12 @@ public class FilePanel {
     }
 
     public void refreshFiles() {
-        systemScripts = ScriptManager.getSystemScripts();
+        kasperstudios.kashub.config.KashubConfig config = kasperstudios.kashub.config.KashubConfig.getInstance();
+        if (config.hideSystemScripts) {
+            systemScripts = new ArrayList<>();
+        } else {
+            systemScripts = ScriptManager.getSystemScripts();
+        }
         userScripts = ScriptManager.getUserScripts();
         applyFilter();
     }
@@ -198,12 +203,20 @@ public class FilePanel {
                     context.fill(x + 4, currentY + 2, x + width - 4, currentY + ITEM_HEIGHT - 2, theme.buttonHoverColor);
                 }
                 
-                // Icon
-                String icon = isSystem ? "📜" : "📄";
+                // Icon - show folder icon for scripts in subdirectories
+                boolean isInFolder = displayName.contains("/");
+                String icon = isSystem ? "📜" : (isInFolder ? "📁" : "📄");
                 context.drawText(textRenderer, icon, x + 12, currentY + 8, theme.textDimColor, false);
                 
-                // File name
+                // File name - show folder path for scripts in subdirectories
                 String name = displayName;
+                if (isInFolder) {
+                    // Show "folder/script" format
+                    int lastSlash = name.lastIndexOf('/');
+                    String folder = name.substring(0, lastSlash);
+                    String scriptName = name.substring(lastSlash + 1);
+                    name = folder + "/" + scriptName;
+                }
                 if (name.length() > 20) {
                     name = name.substring(0, 17) + "...";
                 }

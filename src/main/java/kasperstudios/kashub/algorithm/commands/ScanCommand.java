@@ -3,7 +3,6 @@ package kasperstudios.kashub.algorithm.commands;
 import kasperstudios.kashub.algorithm.Command;
 import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import kasperstudios.kashub.config.KashubConfig;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -297,8 +296,11 @@ public class ScanCommand implements Command {
                     
                     if (VALUABLE_ORES.contains(blockId)) {
                         // If cheats disabled, check if block is visible (not behind other blocks)
-                        if (!allowCheats && !isBlockVisible(world, playerEyes, pos)) {
+                        if (!allowCheats) {
+                            boolean visible = isBlockVisible(world, playerEyes, pos);
+                            if (!visible) {
                             continue;
+                            }
                         }
                         oresByType.computeIfAbsent(blockId, k -> new ArrayList<>()).add(pos);
                     }

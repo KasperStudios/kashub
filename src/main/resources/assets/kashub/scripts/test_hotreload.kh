@@ -1,0 +1,15 @@
+// ===================================
+// Test Script for Hot-Reload
+// ===================================
+// This script is used to test hot-reload functionality
+// Run it, then modify this file externally to test reloading
+
+print "Hot-reload test script started!"
+print "Version 1.0"
+wait 2000
+print "Waiting for file changes..."
+loop {
+    print "Running... (modify this file to test hot-reload)"
+    wait 3000
+}
+

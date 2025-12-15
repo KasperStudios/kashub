@@ -16,12 +16,12 @@ public class LogCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Записывает сообщение в лог";
+        return "Writes message to log";
     }
 
     @Override
     public String getParameters() {
-        return "[level] <message> - уровень (debug/info/warn/error) и сообщение";
+        return "[level] <message> - level (debug/info/warn/error) and message";
     }
 
     @Override

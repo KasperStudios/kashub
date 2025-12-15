@@ -24,12 +24,12 @@ public class SneakCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Заставляет игрока присесть";
+        return "Makes player sneak";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] или toggle - длительность в мс или переключение";
+        return "[duration_ms] or toggle - duration in ms or toggle";
     }
 
     @Override

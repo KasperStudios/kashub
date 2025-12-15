@@ -21,12 +21,12 @@ public class EquipArmorCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Экипирует броню указанного типа из инвентаря";
+        return "Equips armor of specified type from inventory";
     }
 
     @Override
     public String getParameters() {
-        return "[type] - тип брони (diamond, iron, gold, netherite, leather, chainmail) или 'best'";
+        return "[type] - armor type (diamond, iron, gold, netherite, leather, chainmail) or 'best'";
     }
 
     @Override

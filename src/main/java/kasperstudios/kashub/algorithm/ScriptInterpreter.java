@@ -22,15 +22,13 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 /**
- * Интерпретатор для обработки скриптов KHScript.
- * Поддерживает асинхронное выполнение команд через очередь и переменные
- *
- * окружения.
+ * KHScript interpreter.
+ * Supports asynchronous command execution via queue and environment variables.
  */
 public class ScriptInterpreter {
 private static final Logger LOGGER = LogManager.getLogger(ScriptInterpreter.class);
 
-    // Синглтон для доступа из разных частей приложения
+    // Singleton instance for global access
 private static ScriptInterpreter instance;
 
     private boolean isProcessing = false;
@@ -58,13 +56,13 @@ private final VariableStore variableStore = new VariableStore();
     private static final Pattern ELSE_IF_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s+if\\s+(.+?)\\s*\\{\\s*$|^\\s*\\}?\\s*else\\s+if\\s*\\((.*)\\)\\s*\\{?\\s*$");
     private static final Pattern LOOP_PATTERN = Pattern.compile("^\\s*loop(?:\\s+(\\d+))?\\s*\\{?\\s*$");
 
-    // Приватный конструктор для синглтона
+    // Private constructor for singleton
     private ScriptInterpreter() {
         initializeEnvironmentVariables();
     }
 
     /**
-     * Получить экземпляр интерпретатора (синглтон)
+     * Get interpreter instance (singleton)
      */
     public static ScriptInterpreter getInstance() {
         if (instance == null) {
@@ -82,31 +80,31 @@ private final VariableStore variableStore = new VariableStore();
     }
 
     private void initializeEnvironmentVariables() {
-        // Игровые переменные
-        environmentVariables.put("PLAYER_NAME", new EnvironmentVariable("PLAYER_NAME", "", "Имя текущего игрока"));
-        environmentVariables.put("PLAYER_X", new EnvironmentVariable("PLAYER_X", "", "X координата игрока"));
-        environmentVariables.put("PLAYER_Y", new EnvironmentVariable("PLAYER_Y", "", "Y координата игрока"));
-        environmentVariables.put("PLAYER_Z", new EnvironmentVariable("PLAYER_Z", "", "Z координата игрока"));
-        environmentVariables.put("PLAYER_YAW", new EnvironmentVariable("PLAYER_YAW", "", "Поворот игрока по горизонтали"));
-        environmentVariables.put("PLAYER_PITCH", new EnvironmentVariable("PLAYER_PITCH", "", "Поворот игрока по вертикали"));
-        environmentVariables.put("PLAYER_HEALTH", new EnvironmentVariable("PLAYER_HEALTH", "", "Здоровье игрока"));
-        environmentVariables.put("PLAYER_FOOD", new EnvironmentVariable("PLAYER_FOOD", "", "Сытость игрока"));
-        environmentVariables.put("PLAYER_LEVEL", new EnvironmentVariable("PLAYER_LEVEL", "", "Уровень игрока"));
-        environmentVariables.put("PLAYER_SPEED", new EnvironmentVariable("PLAYER_SPEED", "", "Скорость игрока"));
-        environmentVariables.put("PLAYER_XP", new EnvironmentVariable("PLAYER_XP", "", "Уровень опыта игрока"));
-        environmentVariables.put("IS_SNEAKING", new EnvironmentVariable("IS_SNEAKING", "", "Присел ли игрок"));
-        environmentVariables.put("IS_SPRINTING", new EnvironmentVariable("IS_SPRINTING", "", "Бежит ли игрок"));
+        // Player variables
+        environmentVariables.put("PLAYER_NAME", new EnvironmentVariable("PLAYER_NAME", "", "Current player name"));
+        environmentVariables.put("PLAYER_X", new EnvironmentVariable("PLAYER_X", "", "Player X coordinate"));
+        environmentVariables.put("PLAYER_Y", new EnvironmentVariable("PLAYER_Y", "", "Player Y coordinate"));
+        environmentVariables.put("PLAYER_Z", new EnvironmentVariable("PLAYER_Z", "", "Player Z coordinate"));
+        environmentVariables.put("PLAYER_YAW", new EnvironmentVariable("PLAYER_YAW", "", "Player horizontal rotation"));
+        environmentVariables.put("PLAYER_PITCH", new EnvironmentVariable("PLAYER_PITCH", "", "Player vertical rotation"));
+        environmentVariables.put("PLAYER_HEALTH", new EnvironmentVariable("PLAYER_HEALTH", "", "Player health"));
+        environmentVariables.put("PLAYER_FOOD", new EnvironmentVariable("PLAYER_FOOD", "", "Player food level"));
+        environmentVariables.put("PLAYER_LEVEL", new EnvironmentVariable("PLAYER_LEVEL", "", "Player level"));
+        environmentVariables.put("PLAYER_SPEED", new EnvironmentVariable("PLAYER_SPEED", "", "Player speed"));
+        environmentVariables.put("PLAYER_XP", new EnvironmentVariable("PLAYER_XP", "", "Player experience level"));
+        environmentVariables.put("IS_SNEAKING", new EnvironmentVariable("IS_SNEAKING", "", "Is player sneaking"));
+        environmentVariables.put("IS_SPRINTING", new EnvironmentVariable("IS_SPRINTING", "", "Is player sprinting"));
         
-        // Мировые переменные
-        environmentVariables.put("WORLD_TIME", new EnvironmentVariable("WORLD_TIME", "", "Текущее время в мире"));
-        environmentVariables.put("WORLD_DAY", new EnvironmentVariable("WORLD_DAY", "", "Текущий день в мире"));
-        environmentVariables.put("WORLD_WEATHER", new EnvironmentVariable("WORLD_WEATHER", "", "Текущая погода в мире"));
-        environmentVariables.put("WORLD_DIFFICULTY", new EnvironmentVariable("WORLD_DIFFICULTY", "", "Сложность мира"));
+        // World variables
+        environmentVariables.put("WORLD_TIME", new EnvironmentVariable("WORLD_TIME", "", "Current world time"));
+        environmentVariables.put("WORLD_DAY", new EnvironmentVariable("WORLD_DAY", "", "Current world day"));
+        environmentVariables.put("WORLD_WEATHER", new EnvironmentVariable("WORLD_WEATHER", "", "Current weather"));
+        environmentVariables.put("WORLD_DIFFICULTY", new EnvironmentVariable("WORLD_DIFFICULTY", "", "World difficulty"));
         
-        // Системные переменные
-        environmentVariables.put("SCRIPT_NAME", new EnvironmentVariable("SCRIPT_NAME", "", "Имя текущего скрипта"));
-        environmentVariables.put("SCRIPT_PATH", new EnvironmentVariable("SCRIPT_PATH", "", "Путь к текущему скрипту"));
-        environmentVariables.put("SCRIPT_DIR", new EnvironmentVariable("SCRIPT_DIR", "", "Директория текущего скрипта"));
+        // System variables
+        environmentVariables.put("SCRIPT_NAME", new EnvironmentVariable("SCRIPT_NAME", "", "Current script name"));
+        environmentVariables.put("SCRIPT_PATH", new EnvironmentVariable("SCRIPT_PATH", "", "Current script path"));
+        environmentVariables.put("SCRIPT_DIR", new EnvironmentVariable("SCRIPT_DIR", "", "Current script directory"));
     }
     
 
@@ -119,7 +117,16 @@ private final VariableStore variableStore = new VariableStore();
             updateEnvVar("PLAYER_Z", String.format("%.2f", mc.player.getZ()));
             updateEnvVar("PLAYER_YAW", String.format("%.2f", mc.player.getYaw()));
             updateEnvVar("PLAYER_PITCH", String.format("%.2f", mc.player.getPitch()));
-            updateEnvVar("PLAYER_HEALTH", String.format("%.1f", mc.player.getHealth()));
+            float health = mc.player.getHealth();
+            String healthStr = String.format("%.1f", health);
+            updateEnvVar("PLAYER_HEALTH", healthStr);
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
+                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptInterpreter.updateEnvironmentVariables:120\",\"message\":\"Updated PLAYER_HEALTH\",\"data\":{\"health\":" + health + ",\"healthStr\":\"" + healthStr + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\"}\n");
+                fw.close();
+            } catch (Exception e) {}
+            // #endregion
             updateEnvVar("PLAYER_FOOD", String.valueOf(mc.player.getHungerManager().getFoodLevel()));
             updateEnvVar("PLAYER_XP", String.valueOf(mc.player.experienceLevel));
             updateEnvVar("PLAYER_LEVEL", String.valueOf(mc.player.experienceLevel));
@@ -140,7 +147,7 @@ private final VariableStore variableStore = new VariableStore();
             updateEnvVar("IS_SNEAKING", String.valueOf(mc.player.isSneaking()));
             updateEnvVar("IS_SPRINTING", String.valueOf(mc.player.isSprinting()));
             
-            // Обновляем подсказки в редакторе
+            // Update editor hints
             CodeCompletionManager.updateEnvironmentVariables();
         }
     }
@@ -155,10 +162,10 @@ private final VariableStore variableStore = new VariableStore();
     }
 
     /**
-     * Парсит код и возвращает список команд для выполнения.
+     * Parse code and return list of commands to execute.
      *
-     * @param code Строка кода в формате KHScript
-     * @return Список распознанных команд
+     * @param code KHScript code string
+     * @return List of recognized commands
      */
     public List<Command> parseCommands(String code) {
         List<Command> commands = new ArrayList<>();
@@ -168,7 +175,7 @@ private final VariableStore variableStore = new VariableStore();
             String line = lines[i].trim();
             if (!line.isEmpty() && !line.startsWith("//")) {
                 try {
-                    // Проверяем на определение функции
+                    // Check for function definition
                     Matcher funcMatcher = FUNCTION_PATTERN.matcher(line);
                     if (funcMatcher.find()) {
                         String funcName = funcMatcher.group(1);
@@ -196,7 +203,7 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Проверяем на вызов функции
+                    // Check for function call
                     Matcher funcCallMatcher = FUNCTION_CALL_PATTERN.matcher(line);
                     if (funcCallMatcher.find()) {
                         String funcName = funcCallMatcher.group(1);
@@ -209,19 +216,19 @@ private final VariableStore variableStore = new VariableStore();
                         
                         Function func = functions.get(funcName);
                         if (func != null) {
-                            // Сохраняем текущие значения переменных
+                            // Save current variable values
                             Map<String, String> oldVars = new HashMap<>(variables);
                             
-                            // Устанавливаем параметры функции
+                            // Set function parameters
                             List<String> params = func.getParameters();
                             for (int j = 0; j < params.size() && j < arguments.size(); j++) {
                                 variables.put(params.get(j), arguments.get(j));
                             }
                             
-                            // Выполняем тело функции
+                            // Execute function body
                             parseCommands(func.getBody());
                             
-                            // Восстанавливаем значения переменных
+                            // Restore variable values
                             variables.clear();
                             variables.putAll(oldVars);
                         } else {
@@ -279,7 +286,8 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Проверяем на условные конструкции
+
+                    // Check for conditional statements
                     Matcher ifMatcher = IF_PATTERN.matcher(line);
                     if (ifMatcher.find()) {
                         // Support both Rust-style (if cond {) and legacy (if (cond) {)
@@ -302,7 +310,7 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Проверяем на цикл while
+                    // Check for while loop
                     Matcher whileMatcher = WHILE_PATTERN.matcher(line);
                     if (whileMatcher.find()) {
                         // Support both Rust-style (while cond {) and legacy (while (cond) {)
@@ -325,7 +333,7 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Проверяем на цикл for
+                    // Check for for loop
                     Matcher forMatcher = FOR_PATTERN.matcher(line);
                     if (forMatcher.find()) {
                         String[] forParts = forMatcher.group(1).split(";");
@@ -334,7 +342,7 @@ private final VariableStore variableStore = new VariableStore();
                             String condition = forParts[1].trim();
                             String increment = forParts[2].trim();
                             
-                            // Выполняем инициализацию
+                            // Execute initialization
                             if (!init.isEmpty()) {
                                 parseCommands(init);
                             }
@@ -362,7 +370,7 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Обрабатываем обычные команды
+                    // Process regular commands
                     line = processVariables(line);
                     List<String> parts = parseArguments(line);
                     if (parts.isEmpty()) {
@@ -391,7 +399,7 @@ private final VariableStore variableStore = new VariableStore();
     }
 
     /**
-     * Обрабатывает присваивание переменной
+     * Process variable assignment
      */
     private void processVariableAssignment(String line) {
         String[] parts = line.split("=", 2);
@@ -399,7 +407,7 @@ private final VariableStore variableStore = new VariableStore();
 String varName = parts[0].trim();
             String varValue = parts[1].trim();
 
-            // Если значение в кавычках, удаляем их
+            // Remove quotes if present
             if (varValue.startsWith("\"") && varValue.endsWith("\"")) {
     varValue = varValue.substring(1, varValue.length() - 1);
             }
@@ -410,12 +418,12 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Заменяет переменные в строке на их значения
+     * Replace variables in string with their values
      */
     private String processVariables(String line) {
         String result = line;
         
-        // Обрабатываем переменные окружения
+        // Process environment variables
         Matcher envMatcher = ENV_VAR_PATTERN.matcher(line);
         StringBuffer sb = new StringBuffer();
         while (envMatcher.find()) {
@@ -429,7 +437,7 @@ String varName = parts[0].trim();
         envMatcher.appendTail(sb);
         result = sb.toString();
 
-        // Обрабатываем пользовательские переменные
+        // Process user variables
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             Pattern varPattern = Pattern.compile("\\$" + Pattern.quote(entry.getKey()));
             Matcher varMatcher = varPattern.matcher(result);
@@ -445,13 +453,13 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Добавляет команду в очередь для асинхронного выполнения.
+     * Add command to queue for async execution.
      *
-     * @param command Команда для выполнения
-     * @param args    Аргументы команды
+     * @param command Command to execute
+     * @param args    Command arguments
      */
     public void queueCommand(Command command, String[] args) {
-        // Обрабатываем переменные в аргументах
+        // Process variables in arguments
         String[] processedArgs = new String[args.length];
         for (int i = 0; i < args.length; i++) {
             processedArgs[i] = processVariables(args[i]);
@@ -464,18 +472,18 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Запускает выполнение команд из очереди.
-     * Можно вызвать из GUI для запуска скрипта.
+     * Start executing queued commands.
+     * Can be called from GUI to run script.
      */
     public void executeQueuedCommands() {
         if (!isProcessing && !shouldStop && !commandQueue.isEmpty()) {
-            updateEnvironmentVariables(); // Обновляем переменные окружения перед выполнением
+            updateEnvironmentVariables(); // Update environment variables before execution
             processNextCommand();
         }
     }
 
     /**
-     * Обрабатывает следующую команду из очереди асинхронно.
+     * Process next command from queue asynchronously.
      */
     private void processNextCommand() {
         if (commandQueue.isEmpty() || shouldStop) {
@@ -503,7 +511,7 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Останавливает выполнение всех команд в очереди.
+     * Stop execution of all queued commands.
      */
     public void stopProcessing() {
         shouldStop = true;
@@ -512,10 +520,10 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Разбирает строку на команды и аргументы, учитывая кавычки.
+     * Parse line into commands and arguments, respecting quotes.
      *
-     * @param line Строка для парсинга
-     * @return Список частей: команда и аргументы
+     * @param line Line to parse
+     * @return List of parts: command and arguments
      */
     private static List<String> parseArguments(String line) {
         List<String> args = new ArrayList<>();
@@ -543,39 +551,39 @@ String varName = parts[0].trim();
     }
 
     /**
-     * Очищает все переменные
+     * Clear all variables
      */
     public void clearVariables() {
         variables.clear();
-        // Очищаем пользовательские переменные в CodeCompletionManager
+        // Clear user variables in CodeCompletionManager
         CodeCompletionManager.clearUserVariables();
     }
 
     /**
-     * Получает значение переменной
+     * Get variable value
      */
     public String getVariable(String name) {
         return variables.get(name);
     }
 
     /**
-     * Устанавливает значение переменной
+     * Set variable value
      */
     public void setVariable(String name, String value) {
         variables.put(name, value);
-        // Уведомляем CodeCompletionManager о новой переменной
+        // Notify CodeCompletionManager about new variable
         CodeCompletionManager.addUserVariable(name);
     }
 
     /**
-     * Проверяет, существует ли переменная
+     * Check if variable exists
      */
     public boolean hasVariable(String name) {
         return variables.containsKey(name);
     }
 
     /**
-     * Возвращает все переменные скрипта
+     * Return all script variables
      */
     public Map<String, String> getVariables() {
         return variables;
@@ -640,7 +648,7 @@ String varName = parts[0].trim();
     }
     
     /**
-     * Внутренний класс для хранения команды и её аргументов в очереди.
+     * Internal class for storing command and its arguments in queue.
      */
     private static class CommandEntry {
         final Command command;

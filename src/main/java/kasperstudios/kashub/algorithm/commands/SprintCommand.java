@@ -23,12 +23,12 @@ public class SprintCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Заставляет игрока бежать";
+        return "Makes player sprint";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] или toggle/stop - длительность в мс или переключение";
+        return "[duration_ms] or toggle/stop - duration in ms or toggle";
     }
 
     @Override

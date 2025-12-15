@@ -28,12 +28,12 @@ public class EatCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Съедает указанную еду или лучшую доступную";
+        return "Eats specified food or best available";
     }
 
     @Override
     public String getParameters() {
-        return "[itemName] - имя еды (опционально, без указания съест лучшую доступную)";
+        return "[itemName] - food name (optional, eats best available if not specified)";
     }
 
     @Override

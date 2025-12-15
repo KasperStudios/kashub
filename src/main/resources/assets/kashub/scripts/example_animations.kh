@@ -3,19 +3,14 @@
 // ===================================
 // Demonstrates custom player animation
 
-// List available animation
-animation list
-
-wait 1000
-
 // Play wave animation
 print "Waving..."
 animation play wave
 wait 2500
 
-// Play dance animation with looping
+// Play dance animation
 print "Dancing..."
-animation play dance loop=true
+animation play dance
 wait 5000
 animation stop dance
 
@@ -29,7 +24,7 @@ print "Glowing..."
 animation play glow
 wait 5000
 
-// Stop all animation
-animation stopAll
+// Stop all animations
+animation stop
 
 print "Animation demo complete!"

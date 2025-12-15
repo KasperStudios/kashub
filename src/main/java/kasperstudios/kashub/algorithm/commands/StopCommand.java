@@ -18,12 +18,12 @@ public class StopCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Останавливает выполнение скриптов и действий";
+        return "Stops script execution and actions";
     }
 
     @Override
     public String getParameters() {
-        return "[all/scripts/events/movement] - что остановить (по умолчанию all)";
+        return "[all/scripts/events/movement] - what to stop (default: all)";
     }
 
     @Override

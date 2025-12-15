@@ -16,12 +16,12 @@ public class OnEventCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Регистрирует скрипт для выполнения при событии";
+        return "Registers script to execute on event";
     }
 
     @Override
     public String getParameters() {
-        return "<eventName> { <script> } - имя события и скрипт для выполнения";
+        return "<eventName> { <script> } - event name and script to execute";
     }
 
     @Override

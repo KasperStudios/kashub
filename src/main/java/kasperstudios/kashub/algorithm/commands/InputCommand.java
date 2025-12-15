@@ -33,7 +33,7 @@ public class InputCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Высокоуровневое управление вводом игрока";
+        return "High-level player input control";
     }
 
     @Override

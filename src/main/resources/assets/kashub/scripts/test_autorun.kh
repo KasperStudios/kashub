@@ -1,0 +1,10 @@
+// ===================================
+// Test Script for Autorun
+// ===================================
+// Add this script to autorunScripts in config.json to test autorun
+
+print "Autorun test script started!"
+print "This script was automatically started on world load"
+wait 1000
+print "Autorun test complete!"
+

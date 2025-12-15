@@ -12,8 +12,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Команда для поворота игрока к указанным координатам или сущности
- * Синтаксис: lookAt x y z или lookAt entity [type]
+ * Command for rotating player to look at coordinates or entity
+ * Syntax: lookAt x y z or lookAt entity [type]
  */
 public class LookAtCommand implements Command {
 
@@ -24,7 +24,7 @@ public class LookAtCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Поворачивает игрока к указанным координатам или ближайшей сущности";
+        return "Rotates player to look at specified coordinates or nearest entity";
     }
 
     @Override

@@ -2,6 +2,121 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v0.6.0 beta] - 2025-12-15
+
+### 🔥 Major Features
+
+#### Hot-Reload System
+- **Automatic script reloading** when files are modified externally
+- Edit scripts in your favorite editor (VSCode, IntelliJ, Notepad++, etc.) and see changes instantly
+- Dual monitoring system:
+  - Java NIO `WatchService` for real-time file system events
+  - Periodic polling (configurable interval, default: 1000ms) for external editor compatibility
+- Configurable via Settings panel (`hotReload` option)
+- Automatic registration/unregistration with script lifecycle
+- Thread-safe reloading with error handling
+- **Use case**: Edit long-running scripts without stopping them!
+- **Note**: May have 1-2 second delay for external editors (this is normal)
+
+#### Autorun System
+- **Automatic script execution** on world load
+- Configure multiple scripts to start automatically when joining a world
+- Visual management interface in Task Manager (new "Autorun" tab)
+- Scripts execute sequentially with error handling
+- Failed scripts don't block other autorun scripts
+- Configurable via Settings panel (`autorunEnabled`, `autorunScripts`)
+- **Use case**: Always-on utility scripts (anti-AFK, auto-farm, monitoring, etc.)
+
+### ✨ Added
+
+#### Task Manager UI Enhancements
+- **Tabbed Interface** - Task Manager now has tabs like Windows Task Manager
+  - **Processes Tab** - View and manage running scripts (existing functionality)
+  - **Autorun Tab** - NEW! Manage scripts that auto-start on game launch
+- **Autorun Management Panel** - Visual interface for autorun scripts
+  - Left panel: Currently configured autorun scripts
+  - Right panel: Available scripts that can be added
+  - Add/Remove buttons (→/←) to move scripts between panels
+  - Real-time status indicators (running/stopped)
+  - Changes saved automatically to config
+
+#### Configuration
+- New settings in `config/kashub/config.json`:
+  - `hotReload` - Enable/disable hot-reload (default: false)
+  - `hotReloadCheckInterval` - Polling interval in milliseconds (default: 1000)
+  - `autorunEnabled` - Enable/disable autorun (default: false)
+  - `autorunScripts` - List of scripts to auto-start (default: [])
+- Settings accessible via in-game Settings panel
+- Auto-save on configuration changes
+
+### 🐛 Fixed
+
+#### Script Execution
+- **If/Else If/Else Blocks** - Fixed detection of `else` blocks in conditional chains
+  - `findIfElseChain` now correctly finds all blocks including `else`
+  - Fixed parsing of `} else {` syntax on same line
+  - Extended search range to include blocks outside initial if block
+- **While (true) Loops** - Fixed infinite loop execution
+  - Loops now correctly re-queue after each iteration
+  - Fixed `findBlockEnd` to properly handle `} else {` syntax
+  - Commands after conditional blocks (like `wait 200`) now execute correctly
+- **Environment Variables** - Fixed timing of variable updates
+  - Variables now update before condition evaluation
+  - Health checks now use current values instead of stale data
+  - Fixed incorrect health messages when player has full health
+
+#### Example Scripts
+- **Fixed multiple example scripts** to ensure 100% working examples
+  - `example_animations.kh` - Fixed animation command syntax (`animation stopAll` → `animation stop`)
+  - `example_deepslate_miner.kh` - Fixed loop syntax, input commands, and scan commands
+  - `example_area_clearer.kh` - Fixed `lookAt` relative coordinates syntax and loop syntax
+  - `example_scanner_advanced.kh` - Fixed for loop increment syntax (`i = i + 1` → `i++`)
+  - All examples now use correct command syntax and proper quote formatting
+
+### 🔄 Changed
+- Task Manager dialog now uses tabbed interface for better organization
+- Autorun configuration moved from Settings to Task Manager for easier access
+- Improved command queue management for better stability
+- Enhanced error handling - script errors no longer stop entire script execution
+- Better state cleanup on script stop/restart
+- Improved loop marker re-queuing logic for better performance
+
+### 🔒 Security & Stability
+- Thread-safe hot-reload implementation
+- Debouncing for rapid file changes (prevents reload spam)
+- Protected against file lock issues on Windows
+- Safe handling of missing/deleted files during hot-reload
+- Autorun scripts validate before execution
+
+### 🔄 Migration from v0.5.x
+
+**No breaking changes!** All existing scripts work as-is.
+
+**To enable new features:**
+1. Open Settings → Enable "Hot-Reload" (optional)
+2. Open Task Manager → Autorun tab → Add scripts with → button
+3. Enable "Autorun" in Settings
+4. Done! 🎉
+
+**Recommended workflow:**
+- Use Kashub editor for quick tests and debugging
+- Use external editor (VSCode/IntelliJ) for serious development
+- Let hot-reload sync changes automatically
+
+### ⚠️ Known Issues (v0.6.0 Beta)
+
+- **Hot-reload**: 1-2 second delay for external editors (by design, ensures file write completion)
+- **Windows**: Rare file lock delays on rapid saves (working on fix for v0.6.1)
+- **Large scripts** (>1000 lines): Slower reload time (optimization planned)
+
+**These will be addressed in v0.6.1!**
+
+### 📚 Notes
+- **Hot-reload** may have 1-2 second delay for external editors (this is normal)
+- **Autorun** scripts execute once per world join
+- Both features disabled by default for backward compatibility
+- **v0.6.0 beta** - Please report any issues on GitHub!
+
 ## [v0.2.1 beta] - 2025-12-05
 
 ### Added

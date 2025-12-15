@@ -19,12 +19,12 @@ public class DropItemCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Выбрасывает предметы из инвентаря";
+        return "Drops items from inventory";
     }
 
     @Override
     public String getParameters() {
-        return "[itemName] [count] или all - имя предмета и количество, или все предметы";
+        return "[itemName] [count] or all - item name and count, or all items";
     }
 
     @Override

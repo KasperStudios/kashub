@@ -4,6 +4,7 @@ import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.runtime.ScriptType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 
 import java.io.*;
@@ -15,15 +16,8 @@ import java.util.stream.Collectors;
 public class ScriptManager {
     private static final Path SCRIPTS_DIR = Paths.get("config", "kashub", "scripts");
     
-    private static final List<String> SYSTEM_SCRIPTS = List.of(
-        "example_vision",
-        "example_http", 
-        "example_input",
-        "example_animations",
-        "example_tasks",
-        "example_ore_detector",
-        "example_music"
-    );
+    // Cache for discovered system scripts
+    private static List<String> cachedSystemScripts = null;
 
     static {
         try {
@@ -41,7 +35,9 @@ public class ScriptManager {
             }
             
             String filename = name.endsWith(".kh") ? name : name + ".kh";
+            // Support folders: "folder/script.kh" -> create folder structure
             Path scriptFile = SCRIPTS_DIR.resolve(filename);
+            Files.createDirectories(scriptFile.getParent());
             Files.writeString(scriptFile, content, StandardCharsets.UTF_8);
             return true;
         } catch (IOException e) {
@@ -80,7 +76,9 @@ public class ScriptManager {
                 return null;
             }
 
-            Identifier id = Identifier.of(Kashub.MOD_ID, "scripts/" + name + ".kh");
+            // Support folders: "folder/script" -> "scripts/folder/script.kh"
+            String path = name.contains("/") ? "scripts/" + name + ".kh" : "scripts/" + name + ".kh";
+            Identifier id = Identifier.of(Kashub.MOD_ID, path);
             Optional<Resource> resourceOpt = client.getResourceManager().getResource(id);
             
             if (resourceOpt.isPresent()) {
@@ -105,7 +103,12 @@ public class ScriptManager {
 
     public static boolean isSystemScript(String name) {
         String baseName = name.replace(".kh", "");
-        return SYSTEM_SCRIPTS.contains(baseName) || baseName.startsWith("example_") || baseName.startsWith("system_");
+        // Check if it's in system scripts cache or matches pattern
+        if (cachedSystemScripts != null && cachedSystemScripts.contains(baseName)) {
+            return true;
+        }
+        // Also check by pattern (for scripts not yet discovered)
+        return baseName.startsWith("example_") || baseName.startsWith("system_");
     }
 
     public static ScriptType getScriptType(String name) {
@@ -131,26 +134,108 @@ public class ScriptManager {
     }
 
     public static List<String> getUserScripts() {
+        return getUserScripts("");
+    }
+    
+    /**
+     * Get user scripts, optionally from a subdirectory
+     * @param subdir Subdirectory path (e.g., "folder" or "folder/subfolder"), empty string for root
+     */
+    public static List<String> getUserScripts(String subdir) {
         try {
-            if (!Files.exists(SCRIPTS_DIR)) {
+            Path scriptsPath = subdir.isEmpty() ? SCRIPTS_DIR : SCRIPTS_DIR.resolve(subdir);
+            if (!Files.exists(scriptsPath)) {
                 return new ArrayList<>();
             }
             
-            return Files.list(SCRIPTS_DIR)
-                .map(path -> path.getFileName().toString())
-                .filter(name -> name.endsWith(".kh"))
-                .map(name -> name.replace(".kh", ""))
-                .filter(name -> !isSystemScript(name))
-                .sorted()
-                .collect(Collectors.toList());
+            List<String> scripts = new ArrayList<>();
+            Files.walk(scriptsPath)
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".kh"))
+                .forEach(path -> {
+                    try {
+                        Path relativePath = SCRIPTS_DIR.relativize(path);
+                        String scriptName = relativePath.toString().replace(".kh", "").replace("\\", "/");
+                        if (!isSystemScript(scriptName)) {
+                            scripts.add(scriptName);
+                        }
+                    } catch (Exception e) {
+                        Kashub.LOGGER.warn("Failed to process script path: " + path, e);
+                    }
+                });
+            
+            scripts.sort(String::compareToIgnoreCase);
+            return scripts;
         } catch (IOException e) {
             Kashub.LOGGER.error("Failed to list user scripts", e);
             return new ArrayList<>();
         }
     }
 
+    /**
+     * Automatically discover all system scripts from resources
+     */
     public static List<String> getSystemScripts() {
-        return new ArrayList<>(SYSTEM_SCRIPTS);
+        // Return cached list if available
+        if (cachedSystemScripts != null) {
+            return new ArrayList<>(cachedSystemScripts);
+        }
+        
+        List<String> scripts = new ArrayList<>();
+        try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client != null && client.getResourceManager() != null) {
+                ResourceManager resourceManager = client.getResourceManager();
+                
+                // Find all .kh files in assets/kashub/scripts/
+                // Use findResources with path prefix "scripts" and filter for .kh files
+                Map<Identifier, Resource> foundResources = resourceManager.findResources("scripts", 
+                    id -> id.getPath().endsWith(".kh"));
+                
+                for (Identifier id : foundResources.keySet()) {
+                    // Only process scripts from our mod namespace
+                    if (!id.getNamespace().equals(Kashub.MOD_ID)) {
+                        continue;
+                    }
+                    
+                    // Extract script name from path (e.g., "scripts/example_basic.kh" -> "example_basic")
+                    String path = id.getPath();
+                    if (path.startsWith("scripts/") && path.endsWith(".kh")) {
+                        String scriptName = path.substring(8, path.length() - 3); // Remove "scripts/" prefix and ".kh" suffix
+                        // Handle subdirectories: "scripts/folder/script.kh" -> "folder/script"
+                        scripts.add(scriptName);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Failed to discover system scripts", e);
+            // Fallback: try to load known scripts to verify they exist
+            List<String> fallback = List.of(
+                "example_vision", "example_http", "example_input", "example_animations",
+                "example_tasks", "example_ore_detector", "example_music",
+                "example_basic", "example_building", "example_combat", "example_farming",
+                "example_mining", "example_autocraft", "example_autotrade", "example_events",
+                "example_pathfind_advanced", "example_scanner_advanced", "example_deepslate_miner",
+                "example_area_clearer"
+            );
+            for (String name : fallback) {
+                if (loadSystemScript(name) != null) {
+                    scripts.add(name);
+                }
+            }
+        }
+        
+        // Sort and cache
+        scripts.sort(String::compareToIgnoreCase);
+        cachedSystemScripts = scripts;
+        return new ArrayList<>(scripts);
+    }
+    
+    /**
+     * Clear the system scripts cache (call when resource manager reloads)
+     */
+    public static void clearSystemScriptsCache() {
+        cachedSystemScripts = null;
     }
 
     public static List<String> getAllScripts() {
@@ -161,10 +246,16 @@ public class ScriptManager {
     }
 
     public static List<ScriptInfo> getAllScriptsWithInfo() {
+        return getAllScriptsWithInfo(false);
+    }
+    
+    public static List<ScriptInfo> getAllScriptsWithInfo(boolean hideSystemScripts) {
         List<ScriptInfo> result = new ArrayList<>();
         
+        if (!hideSystemScripts) {
         for (String name : getSystemScripts()) {
             result.add(new ScriptInfo(name, ScriptType.SYSTEM));
+            }
         }
         
         for (String name : getUserScripts()) {

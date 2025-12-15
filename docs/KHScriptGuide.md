@@ -37,7 +37,8 @@ A comprehensive guide for scripting with the Kashub (KHScript) automation system
 ### Syntax
 - One command per line
 - Comments with `//`
-- Variables via `$name`
+- Variables: `let x = 5` or `x = 5` (legacy)
+- Use variables: `$x` or `x` (in conditions)
 - Strings use `"double quotes"`
 
 ### Core Commands
@@ -54,13 +55,12 @@ chat <message>
 - Keybinds (if configured)
 
 ## Control Flow
-```
-// Loop N times
-loop 10
-    print "Iteration"
-end
 
-// For loop with counter
+KHScript supports both **Legacy** and **Rust-style** syntax:
+
+### Legacy Syntax (with parentheses)
+```javascript
+// For loop
 for (i = 0; i < 10; i++) {
     print "Counter: $i"
 }
@@ -78,6 +78,46 @@ if ($PLAYER_HEALTH < 10) {
 } else {
     print "Health OK"
 }
+```
+
+### Rust-style Syntax (without parentheses)
+```javascript
+// For loop
+for (i = 0; i < 10; i++) {
+    print "Counter: $i"
+}
+
+// While loop
+while health > 10 {
+    attack
+    wait 500
+}
+
+// If-else
+if PLAYER_HEALTH < 10 {
+    print "Low health!"
+    eat
+} else {
+    print "Health OK"
+}
+
+// Else if chain
+if x > 10 {
+    print "Large"
+} else if x > 5 {
+    print "Medium"
+} else {
+    print "Small"
+}
+```
+
+### Loop Command
+```javascript
+// Loop N times
+loop 10 {
+    print "Iteration"
+}
+```
 
 // Logical operators
 if ($x > 5 && $y < 10) {
@@ -91,12 +131,33 @@ if ($health < 5 || $food < 3) {
 - `while`, `for`, `loop` supported
 - `break`, `continue` for loop control
 - `&&` (AND) and `||` (OR) logical operators
-- Modulo operator `%` in conditions: `if ($i % 8 == 0)`
+- Modulo operator `%` in conditions: `if (i % 8 == 0)` or `if $i % 8 == 0`
+- **Arithmetic expressions** are automatically evaluated: `counter = $counter + 1` → `counter = 1`
 
 ## Variables & Context
-- Set variable: `myVar = value` (without $ on left side)
-- Use variable: `$myVar` (with $ prefix)
-- Use: `print Value: $myVar`
+
+### Variable Declaration
+KHScript supports multiple variable declaration styles:
+
+```javascript
+// Legacy style
+myVar = "value"
+
+// Rust-style: let (mutable)
+let counter = 0
+counter = counter + 1
+
+// Rust-style: const (immutable)
+const MAX_ITERATIONS = 100
+// MAX_ITERATIONS = 200  // Error: cannot reassign const
+```
+
+### Variable Usage
+- Use variable: `$myVar` (with $ prefix) or `myVar` (in conditions)
+- Example: `print Value: $myVar`
+- In conditions: `if x > 5 {` or `if $x > 5 {` (both work)
+
+### Built-in Context
 - Built-in context from commands:
   - `scan_*`, `inv_*`, `pathfind_*`, `player_*`, etc.
 - `ScriptInterpreter.getContext()` accessible for advanced integration
@@ -413,6 +474,7 @@ crashGuard report
 - Trigger with `Tab` key
 - Commands, variables, snippets
 - Environment variables (`$PLAYER_*`)
+- Supports both `let`/`const` and legacy variable syntax
 
 ### Scrolling
 - **Vertical scroll**: Mouse wheel

@@ -56,7 +56,7 @@ public class AutoTradeCommand implements Command {
     
     @Override
     public String getDescription() {
-        return "Автоматическая торговля с жителями";
+        return "Automated trading with villagers";
     }
     
     @Override

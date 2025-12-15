@@ -11,8 +11,8 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * Менеджер черновиков для редактора скриптов
- * Автоматически сохраняет несохранённые изменения и предлагает восстановление
+ * Draft manager for script editor
+ * Automatically saves unsaved changes and offers recovery
  */
 public class DraftManager {
     private static final Logger LOGGER = LogManager.getLogger(DraftManager.class);
@@ -21,11 +21,11 @@ public class DraftManager {
     
     private static DraftManager instance;
     
-    // Текущие черновики в памяти
+    // Current drafts in memory
     private final Map<String, Draft> activeDrafts = new HashMap<>();
     
-    // Интервал автосохранения (мс)
-    private static final long AUTO_SAVE_INTERVAL = 30000; // 30 секунд
+    // Auto-save interval (ms)
+    private static final long AUTO_SAVE_INTERVAL = 30000; // 30 seconds
     private long lastAutoSave = 0;
     
     private DraftManager() {
@@ -48,7 +48,7 @@ public class DraftManager {
     }
     
     /**
-     * Сохраняет черновик для скрипта
+     * Save draft for script
      */
     public void saveDraft(String scriptName, String content, int cursorPosition) {
         Draft draft = new Draft();
@@ -59,7 +59,7 @@ public class DraftManager {
         
         activeDrafts.put(scriptName, draft);
         
-        // Сохраняем на диск
+        // Save to disk
         Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
         try {
             String json = GSON.toJson(draft);
@@ -71,15 +71,15 @@ public class DraftManager {
     }
     
     /**
-     * Загружает черновик для скрипта
+     * Load draft for script
      */
     public Draft loadDraft(String scriptName) {
-        // Сначала проверяем память
+        // First check memory
         if (activeDrafts.containsKey(scriptName)) {
             return activeDrafts.get(scriptName);
         }
         
-        // Затем проверяем диск
+        // Then check disk
         Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
         if (Files.exists(draftPath)) {
             try {
@@ -96,7 +96,7 @@ public class DraftManager {
     }
     
     /**
-     * Проверяет, есть ли черновик для скрипта
+     * Check if draft exists for script
      */
     public boolean hasDraft(String scriptName) {
         if (activeDrafts.containsKey(scriptName)) {
@@ -108,7 +108,7 @@ public class DraftManager {
     }
     
     /**
-     * Удаляет черновик (после успешного сохранения)
+     * Delete draft (after successful save)
      */
     public void deleteDraft(String scriptName) {
         activeDrafts.remove(scriptName);
@@ -123,7 +123,7 @@ public class DraftManager {
     }
     
     /**
-     * Получает список всех доступных черновиков
+     * Get list of all available drafts
      */
     public List<DraftInfo> getAllDrafts() {
         List<DraftInfo> drafts = new ArrayList<>();
@@ -150,14 +150,14 @@ public class DraftManager {
             LOGGER.error("Failed to list drafts", e);
         }
         
-        // Сортируем по времени (новые первые)
+        // Sort by time (newest first)
         drafts.sort((a, b) -> Long.compare(b.timestamp, a.timestamp));
         
         return drafts;
     }
     
     /**
-     * Автосохранение черновика (вызывается периодически)
+     * Auto-save draft (called periodically)
      */
     public void autoSave(String scriptName, String content, int cursorPosition) {
         long now = System.currentTimeMillis();
@@ -168,7 +168,7 @@ public class DraftManager {
     }
     
     /**
-     * Очищает старые черновики (старше 7 дней)
+     * Cleanup old drafts (older than 7 days)
      */
     public void cleanupOldDrafts() {
         long cutoff = Instant.now().toEpochMilli() - (7 * 24 * 60 * 60 * 1000L);
@@ -200,7 +200,7 @@ public class DraftManager {
     }
     
     /**
-     * Класс для хранения черновика
+     * Class for storing draft
      */
     public static class Draft {
         public String scriptName;
@@ -210,7 +210,7 @@ public class DraftManager {
     }
     
     /**
-     * Краткая информация о черновике
+     * Brief draft information
      */
     public static class DraftInfo {
         public final String scriptName;

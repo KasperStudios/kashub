@@ -28,12 +28,12 @@ public class SpeedHackCommand implements Command {
 
   @Override
   public String getDescription() {
-    return "Изменяет скорость передвижения игрока";
+    return "Changes player movement speed";
   }
 
   @Override
   public String getParameters() {
-    return "<multiplier|off> - множитель скорости (0.1-10.0) или 'off' для отключения";
+    return "<multiplier|off> - speed multiplier (0.1-10.0) or 'off' to disable";
   }
   
   @Override
@@ -43,15 +43,15 @@ public class SpeedHackCommand implements Command {
   
   @Override
   public String getDetailedHelp() {
-    return "Изменяет скорость передвижения игрока.\n\n" +
-           "Параметры:\n" +
-           "  <multiplier> - Множитель скорости (0.1 - 10.0)\n" +
-           "  off          - Отключить и вернуть нормальную скорость\n\n" +
-           "Примеры:\n" +
-           "  speed 2.0    - Удвоить скорость\n" +
-           "  speed 0.5    - Половинная скорость\n" +
-           "  speed off    - Вернуть нормальную скорость\n\n" +
-           "Примечание: Слишком высокая скорость может вызвать проблемы на серверах.";
+    return "Changes player movement speed.\n\n" +
+           "Parameters:\n" +
+           "  <multiplier> - Speed multiplier (0.1 - 10.0)\n" +
+           "  off          - Disable and restore normal speed\n\n" +
+           "Examples:\n" +
+           "  speed 2.0    - Double speed\n" +
+           "  speed 0.5    - Half speed\n" +
+           "  speed off    - Restore normal speed\n\n" +
+           "Note: Too high speed may cause issues on servers.";
   }
 
   @Override

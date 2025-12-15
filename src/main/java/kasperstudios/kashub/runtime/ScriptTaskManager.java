@@ -2,6 +2,7 @@ package kasperstudios.kashub.runtime;
 
 import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import kasperstudios.kashub.config.KashubConfig;
+import kasperstudios.kashub.util.ScriptFileWatcher;
 import kasperstudios.kashub.util.ScriptLogger;
 import kasperstudios.kashub.util.ScriptManager;
 
@@ -59,6 +60,11 @@ public class ScriptTaskManager {
         
         ScriptLogger.getInstance().info("Started task " + id + ": " + name);
         
+        // Register for hot-reload if enabled and it's a user script
+        if (KashubConfig.getInstance().hotReload && scriptType == ScriptType.USER) {
+            ScriptFileWatcher.getInstance().registerScript(name, id);
+        }
+        
         // Parse and queue commands to the TASK's own queue (not global interpreter)
         try {
             task.parseAndQueue();
@@ -100,12 +106,21 @@ public class ScriptTaskManager {
 
         KashubConfig config = KashubConfig.getInstance();
         int processed = 0;
+        int runningCount = 0;
 
         for (ScriptTask task : tasks.values()) {
             if (processed >= config.maxScriptsPerTick) break;
             
             if (task.getState() == ScriptState.RUNNING) {
+                runningCount++;
                 try {
+                    // #region agent log
+                    try {
+                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
+                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTaskManager.tick:117\",\"message\":\"Calling tick on task\",\"data\":{\"taskId\":" + task.getId() + ",\"taskName\":\"" + task.getName() + "\",\"processed\":" + processed + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"C\"}\n");
+                        fw.close();
+                    } catch (Exception e) {}
+                    // #endregion
                     task.tick();
                     processed++;
                 } catch (Exception e) {
@@ -116,8 +131,17 @@ public class ScriptTaskManager {
             // Удаляем завершённые задачи старше 5 минут
             if (task.getState() == ScriptState.STOPPED && 
                 System.currentTimeMillis() - task.getLastTickTime() > 300000) {
+                // Unregister from file watcher
+                if (KashubConfig.getInstance().hotReload && task.getScriptType() == ScriptType.USER) {
+                    ScriptFileWatcher.getInstance().unregisterScript(task.getName());
+                }
                 tasks.remove(task.getId());
             }
+        }
+        
+        // Log periodically to track script execution
+        if (runningCount > 0 && System.currentTimeMillis() % 1000 < 50) { // Log roughly once per second
+            ScriptLogger.getInstance().debug("ScriptTaskManager: " + runningCount + " running tasks, processed " + processed + " this tick");
         }
     }
 
@@ -134,7 +158,13 @@ public class ScriptTaskManager {
 
     public void stop(int id) {
         ScriptTask task = tasks.get(id);
-        if (task != null) task.stop();
+        if (task != null) {
+            // Unregister from file watcher
+            if (KashubConfig.getInstance().hotReload && task.getScriptType() == ScriptType.USER) {
+                ScriptFileWatcher.getInstance().unregisterScript(task.getName());
+            }
+            task.stop();
+        }
     }
 
     public void restart(int id) {

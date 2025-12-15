@@ -7,8 +7,8 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
 
 /**
- * Команда для установки здоровья (только в креативе/с читами)
- * Синтаксис: setHealth <value>
+ * Command for setting health (creative/cheats only)
+ * Syntax: setHealth <value>
  */
 public class SetHealthCommand implements Command {
     
@@ -23,12 +23,12 @@ public class SetHealthCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Устанавливает здоровье игрока (требует креатив/читы)";
+        return "Sets player health (requires creative/cheats)";
     }
 
     @Override
     public String getParameters() {
-        return "<value> - значение здоровья (0.0-20.0)";
+        return "<value> - health value (0.0-20.0)";
     }
     
     @Override
@@ -38,15 +38,15 @@ public class SetHealthCommand implements Command {
     
     @Override
     public String getDetailedHelp() {
-        return "Устанавливает здоровье игрока.\n\n" +
-               "Параметры:\n" +
-               "  <value> - Значение здоровья (0.0 - 20.0)\n\n" +
-               "Примеры:\n" +
-               "  setHealth 20    - Полное здоровье\n" +
-               "  setHealth 10    - Половина здоровья\n" +
-               "  setHealth 1     - Критическое здоровье\n\n" +
-               "Примечание: Работает только в креативе или с включенными читами.\n" +
-               "На серверах может не работать из-за проверок на стороне сервера.";
+        return "Sets player health.\n\n" +
+               "Parameters:\n" +
+               "  <value> - Health value (0.0 - 20.0)\n\n" +
+               "Examples:\n" +
+               "  setHealth 20    - Full health\n" +
+               "  setHealth 10    - Half health\n" +
+               "  setHealth 1     - Critical health\n\n" +
+               "Note: Works only in creative mode or with cheats enabled.\n" +
+               "May not work on servers due to server-side checks.";
     }
 
     @Override

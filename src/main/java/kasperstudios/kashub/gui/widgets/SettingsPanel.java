@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Панель настроек редактора
+ * Editor settings panel
  */
 public class SettingsPanel {
     private int x, y, width, height;
@@ -41,7 +41,7 @@ public class SettingsPanel {
         settings.clear();
         KashubConfig config = KashubConfig.getInstance();
         
-        // Секция: Редактор
+        // Section: Editor
         settings.add(new SettingEntry("EDITOR", null, null, true));
         settings.add(new SettingEntry("Line Numbers", "Show line numbers in editor", 
             () -> config.editorLineNumbers, v -> config.editorLineNumbers = v));
@@ -50,7 +50,7 @@ public class SettingsPanel {
         settings.add(new SettingEntry("Syntax Highlight", "Enable syntax highlighting",
             () -> config.editorSyntaxHighlight, v -> config.editorSyntaxHighlight = v));
         
-        // Секция: Логирование
+        // Section: Logging
         settings.add(new SettingEntry("LOGGING", null, null, true));
         settings.add(new SettingEntry("Enable Logging", "Log script execution",
             () -> config.enableLogging, v -> config.enableLogging = v));
@@ -59,7 +59,7 @@ public class SettingsPanel {
         settings.add(new SettingEntry("Log to Chat", "Show logs in game chat",
             () -> config.logToChat, v -> config.logToChat = v));
         
-        // Секция: Безопасность
+        // Section: Security
         settings.add(new SettingEntry("SECURITY", null, null, true));
         settings.add(new SettingEntry("Sandbox Mode", "Restrict dangerous commands",
             () -> config.sandboxMode, v -> config.sandboxMode = v));
@@ -69,20 +69,43 @@ public class SettingsPanel {
             () -> config.allowHttpRequests, v -> config.allowHttpRequests = v));
         settings.add(new SettingEntry("Allow AI", "Enable AI integration",
             () -> config.allowAiIntegration, v -> config.allowAiIntegration = v));
+        
+        // Section: Scripts
+        settings.add(new SettingEntry("SCRIPTS", null, null, true));
+        settings.add(new SettingEntry("Hide System Scripts", "Hide example/system scripts in file panel",
+            () -> config.hideSystemScripts, v -> {
+                config.hideSystemScripts = v;
+                config.save();
+            }));
+        settings.add(new SettingEntry("Hot Reload", "Automatically reload scripts when files change",
+            () -> config.hotReload, v -> {
+                config.hotReload = v;
+                config.save();
+                if (v) {
+                    kasperstudios.kashub.util.ScriptFileWatcher.getInstance().start();
+                } else {
+                    kasperstudios.kashub.util.ScriptFileWatcher.getInstance().stop();
+                }
+            }));
+        settings.add(new SettingEntry("Autorun Enabled", "Auto-run scripts on startup",
+            () -> config.autorunEnabled, v -> {
+                config.autorunEnabled = v;
+                config.save();
+            }));
     }
     
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Фон
+        // Background
         context.fill(x, y, x + width, y + height, theme.consoleBackground);
         
-        // Заголовок
+        // Header
         context.fill(x, y, x + width, y + HEADER_HEIGHT, adjustBrightness(theme.consoleBackground, 10));
         context.drawText(textRenderer, "⚙ SETTINGS", x + 10, y + 10, theme.textColor, true);
         
-        // Разделитель
+        // Separator
         context.fill(x, y + HEADER_HEIGHT - 1, x + width, y + HEADER_HEIGHT, theme.accentColor & 0x66FFFFFF);
         
-        // Список настроек
+        // Settings list
         int listY = y + HEADER_HEIGHT;
         int listHeight = height - HEADER_HEIGHT;
         int visibleRows = listHeight / ROW_HEIGHT;
@@ -103,7 +126,7 @@ public class SettingsPanel {
             }
         }
         
-        // Скроллбар
+        // Scrollbar
         if (settings.size() * ROW_HEIGHT > listHeight) {
             int totalHeight = settings.size() * ROW_HEIGHT;
             int scrollbarHeight = Math.max(20, (listHeight * listHeight) / totalHeight);
@@ -122,16 +145,16 @@ public class SettingsPanel {
     }
     
     private void renderSettingRow(DrawContext context, SettingEntry entry, int rowY, int mouseX, int mouseY) {
-        // Hover эффект
+        // Hover effect
         boolean isHovered = mouseX >= x && mouseX < x + width && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
         if (isHovered) {
             context.fill(x + 4, rowY + 2, x + width - 4, rowY + ROW_HEIGHT - 2, theme.buttonHoverColor);
         }
         
-        // Название
+        // Name
         context.drawText(textRenderer, entry.name, x + 20, rowY + 8, theme.textColor, false);
         
-        // Описание
+        // Description
         if (entry.description != null) {
             context.drawText(textRenderer, entry.description, x + 20, rowY + 22, theme.textDimColor, false);
         }
@@ -149,18 +172,18 @@ public class SettingsPanel {
     private void renderToggle(DrawContext context, int tx, int ty, boolean value, int mouseX, int mouseY) {
         boolean isHovered = mouseX >= tx && mouseX < tx + TOGGLE_WIDTH && mouseY >= ty && mouseY < ty + TOGGLE_HEIGHT;
         
-        // Фон toggle
+        // Toggle background
         int bgColor = value ? theme.consoleSuccessColor : theme.textDimColor;
         if (isHovered) {
             bgColor = brighten(bgColor, 20);
         }
         
-        // Рисуем закруглённый фон
+        // Draw rounded background
         context.fill(tx + 2, ty, tx + TOGGLE_WIDTH - 2, ty + TOGGLE_HEIGHT, bgColor);
         context.fill(tx, ty + 2, tx + TOGGLE_WIDTH, ty + TOGGLE_HEIGHT - 2, bgColor);
         context.fill(tx + 1, ty + 1, tx + TOGGLE_WIDTH - 1, ty + TOGGLE_HEIGHT - 1, bgColor);
         
-        // Кружок
+        // Circle
         int circleX = value ? tx + TOGGLE_WIDTH - TOGGLE_HEIGHT + 2 : tx + 2;
         int circleSize = TOGGLE_HEIGHT - 4;
         context.fill(circleX, ty + 2, circleX + circleSize, ty + 2 + circleSize, 0xFFFFFFFF);
@@ -181,7 +204,7 @@ public class SettingsPanel {
             SettingEntry entry = settings.get(index);
             
             if (!entry.isSection && entry.getter != null && entry.setter != null) {
-                // Проверяем клик по toggle
+                // Check click on toggle
                 int rowY = listY + (index * ROW_HEIGHT) - scrollY;
                 int toggleX = x + width - TOGGLE_WIDTH - 20;
                 int toggleY = rowY + (ROW_HEIGHT - TOGGLE_HEIGHT) / 2;

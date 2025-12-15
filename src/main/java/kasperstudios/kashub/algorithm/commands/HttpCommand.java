@@ -9,11 +9,11 @@ import kasperstudios.kashub.util.ScriptLogger;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Команды для работы с HTTP API
- * Синтаксис:
- *   http.get <url> - GET запрос
- *   http.post <url> <body> - POST запрос
- *   http.status - статус последнего запроса
+ * Commands for HTTP API
+ * Syntax:
+ *   http.get <url> - GET request
+ *   http.post <url> <body> - POST request
+ *   http.status - last request status
  */
 public class HttpCommand implements Command {
 
@@ -24,7 +24,7 @@ public class HttpCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Выполняет HTTP-запросы (GET/POST)";
+        return "Performs HTTP requests (GET/POST)";
     }
 
     @Override

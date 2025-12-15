@@ -1,10 +1,12 @@
 package kasperstudios.kashub.gui.dialogs;
 
+import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.theme.EditorTheme;
 import kasperstudios.kashub.gui.theme.ThemeManager;
 import kasperstudios.kashub.runtime.ScriptState;
 import kasperstudios.kashub.runtime.ScriptTask;
 import kasperstudios.kashub.runtime.ScriptTaskManager;
+import kasperstudios.kashub.util.ScriptManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -16,19 +18,46 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Modal dialog for Task Manager
+ * Modal dialog for Task Manager with tabs (Processes and Autorun)
  */
 public class TaskManagerDialog extends Screen {
     private final Screen parent;
     private EditorTheme theme;
     private final TextRenderer textRenderer;
     
+    // Tab system
+    private enum Tab {
+        PROCESSES("Processes"),
+        AUTORUN("Autorun");
+        
+        private final String displayName;
+        
+        Tab(String displayName) {
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+    
+    private Tab currentTab = Tab.PROCESSES;
+    
+    // Processes tab data
     private List<ScriptTask> tasks = new ArrayList<>();
     private int scrollY = 0;
     private int selectedTaskId = -1;
     private int hoveredTaskId = -1;
     
+    // Autorun tab data
+    private List<String> allScripts = new ArrayList<>();
+    private List<String> autorunScripts = new ArrayList<>();
+    private int autorunScrollY = 0;
+    private int hoveredAutorunIndex = -1;
+    private int hoveredAvailableIndex = -1;
+    
     private static final int HEADER_HEIGHT = 40;
+    private static final int TAB_HEIGHT = 32;
     private static final int ROW_HEIGHT = 36;
     private static final int BUTTON_HEIGHT = 28;
     private static final int FOOTER_HEIGHT = 50;
@@ -53,6 +82,7 @@ public class TaskManagerDialog extends Screen {
     @Override
     protected void init() {
         super.init();
+        refreshAutorunData();
     }
     
     @Override
@@ -97,8 +127,16 @@ public class TaskManagerDialog extends Screen {
         // Header
         renderHeader(context, dx, dy, mouseX, mouseY);
         
-        // Task list
-        renderTaskList(context, dx, dy + HEADER_HEIGHT, mouseX, mouseY, delta);
+        // Tabs
+        renderTabs(context, dx, dy + HEADER_HEIGHT, mouseX, mouseY);
+        
+        // Content based on current tab
+        int contentY = dy + HEADER_HEIGHT + TAB_HEIGHT;
+        if (currentTab == Tab.PROCESSES) {
+            renderTaskList(context, dx, contentY, mouseX, mouseY, delta);
+        } else {
+            renderAutorunPanel(context, dx, contentY, mouseX, mouseY, delta);
+        }
         
         // Footer with buttons
         renderFooter(context, dx, dy + getDialogHeight() - FOOTER_HEIGHT, mouseX, mouseY);
@@ -130,8 +168,40 @@ public class TaskManagerDialog extends Screen {
         context.fill(dx, dy + HEADER_HEIGHT - 1, dx + getDialogWidth(), dy + HEADER_HEIGHT, theme.accentColor & 0x66FFFFFF);
     }
     
+    private void renderTabs(DrawContext context, int dx, int dy, int mouseX, int mouseY) {
+        int tabWidth = getDialogWidth() / Tab.values().length;
+        
+        for (int i = 0; i < Tab.values().length; i++) {
+            Tab tab = Tab.values()[i];
+            int tabX = dx + i * tabWidth;
+            boolean isActive = tab == currentTab;
+            boolean isHovered = mouseX >= tabX && mouseX < tabX + tabWidth && 
+                               mouseY >= dy && mouseY < dy + TAB_HEIGHT;
+            
+            // Tab background
+            int bgColor = isActive ? theme.accentColor : (isHovered ? theme.buttonHoverColor : theme.sidebarColor);
+            context.fill(tabX, dy, tabX + tabWidth, dy + TAB_HEIGHT, bgColor);
+            
+            // Tab text
+            String tabText = tab.getDisplayName();
+            int textWidth = textRenderer.getWidth(tabText);
+            int textX = tabX + (tabWidth - textWidth) / 2;
+            int textY = dy + (TAB_HEIGHT - 9) / 2;
+            int textColor = isActive ? 0xFFFFFFFF : theme.textColor;
+            context.drawText(textRenderer, tabText, textX, textY, textColor, false);
+            
+            // Separator
+            if (i < Tab.values().length - 1) {
+                context.fill(tabX + tabWidth - 1, dy, tabX + tabWidth, dy + TAB_HEIGHT, theme.accentColor & 0x44FFFFFF);
+            }
+        }
+        
+        // Bottom border
+        context.fill(dx, dy + TAB_HEIGHT - 1, dx + getDialogWidth(), dy + TAB_HEIGHT, theme.accentColor & 0x66FFFFFF);
+    }
+    
     private void renderTaskList(DrawContext context, int dx, int dy, int mouseX, int mouseY, float delta) {
-        int listHeight = getDialogHeight() - HEADER_HEIGHT - FOOTER_HEIGHT;
+        int listHeight = getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT;
         
         if (tasks.isEmpty()) {
             // Empty state
@@ -325,17 +395,38 @@ public class TaskManagerDialog extends Screen {
             return true;
         }
         
-        // Task row click
-        int listY = dy + HEADER_HEIGHT;
-        int listHeight = getDialogHeight() - HEADER_HEIGHT - FOOTER_HEIGHT;
-        if (mouseY >= listY && mouseY < listY + listHeight && mouseX >= dx && mouseX < dx + getDialogWidth()) {
-            int relativeY = (int) mouseY - listY + scrollY;
-            int index = relativeY / ROW_HEIGHT;
-            
-            if (index >= 0 && index < tasks.size()) {
-                selectedTaskId = tasks.get(index).getId();
+        // Tab clicks
+        int tabY = dy + HEADER_HEIGHT;
+        int tabWidth = getDialogWidth() / Tab.values().length;
+        for (int i = 0; i < Tab.values().length; i++) {
+            Tab tab = Tab.values()[i];
+            int tabX = dx + i * tabWidth;
+            if (mouseX >= tabX && mouseX < tabX + tabWidth && 
+                mouseY >= tabY && mouseY < tabY + TAB_HEIGHT) {
+                currentTab = tab;
+                refreshAutorunData();
                 return true;
             }
+        }
+        
+        // Content area clicks
+        int contentY = dy + HEADER_HEIGHT + TAB_HEIGHT;
+        if (currentTab == Tab.PROCESSES) {
+            // Task row click
+            int listY = contentY;
+            int listHeight = getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT;
+            if (mouseY >= listY && mouseY < listY + listHeight && mouseX >= dx && mouseX < dx + getDialogWidth()) {
+                int relativeY = (int) mouseY - listY + scrollY;
+                int index = relativeY / ROW_HEIGHT;
+                
+                if (index >= 0 && index < tasks.size()) {
+                    selectedTaskId = tasks.get(index).getId();
+                    return true;
+                }
+            }
+        } else {
+            // Autorun panel clicks
+            return handleAutorunClick(mouseX, mouseY, dx, contentY);
         }
         
         return super.mouseClicked(mouseX, mouseY, button);
@@ -347,9 +438,15 @@ public class TaskManagerDialog extends Screen {
     
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int listHeight = getDialogHeight() - HEADER_HEIGHT - FOOTER_HEIGHT;
-        int maxScroll = Math.max(0, tasks.size() * ROW_HEIGHT - listHeight);
-        scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int) (verticalAmount * ROW_HEIGHT)));
+        int listHeight = getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT;
+        
+        if (currentTab == Tab.PROCESSES) {
+            int maxScroll = Math.max(0, tasks.size() * ROW_HEIGHT - listHeight);
+            scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int) (verticalAmount * ROW_HEIGHT)));
+        } else {
+            int maxScroll = Math.max(0, Math.max(autorunScripts.size(), allScripts.size()) * ROW_HEIGHT - listHeight);
+            autorunScrollY = Math.max(0, Math.min(maxScroll, autorunScrollY - (int) (verticalAmount * ROW_HEIGHT)));
+        }
         return true;
     }
     
@@ -375,6 +472,163 @@ public class TaskManagerDialog extends Screen {
     private void refreshTasks() {
         Collection<ScriptTask> allTasks = ScriptTaskManager.getInstance().getAllTasks();
         tasks = new ArrayList<>(allTasks);
+    }
+    
+    private void refreshAutorunData() {
+        KashubConfig config = KashubConfig.getInstance();
+        autorunScripts = new ArrayList<>(config.autorunScripts);
+        
+        // Get all available scripts
+        allScripts = new ArrayList<>(ScriptManager.getAllScripts());
+        // Remove already added scripts from available list
+        allScripts.removeAll(autorunScripts);
+    }
+    
+    private void renderAutorunPanel(DrawContext context, int dx, int dy, int mouseX, int mouseY, float delta) {
+        int panelHeight = getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT;
+        int panelWidth = getDialogWidth() - 16;
+        int panelX = dx + 8;
+        
+        // Split into two columns
+        int leftWidth = (panelWidth - 20) / 2;
+        int rightWidth = panelWidth - leftWidth - 20;
+        int rightX = panelX + leftWidth + 20;
+        
+        // Left column: Autorun scripts
+        renderAutorunList(context, panelX, dy, leftWidth, panelHeight, mouseX, mouseY, true);
+        
+        // Right column: Available scripts
+        renderAutorunList(context, rightX, dy, rightWidth, panelHeight, mouseX, mouseY, false);
+        
+        // Arrow buttons in the middle
+        int centerX = panelX + leftWidth + 4;
+        int centerY = dy + panelHeight / 2 - 20;
+        
+        // Add button (->)
+        boolean addHovered = mouseX >= centerX && mouseX < centerX + 32 && 
+                            mouseY >= centerY && mouseY < centerY + 24;
+        context.fill(centerX, centerY, centerX + 32, centerY + 24, 
+            addHovered ? theme.consoleSuccessColor : theme.buttonColor);
+        context.drawText(textRenderer, "→", centerX + 10, centerY + 8, 0xFFFFFFFF, false);
+        
+        // Remove button (<-)
+        boolean removeHovered = mouseX >= centerX && mouseX < centerX + 32 && 
+                               mouseY >= centerY + 28 && mouseY < centerY + 52;
+        context.fill(centerX, centerY + 28, centerX + 32, centerY + 52, 
+            removeHovered ? theme.consoleErrorColor : theme.buttonColor);
+        context.drawText(textRenderer, "←", centerX + 10, centerY + 36, 0xFFFFFFFF, false);
+    }
+    
+    private void renderAutorunList(DrawContext context, int x, int y, int width, int height, 
+                                   int mouseX, int mouseY, boolean isAutorunList) {
+        List<String> scripts = isAutorunList ? autorunScripts : allScripts;
+        String title = isAutorunList ? "Autorun Scripts" : "Available Scripts";
+        
+        // Header
+        context.fill(x, y, x + width, y + 24, adjustBrightness(theme.sidebarColor, 5));
+        context.drawText(textRenderer, title, x + 8, y + 8, theme.textColor, false);
+        context.fill(x, y + 23, x + width, y + 24, theme.accentColor & 0x44FFFFFF);
+        
+        int listY = y + 24;
+        int listHeight = height - 24;
+        
+        if (scripts.isEmpty()) {
+            String message = isAutorunList ? "No autorun scripts" : "No available scripts";
+            int textWidth = textRenderer.getWidth(message);
+            context.drawText(textRenderer, message, x + (width - textWidth) / 2, 
+                listY + listHeight / 2, theme.textDimColor, false);
+            return;
+        }
+        
+        // Reset hover
+        if (isAutorunList) {
+            hoveredAutorunIndex = -1;
+        } else {
+            hoveredAvailableIndex = -1;
+        }
+        
+        int visibleRows = listHeight / ROW_HEIGHT;
+        int startIndex = autorunScrollY / ROW_HEIGHT;
+        int endIndex = Math.min(startIndex + visibleRows + 1, scripts.size());
+        
+        for (int i = startIndex; i < endIndex; i++) {
+            String script = scripts.get(i);
+            int rowY = listY + (i * ROW_HEIGHT) - autorunScrollY;
+            
+            if (rowY + ROW_HEIGHT < listY || rowY > listY + listHeight) continue;
+            
+            // Check hover
+            if (mouseX >= x && mouseX < x + width && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT) {
+                if (isAutorunList) {
+                    hoveredAutorunIndex = i;
+                } else {
+                    hoveredAvailableIndex = i;
+                }
+            }
+            
+            boolean isHovered = (isAutorunList && hoveredAutorunIndex == i) || 
+                              (!isAutorunList && hoveredAvailableIndex == i);
+            
+            // Background
+            if (isHovered) {
+                context.fill(x + 2, rowY + 2, x + width - 2, rowY + ROW_HEIGHT - 2, theme.buttonHoverColor);
+            }
+            
+            // Script name
+            String displayName = script;
+            if (displayName.length() > 30) {
+                displayName = displayName.substring(0, 27) + "...";
+            }
+            context.drawText(textRenderer, displayName, x + 8, rowY + 14, theme.textColor, false);
+        }
+        
+        // Scrollbar
+        if (scripts.size() * ROW_HEIGHT > listHeight) {
+            int totalHeight = scripts.size() * ROW_HEIGHT;
+            int scrollbarHeight = Math.max(20, (listHeight * listHeight) / totalHeight);
+            int maxScroll = totalHeight - listHeight;
+            int scrollbarY = listY + (autorunScrollY * (listHeight - scrollbarHeight)) / Math.max(1, maxScroll);
+            
+            context.fill(x + width - 6, listY, x + width - 2, listY + listHeight, 0x22FFFFFF);
+            context.fill(x + width - 6, scrollbarY, x + width - 2, scrollbarY + scrollbarHeight, theme.accentColor);
+        }
+    }
+    
+    private boolean handleAutorunClick(double mouseX, double mouseY, int dx, int dy) {
+        int panelWidth = getDialogWidth() - 16;
+        int leftWidth = (panelWidth - 20) / 2;
+        int centerX = dx + 8 + leftWidth + 4;
+        int centerY = dy + (getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT) / 2 - 20;
+        
+        // Add button (->)
+        if (mouseX >= centerX && mouseX < centerX + 32 && 
+            mouseY >= centerY && mouseY < centerY + 24) {
+            if (hoveredAvailableIndex >= 0 && hoveredAvailableIndex < allScripts.size()) {
+                String script = allScripts.get(hoveredAvailableIndex);
+                KashubConfig config = KashubConfig.getInstance();
+                if (!config.autorunScripts.contains(script)) {
+                    config.autorunScripts.add(script);
+                    config.save();
+                    refreshAutorunData();
+                }
+                return true;
+            }
+        }
+        
+        // Remove button (<-)
+        if (mouseX >= centerX && mouseX < centerX + 32 && 
+            mouseY >= centerY + 28 && mouseY < centerY + 52) {
+            if (hoveredAutorunIndex >= 0 && hoveredAutorunIndex < autorunScripts.size()) {
+                String script = autorunScripts.get(hoveredAutorunIndex);
+                KashubConfig config = KashubConfig.getInstance();
+                config.autorunScripts.remove(script);
+                config.save();
+                refreshAutorunData();
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     private int adjustBrightness(int color, int amount) {

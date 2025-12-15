@@ -7,7 +7,7 @@ import net.minecraft.text.Text;
 
 /**
  * Command for displaying messages in chat
- * v3.1 - Simplified: outputs to chat only (no console panel)
+ * Simplified: outputs to chat only (no console panel)
  */
 public class PrintCommand implements Command {
     @Override

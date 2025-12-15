@@ -19,12 +19,12 @@ public class SelectSlotCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Выбирает слот в хотбаре по номеру или предмету";
+        return "Selects hotbar slot by number or item";
     }
 
     @Override
     public String getParameters() {
-        return "<slot> (0-8) или item <itemName> - номер слота или имя предмета";
+        return "<slot> (0-8) or item <itemName> - slot number or item name";
     }
 
     @Override

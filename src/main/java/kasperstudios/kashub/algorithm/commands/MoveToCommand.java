@@ -29,12 +29,12 @@ public class MoveToCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Плавно перемещает игрока к указанным координатам";
+        return "Smoothly moves player to specified coordinates";
     }
 
     @Override
     public String getParameters() {
-        return "<x> <y> <z> [speed] - координаты и опциональная скорость (0.1-1.0)";
+        return "<x> <y> <z> [speed] - coordinates and optional speed (0.1-1.0)";
     }
 
     @Override

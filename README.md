@@ -15,8 +15,12 @@
 - **Event System** - React to game events (damage, chat, ticks, etc.)
 - **Debug Tools** - Breakpoints, step-through debugging, variable watching
 
-### v2.0 Features
+### v0.6.0 Features
+- **🔥 Hot-Reload** - Edit scripts in external editors (VSCode, IntelliJ, etc.) and watch them reload automatically!
+- **🚀 Autorun System** - Scripts that start automatically when you join a world
 - **Script Task Manager** - Run multiple scripts simultaneously, pause/resume/stop individual tasks
+  - **Tabbed Interface** - Processes and Autorun tabs (like Windows Task Manager)
+  - **Autorun Management** - Visual interface to configure scripts that auto-start on launch
 - **Vision API** - Raycast, entity detection, cone scanning, mob finding
 - **HTTP API** - Async GET/POST requests, remote script loading
 - **Input API** - High-level player input control (movement, actions, camera)
@@ -241,6 +245,17 @@ Press the "Theme" button in the editor to cycle through themes.
 Scripts are saved in: `config/kashub/scripts/`
 
 File extension: `.kh`
+
+## 🔄 Autorun Scripts
+
+You can configure scripts to automatically start when the game launches:
+
+1. Open **Task Manager** (accessible from the editor or via `/script tasks`)
+2. Click on the **Autorun** tab
+3. Use the arrow buttons (→/←) to add or remove scripts from autorun
+4. Changes are saved automatically
+
+**Note:** Make sure `autorunEnabled` is set to `true` in your config file for autorun to work. (or in settings gui)
 
 ## 🔒 Security
 

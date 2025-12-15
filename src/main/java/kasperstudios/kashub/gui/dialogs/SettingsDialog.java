@@ -3,6 +3,7 @@ package kasperstudios.kashub.gui.dialogs;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.theme.EditorTheme;
 import kasperstudios.kashub.gui.theme.ThemeManager;
+import kasperstudios.kashub.util.ScriptFileWatcher;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -34,6 +35,7 @@ public class SettingsDialog extends Screen {
     private static final int FOOTER_HEIGHT = 50;
     
     private Runnable onThemeChange;
+    private Runnable onClose;
     
     public SettingsDialog(Screen parent) {
         super(Text.literal("Settings"));
@@ -45,6 +47,10 @@ public class SettingsDialog extends Screen {
     
     public void setOnThemeChange(Runnable onThemeChange) {
         this.onThemeChange = onThemeChange;
+    }
+    
+    public void setOnClose(Runnable onClose) {
+        this.onClose = onClose;
     }
     
     private void initializeSettings() {
@@ -81,6 +87,29 @@ public class SettingsDialog extends Screen {
             () -> config.allowAiIntegration, v -> config.allowAiIntegration = v));
         settings.add(new SettingEntry("Allow Eval ⚠", "Execute Java code (DANGEROUS!)",
             () -> config.allowEval, v -> config.allowEval = v));
+        
+        // Scripts section
+        settings.add(new SettingEntry("SCRIPTS", null, null, true));
+        settings.add(new SettingEntry("Hide System Scripts", "Hide example/system scripts in file panel",
+            () -> config.hideSystemScripts, v -> {
+                config.hideSystemScripts = v;
+                config.save();
+            }));
+        settings.add(new SettingEntry("Hot Reload", "Automatically reload scripts when files change",
+            () -> config.hotReload, v -> {
+                config.hotReload = v;
+                config.save();
+                if (v) {
+                    ScriptFileWatcher.getInstance().start();
+                } else {
+                    ScriptFileWatcher.getInstance().stop();
+                }
+            }));
+        settings.add(new SettingEntry("Autorun Enabled", "Auto-run scripts on startup",
+            () -> config.autorunEnabled, v -> {
+                config.autorunEnabled = v;
+                config.save();
+            }));
     }
     
     @Override
@@ -355,6 +384,9 @@ public class SettingsDialog extends Screen {
     @Override
     public void close() {
         KashubConfig.getInstance().save();
+        if (onClose != null) {
+            onClose.run();
+        }
         MinecraftClient.getInstance().setScreen(parent);
     }
     
