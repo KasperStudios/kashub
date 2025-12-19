@@ -35,6 +35,31 @@ public class FullBrightCommand implements Command {
     }
 
     @Override
+    public String getDetailedHelp() {
+        return "Toggles fullbright mode (maximum gamma).\n\n" +
+               "Usage:\n" +
+               "  fullbright          - Toggle on/off\n" +
+               "  fullbright on       - Enable fullbright\n" +
+               "  fullbright off      - Disable fullbright\n" +
+               "  fullbright toggle   - Toggle state\n\n" +
+               "Aliases:\n" +
+               "  on, enable, true    - Enable\n" +
+               "  off, disable, false - Disable\n\n" +
+               "Examples:\n" +
+               "  fullbright\n" +
+               "  fullbright on\n" +
+               "  fullbright off\n\n" +
+               "Variables set:\n" +
+               "  $fullbright - Current state (true/false)\n\n" +
+               "Notes:\n" +
+               "  - Sets gamma to maximum (100.0)\n" +
+               "  - Original gamma is restored on disable\n" +
+               "  - Client-side only, safe on servers\n" +
+               "  - Useful for cave exploration\n" +
+               "  - Auto-disabled when script stops";
+    }
+
+    @Override
     public void execute(String[] args) {
         ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
         MinecraftClient client = MinecraftClient.getInstance();

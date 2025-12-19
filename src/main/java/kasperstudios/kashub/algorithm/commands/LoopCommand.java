@@ -28,6 +28,41 @@ public class LoopCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Control Flow";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Executes commands specified number of times.\n\n" +
+               "Usage:\n" +
+               "  loop <count> { <commands> }\n\n" +
+               "Parameters:\n" +
+               "  <count>    - Number of iterations (positive integer)\n" +
+               "  <commands> - Commands to execute each iteration\n\n" +
+               "Examples:\n" +
+               "  loop 5 { jump }\n" +
+               "  loop 3 { chat Hello! }\n" +
+               "  loop 10 {\n" +
+               "    moveTo ~1 ~ ~\n" +
+               "    wait 500\n" +
+               "  }\n\n" +
+               "Loop Variable:\n" +
+               "  $loop_index - Current iteration (0-based)\n\n" +
+               "Nested Loops:\n" +
+               "  loop 3 {\n" +
+               "    loop 2 {\n" +
+               "      log Nested iteration\n" +
+               "    }\n" +
+               "  }\n\n" +
+               "Notes:\n" +
+               "  - Commands inside {} are executed sequentially\n" +
+               "  - Use 'wait' between iterations if needed\n" +
+               "  - Can be nested for complex patterns\n" +
+               "  - Break out with script stop if needed";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length < 2) {
             System.out.println("Использование: loop <count> { <commands> }");

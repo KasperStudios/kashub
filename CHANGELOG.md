@@ -2,6 +2,80 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v0.6.1] - 2025-12-19
+
+### ⚙️ IBug Fixes
+
+#### Task Manager Autorun GUI
+- **Fixed script selection** - Clicking on scripts in autorun lists now properly selects them
+- **Fixed arrow buttons** - Add/Remove buttons now work with selected scripts
+- **Added double-click support** - Double-click to quickly add/remove scripts from autorun
+- **Visual selection indicator** - Selected scripts are now highlighted with accent color
+
+#### Text Editor Crash Fix
+- **Fixed paste crash** - Fixed `StringIndexOutOfBoundsException` when pasting text with selection
+- **Bounds checking** - Added proper bounds validation in `deleteSelection()` and selection methods
+- **Safer text operations** - Selection indices are now clamped to valid line lengths
+
+### 🔧 Improvements
+
+#### Code Cleanup
+- **Removed debug logging** - Eliminated all hardcoded FileWriter debug logs from ScriptTask and ScriptTaskManager
+- **Cleaner codebase** - Removed 20+ debug log blocks that were writing to absolute paths
+
+#### Documentation
+- **Horizontal scrolling in docs** - DocsDialog now supports Shift+MouseWheel for horizontal scrolling
+- **No more truncated text** - Command descriptions display in full without "..." truncation
+- **Updated KHScriptGuide.md** - Removed HTTP references, added Marketplace section
+- **Complete command documentation** - All commands now have detailed help with:
+  - Full usage syntax and parameters
+  - Multiple examples for each command
+  - Variables set by commands
+  - Notes and important details
+  - Category classification
+
+#### Commands with Enhanced Documentation
+- **Movement**: moveTo, run, jump, sneak, sprint, swim, teleport, stop
+- **Combat**: attack (with target types, range, count)
+- **Interaction**: interact, placeBlock, breakBlock, useItem, eat, dropItem, equipArmor
+- **Inventory**: inventory, selectSlot, autoCraft, autoTrade
+- **Scanner**: scan, scanner (with caching and async support)
+- **Visual**: fullbright, animation
+- **Sound**: sound (with music/melody support)
+- **Input**: input (comprehensive player input control)
+- **AI**: ai (AI assistant integration)
+- **Events**: onEvent (event-driven scripting)
+- **Control Flow**: loop (with nested loop support)
+- **Output**: log, chat
+- **Script Management**: scripts (task management)
+- **Player**: setHealth, speed
+
+#### Security
+- **Removed HTTP commands** - Deleted HttpCommand, LoadScriptCommand, and HttpService for safer scripting
+- **Removed HTTP config options** - Cleaned up allowHttpRequests, httpWhitelistedDomains, allowRemoteScripts, remoteScriptSources from config
+- **Updated GUI** - Removed HTTP toggle from Settings panels
+
+### ✨ Added
+
+#### Marketplace Skeleton (Preparation for future)
+- **MarketplaceService.java** - Service for future GitHub-based script repository
+- **VerifiedScript.java** - Model for verified scripts with ratings, downloads, signatures
+- **MarketplaceConfig.java** - Configuration for marketplace settings
+- Categories: automation, utility, farming, building, combat, navigation, misc
+
+### 🗑️ Removed
+- `HttpCommand.java` - HTTP GET/POST commands for scripts
+- `HttpService.java` - Async HTTP service
+- `LoadScriptCommand.java` - Remote script loading
+- HTTP-related config options from KashubConfig
+- HTTP tick processing from KashubClient
+
+### 📝 Notes
+- This is a patch release focusing on stability and cleanup
+- Marketplace is skeleton only - full implementation coming in future version
+
+---
+
 ## [v0.6.0 beta] - 2025-12-15
 
 ### 🔥 Major Features

@@ -23,7 +23,37 @@ public class PlaceBlockCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[x y z]";
+        return "[x y z] - optional coordinates";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Interaction";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Places a block from hotbar at target position.\n\n" +
+               "Usage:\n" +
+               "  place                   - Place at crosshair target\n" +
+               "  place <x> <y> <z>       - Place at coordinates\n\n" +
+               "Details:\n" +
+               "  - Uses block in currently selected hotbar slot\n" +
+               "  - Without coords: places on face of targeted block\n" +
+               "  - With coords: places at exact position\n" +
+               "  - Simulates right-click with block\n" +
+               "  - Respects block placement rules\n\n" +
+               "Examples:\n" +
+               "  selectSlot item cobblestone\n" +
+               "  place                   // Place at crosshair\n\n" +
+               "  selectSlot 0\n" +
+               "  place 100 64 200        // Place at coords\n\n" +
+               "Building script example:\n" +
+               "  for (i = 0; i < 10; i++) {\n" +
+               "      place ~$i ~ ~0\n" +
+               "      wait 100\n" +
+               "  }\n\n" +
+               "Note: Select block in hotbar first with 'selectSlot'.";
     }
 
     @Override

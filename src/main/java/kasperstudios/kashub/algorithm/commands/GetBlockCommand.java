@@ -20,12 +20,47 @@ public class GetBlockCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Gets information about a block at position or crosshair";
+        return "Gets information about a block at position";
     }
 
     @Override
     public String getParameters() {
         return "[x y z] [print]";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Vision";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Gets block information and stores in variables.\n\n" +
+               "Usage:\n" +
+               "  getBlock                - Block at crosshair\n" +
+               "  getBlock <x> <y> <z>    - Block at coordinates\n" +
+               "  getBlock print          - Print result to chat\n" +
+               "  getBlock <x> <y> <z> print\n\n" +
+               "Variables Set:\n" +
+               "  $block_id   - Block identifier (e.g. 'minecraft:stone')\n" +
+               "  $block_x    - Block X coordinate\n" +
+               "  $block_y    - Block Y coordinate\n" +
+               "  $block_z    - Block Z coordinate\n" +
+               "  $error      - Error message if failed\n\n" +
+               "Details:\n" +
+               "  - Without coords: uses crosshair target\n" +
+               "  - If no block targeted: uses position 3 blocks ahead\n" +
+               "  - 'print' flag shows result in chat\n" +
+               "  - Block ID includes namespace (minecraft:)\n\n" +
+               "Examples:\n" +
+               "  getBlock                // Check crosshair\n" +
+               "  print $block_id         // Show block type\n\n" +
+               "  getBlock 100 64 200\n" +
+               "  if $block_id == \"minecraft:diamond_ore\" {\n" +
+               "      print \"Found diamonds!\"\n" +
+               "  }\n\n" +
+               "  getBlock print          // Quick check with output\n\n" +
+               "Tip: Use with 'scan' for finding specific blocks.";
     }
 
     @Override

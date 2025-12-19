@@ -1180,20 +1180,32 @@ public class ModernTextArea {
     
     private int[] getSelectionStart() {
         if (!hasSelection) return null;
-        if (selectionStartLine < selectionEndLine || 
-            (selectionStartLine == selectionEndLine && selectionStartColumn <= selectionEndColumn)) {
-            return new int[]{selectionStartLine, selectionStartColumn};
+        
+        // Clamp values to valid bounds
+        int startLine = Math.max(0, Math.min(selectionStartLine, lines.size() - 1));
+        int endLine = Math.max(0, Math.min(selectionEndLine, lines.size() - 1));
+        int startCol = Math.max(0, Math.min(selectionStartColumn, lines.get(startLine).length()));
+        int endCol = Math.max(0, Math.min(selectionEndColumn, lines.get(endLine).length()));
+        
+        if (startLine < endLine || (startLine == endLine && startCol <= endCol)) {
+            return new int[]{startLine, startCol};
         }
-        return new int[]{selectionEndLine, selectionEndColumn};
+        return new int[]{endLine, endCol};
     }
     
     private int[] getSelectionEnd() {
         if (!hasSelection) return null;
-        if (selectionStartLine < selectionEndLine || 
-            (selectionStartLine == selectionEndLine && selectionStartColumn <= selectionEndColumn)) {
-            return new int[]{selectionEndLine, selectionEndColumn};
+        
+        // Clamp values to valid bounds
+        int startLine = Math.max(0, Math.min(selectionStartLine, lines.size() - 1));
+        int endLine = Math.max(0, Math.min(selectionEndLine, lines.size() - 1));
+        int startCol = Math.max(0, Math.min(selectionStartColumn, lines.get(startLine).length()));
+        int endCol = Math.max(0, Math.min(selectionEndColumn, lines.get(endLine).length()));
+        
+        if (startLine < endLine || (startLine == endLine && startCol <= endCol)) {
+            return new int[]{endLine, endCol};
         }
-        return new int[]{selectionStartLine, selectionStartColumn};
+        return new int[]{startLine, startCol};
     }
     
     public String getSelectedText() {
@@ -1229,25 +1241,48 @@ public class ModernTextArea {
         int[] start = getSelectionStart();
         int[] end = getSelectionEnd();
         
+        if (start == null || end == null) {
+            clearSelection();
+            return;
+        }
+        
+        // Additional bounds checking
+        if (start[0] < 0 || start[0] >= lines.size() || end[0] < 0 || end[0] >= lines.size()) {
+            clearSelection();
+            return;
+        }
+        
+        String startLineText = lines.get(start[0]);
+        String endLineText = lines.get(end[0]);
+        
+        // Clamp column indices to line lengths
+        start[1] = Math.max(0, Math.min(start[1], startLineText.length()));
+        end[1] = Math.max(0, Math.min(end[1], endLineText.length()));
+        
         if (start[0] == end[0]) {
-            // Single line
+            // Single line - ensure start <= end
+            int minCol = Math.min(start[1], end[1]);
+            int maxCol = Math.max(start[1], end[1]);
             String line = lines.get(start[0]);
-            lines.set(start[0], line.substring(0, start[1]) + line.substring(end[1]));
+            lines.set(start[0], line.substring(0, minCol) + line.substring(maxCol));
+            cursorColumn = minCol;
         } else {
             // Multi-line
-            String startLine = lines.get(start[0]).substring(0, start[1]);
-            String endLine = lines.get(end[0]).substring(end[1]);
+            String startLine = startLineText.substring(0, start[1]);
+            String endLine = endLineText.substring(end[1]);
             
             // Remove lines between
             for (int i = end[0]; i > start[0]; i--) {
-                lines.remove(i);
+                if (i < lines.size()) {
+                    lines.remove(i);
+                }
             }
             
             lines.set(start[0], startLine + endLine);
+            cursorColumn = start[1];
         }
         
         cursorLine = start[0];
-        cursorColumn = start[1];
         clearSelection();
     }
     

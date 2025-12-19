@@ -55,6 +55,47 @@ public class AutoCraftCommand implements Command {
     public String getParameters() {
         return "recipe|check|list|missing|stop <args>";
     }
+
+    @Override
+    public String getCategory() {
+        return "Automation";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Automated crafting of items.\n\n" +
+               "Usage:\n" +
+               "  autoCraft recipe <item> [count]\n" +
+               "  autoCraft check <item>\n" +
+               "  autoCraft list [filter]\n" +
+               "  autoCraft missing <item>\n" +
+               "  autoCraft stop\n\n" +
+               "Actions:\n" +
+               "  recipe  - Craft specified item\n" +
+               "  check   - Check if item can be crafted\n" +
+               "  list    - List craftable items\n" +
+               "  missing - Show missing resources\n" +
+               "  stop    - Stop crafting\n\n" +
+               "Examples:\n" +
+               "  autoCraft recipe stick 64\n" +
+               "  autoCraft recipe diamond_pickaxe\n" +
+               "  autoCraft check iron_sword\n" +
+               "  autoCraft list sword\n" +
+               "  autoCraft missing diamond_chestplate\n" +
+               "  autoCraft stop\n\n" +
+               "Variables set:\n" +
+               "  $autoCraft_success     - true/false\n" +
+               "  $autoCraft_canCraft    - Can craft item\n" +
+               "  $autoCraft_maxCraftable - Max craftable count\n" +
+               "  $autoCraft_needsTable  - Requires crafting table\n" +
+               "  $autoCraft_crafted     - Items crafted\n" +
+               "  $autoCraft_active      - Is crafting active\n" +
+               "  $autoCraft_progress    - Current progress\n\n" +
+               "Notes:\n" +
+               "  - 3x3 recipes require open crafting table\n" +
+               "  - Uses recipe book for quick crafting\n" +
+               "  - Partial names work (e.g., 'pick' for pickaxe)";
+    }
     
     @Override
     public void execute(String[] args) throws Exception {

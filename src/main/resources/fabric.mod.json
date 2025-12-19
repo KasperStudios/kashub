@@ -3,7 +3,7 @@
 	"id": "kashub",
 	"version": "${version}",
 	"name": "Kashub",
-	"description": "Next-gen scripting mod with modern UI. Automate gameplay with KHScript - featuring Vision API, HTTP integration, runtime task manager, and a stunning code editor with 15+ themes.",
+	"description": "Next-gen scripting mod with modern UI. Automate gameplay with KHScript - featuring Vision API, Script Marketplace, runtime task manager, and a stunning code editor with 15+ themes.",
 	"authors": [
 		"KasperStudios"
 	],

@@ -42,6 +42,48 @@ public class InputCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Input";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "High-level player input control.\n\n" +
+               "Actions:\n" +
+               "  input jump                    - Make player jump\n" +
+               "  input sneak <true/false/toggle> - Sneak control\n" +
+               "  input sprint <true/false/toggle> - Sprint control\n" +
+               "  input attack                  - Attack once\n" +
+               "  input use [offhand]           - Use item\n" +
+               "  input drop [stack]            - Drop item(s)\n" +
+               "  input swap                    - Swap hands\n" +
+               "  input hotbar <0-8/next/prev>  - Select hotbar slot\n" +
+               "  input look <yaw> <pitch>      - Set camera angle\n" +
+               "  input lookAt <x> <y> <z>      - Look at position\n" +
+               "  input lookRelative <dYaw> <dPitch> - Relative look\n" +
+               "  input move <direction> [bool] - Movement control\n" +
+               "  input hold <attack/use> [bool] - Hold button\n" +
+               "  input stop                    - Stop all movement\n\n" +
+               "Movement Directions:\n" +
+               "  forward, back/backward, left, right\n\n" +
+               "Examples:\n" +
+               "  input jump\n" +
+               "  input sneak true\n" +
+               "  input sprint toggle\n" +
+               "  input hotbar 0\n" +
+               "  input hotbar next\n" +
+               "  input look 90 0\n" +
+               "  input lookAt 100 64 200\n" +
+               "  input move forward true\n" +
+               "  input hold attack true\n" +
+               "  input stop\n\n" +
+               "Notes:\n" +
+               "  - Simulates actual player input\n" +
+               "  - Works with server anti-cheat\n" +
+               "  - Use 'stop' to reset all inputs";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length == 0) {
             printHelp();

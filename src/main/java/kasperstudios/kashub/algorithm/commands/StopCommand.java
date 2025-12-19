@@ -18,12 +18,48 @@ public class StopCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Stops script execution and actions";
+        return "Stops script execution and player actions";
     }
 
     @Override
     public String getParameters() {
-        return "[all/scripts/events/movement] - what to stop (default: all)";
+        return "[all|scripts|events|movement]";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Other";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Emergency stop for scripts and player actions.\n\n" +
+               "Usage:\n" +
+               "  stop                    - Stop everything (default)\n" +
+               "  stop all                - Stop everything\n" +
+               "  stop scripts            - Stop script execution only\n" +
+               "  stop events             - Clear event handlers only\n" +
+               "  stop movement           - Stop player movement only\n\n" +
+               "What each mode stops:\n\n" +
+               "  'all' (default):\n" +
+               "    - Script interpreter\n" +
+               "    - Event handlers\n" +
+               "    - All movement keys\n" +
+               "    - Attack/use actions\n" +
+               "    - moveTo/runTo commands\n\n" +
+               "  'scripts':\n" +
+               "    - Script interpreter only\n\n" +
+               "  'events':\n" +
+               "    - Clears all onEvent handlers\n\n" +
+               "  'movement':\n" +
+               "    - Releases all movement keys\n" +
+               "    - Stops moveTo/runTo\n" +
+               "    - Zeroes player velocity\n\n" +
+               "Examples:\n" +
+               "  stop                    // Emergency stop all\n" +
+               "  stop movement           // Just stop moving\n" +
+               "  stop events             // Clear event handlers\n\n" +
+               "Tip: Bind to hotkey (Z by default) for quick stop.";
     }
 
     @Override

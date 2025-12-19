@@ -55,6 +55,8 @@ public class TaskManagerDialog extends Screen {
     private int autorunScrollY = 0;
     private int hoveredAutorunIndex = -1;
     private int hoveredAvailableIndex = -1;
+    private int selectedAutorunIndex = -1;
+    private int selectedAvailableIndex = -1;
     
     private static final int HEADER_HEIGHT = 40;
     private static final int TAB_HEIGHT = 32;
@@ -71,6 +73,9 @@ public class TaskManagerDialog extends Screen {
     }
     
     private float pulseAnimation = 0f;
+    private long lastClickTime = 0;
+    private int lastClickedIndex = -1;
+    private boolean lastClickWasAutorun = false;
     
     public TaskManagerDialog(Screen parent) {
         super(Text.literal("Task Manager"));
@@ -482,6 +487,14 @@ public class TaskManagerDialog extends Screen {
         allScripts = new ArrayList<>(ScriptManager.getAllScripts());
         // Remove already added scripts from available list
         allScripts.removeAll(autorunScripts);
+        
+        // Reset selections if out of bounds
+        if (selectedAutorunIndex >= autorunScripts.size()) {
+            selectedAutorunIndex = autorunScripts.isEmpty() ? -1 : autorunScripts.size() - 1;
+        }
+        if (selectedAvailableIndex >= allScripts.size()) {
+            selectedAvailableIndex = allScripts.isEmpty() ? -1 : allScripts.size() - 1;
+        }
     }
     
     private void renderAutorunPanel(DrawContext context, int dx, int dy, int mouseX, int mouseY, float delta) {
@@ -568,9 +581,13 @@ public class TaskManagerDialog extends Screen {
             
             boolean isHovered = (isAutorunList && hoveredAutorunIndex == i) || 
                               (!isAutorunList && hoveredAvailableIndex == i);
+            boolean isSelected = (isAutorunList && selectedAutorunIndex == i) ||
+                               (!isAutorunList && selectedAvailableIndex == i);
             
             // Background
-            if (isHovered) {
+            if (isSelected) {
+                context.fill(x + 2, rowY + 2, x + width - 2, rowY + ROW_HEIGHT - 2, theme.accentColor & 0x66FFFFFF);
+            } else if (isHovered) {
                 context.fill(x + 2, rowY + 2, x + width - 2, rowY + ROW_HEIGHT - 2, theme.buttonHoverColor);
             }
             
@@ -595,16 +612,81 @@ public class TaskManagerDialog extends Screen {
     }
     
     private boolean handleAutorunClick(double mouseX, double mouseY, int dx, int dy) {
+        int panelHeight = getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT;
         int panelWidth = getDialogWidth() - 16;
+        int panelX = dx + 8;
         int leftWidth = (panelWidth - 20) / 2;
-        int centerX = dx + 8 + leftWidth + 4;
-        int centerY = dy + (getDialogHeight() - HEADER_HEIGHT - TAB_HEIGHT - FOOTER_HEIGHT) / 2 - 20;
+        int rightWidth = panelWidth - leftWidth - 20;
+        int rightX = panelX + leftWidth + 20;
+        int centerX = panelX + leftWidth + 4;
+        int centerY = dy + panelHeight / 2 - 20;
         
-        // Add button (->)
+        int listY = dy + 24;
+        int listHeight = panelHeight - 24;
+        
+        long currentTime = System.currentTimeMillis();
+        
+        // Click on left list (autorun scripts) - select item or double-click to remove
+        if (mouseX >= panelX && mouseX < panelX + leftWidth && 
+            mouseY >= listY && mouseY < listY + listHeight) {
+            int relativeY = (int) mouseY - listY + autorunScrollY;
+            int index = relativeY / ROW_HEIGHT;
+            if (index >= 0 && index < autorunScripts.size()) {
+                // Check for double-click
+                if (lastClickWasAutorun && lastClickedIndex == index && 
+                    currentTime - lastClickTime < 400) {
+                    // Double-click - remove from autorun
+                    String script = autorunScripts.get(index);
+                    KashubConfig config = KashubConfig.getInstance();
+                    config.autorunScripts.remove(script);
+                    config.save();
+                    refreshAutorunData();
+                    lastClickTime = 0;
+                } else {
+                    selectedAutorunIndex = index;
+                    lastClickTime = currentTime;
+                    lastClickedIndex = index;
+                    lastClickWasAutorun = true;
+                }
+                return true;
+            }
+        }
+        
+        // Click on right list (available scripts) - select item or double-click to add
+        if (mouseX >= rightX && mouseX < rightX + rightWidth && 
+            mouseY >= listY && mouseY < listY + listHeight) {
+            int relativeY = (int) mouseY - listY + autorunScrollY;
+            int index = relativeY / ROW_HEIGHT;
+            if (index >= 0 && index < allScripts.size()) {
+                // Check for double-click
+                if (!lastClickWasAutorun && lastClickedIndex == index && 
+                    currentTime - lastClickTime < 400) {
+                    // Double-click - add to autorun
+                    String script = allScripts.get(index);
+                    KashubConfig config = KashubConfig.getInstance();
+                    if (!config.autorunScripts.contains(script)) {
+                        config.autorunScripts.add(script);
+                        config.save();
+                        refreshAutorunData();
+                    }
+                    lastClickTime = 0;
+                } else {
+                    selectedAvailableIndex = index;
+                    lastClickTime = currentTime;
+                    lastClickedIndex = index;
+                    lastClickWasAutorun = false;
+                }
+                return true;
+            }
+        }
+        
+        // Add button (->) - add selected available script to autorun
         if (mouseX >= centerX && mouseX < centerX + 32 && 
             mouseY >= centerY && mouseY < centerY + 24) {
-            if (hoveredAvailableIndex >= 0 && hoveredAvailableIndex < allScripts.size()) {
-                String script = allScripts.get(hoveredAvailableIndex);
+            // Use selected index, or hovered if nothing selected
+            int indexToAdd = selectedAvailableIndex >= 0 ? selectedAvailableIndex : hoveredAvailableIndex;
+            if (indexToAdd >= 0 && indexToAdd < allScripts.size()) {
+                String script = allScripts.get(indexToAdd);
                 KashubConfig config = KashubConfig.getInstance();
                 if (!config.autorunScripts.contains(script)) {
                     config.autorunScripts.add(script);
@@ -615,11 +697,13 @@ public class TaskManagerDialog extends Screen {
             }
         }
         
-        // Remove button (<-)
+        // Remove button (<-) - remove selected autorun script
         if (mouseX >= centerX && mouseX < centerX + 32 && 
             mouseY >= centerY + 28 && mouseY < centerY + 52) {
-            if (hoveredAutorunIndex >= 0 && hoveredAutorunIndex < autorunScripts.size()) {
-                String script = autorunScripts.get(hoveredAutorunIndex);
+            // Use selected index, or hovered if nothing selected
+            int indexToRemove = selectedAutorunIndex >= 0 ? selectedAutorunIndex : hoveredAutorunIndex;
+            if (indexToRemove >= 0 && indexToRemove < autorunScripts.size()) {
+                String script = autorunScripts.get(indexToRemove);
                 KashubConfig config = KashubConfig.getInstance();
                 config.autorunScripts.remove(script);
                 config.save();

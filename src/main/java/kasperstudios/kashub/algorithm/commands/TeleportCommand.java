@@ -23,7 +23,36 @@ public class TeleportCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "<x> <y> <z> - absolute or relative (~) coordinates";
+        return "<x> <y> <z> - coordinates";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Instantly teleports player to coordinates.\n\n" +
+               "Usage:\n" +
+               "  tp <x> <y> <z>          - Absolute coordinates\n" +
+               "  tp ~<dx> ~<dy> ~<dz>    - Relative coordinates\n\n" +
+               "Parameters:\n" +
+               "  x, y, z  - Target coordinates\n" +
+               "  ~value   - Relative to current position\n\n" +
+               "Details:\n" +
+               "  - Instant teleportation (not smooth movement)\n" +
+               "  - Works in singleplayer and on servers with cheats\n" +
+               "  - May be blocked by anti-cheat on servers\n" +
+               "  - Relative coords: ~5 means current + 5\n" +
+               "  - ~ alone means current position (no change)\n\n" +
+               "Examples:\n" +
+               "  tp 100 64 200           // Go to coords\n" +
+               "  tp ~ ~10 ~              // Go up 10 blocks\n" +
+               "  tp ~100 ~ ~0            // Move 100 blocks in X\n" +
+               "  tp 0 100 0              // Go to world spawn area\n\n" +
+               "Warning: May trigger anti-cheat on multiplayer servers!\n" +
+               "For safe movement, use 'moveTo' or 'pathfind' instead.";
     }
 
     @Override

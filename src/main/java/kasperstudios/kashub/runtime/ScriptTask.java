@@ -101,22 +101,8 @@ public class ScriptTask {
         lastTickTime = System.currentTimeMillis();
         
         // Check if we should re-queue loop marker (only when queue is completely empty and no command is processing)
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.tick:104\",\"message\":\"Checking loop marker re-queue\",\"data\":{\"taskId\":" + id + ",\"pendingLoopMarker\":" + (pendingLoopMarker != null) + ",\"isProcessingCommand\":" + isProcessingCommand + ",\"queueSize\":" + commandQueue.size() + ",\"shouldBreak\":" + shouldBreak + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"C\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
         if (pendingLoopMarker != null && !isProcessingCommand && commandQueue.isEmpty() && !shouldBreak) {
             ScriptLogger.getInstance().debug("Task " + id + ": Re-queuing loop marker, queue empty (pendingLoopMarker=" + (pendingLoopMarker != null) + ", isProcessingCommand=" + isProcessingCommand + ", queueSize=" + commandQueue.size() + ", shouldBreak=" + shouldBreak + ")");
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.tick:106\",\"message\":\"Re-queuing loop marker\",\"data\":{\"taskId\":" + id + ",\"startLine\":" + pendingLoopMarker.startLine + ",\"endLine\":" + pendingLoopMarker.endLine + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             commandQueue.add(new CommandEntry(pendingLoopMarker, new String[0]));
             pendingLoopMarker = null; // Clear pending marker
             // Process the newly queued marker immediately
@@ -163,13 +149,6 @@ public class ScriptTask {
      * Recursively parse code lines with block support
      */
     private void parseLines(String[] lines, int start, int end) {
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:165\",\"message\":\"parseLines called\",\"data\":{\"taskId\":" + id + ",\"start\":" + start + ",\"end\":" + end + ",\"queueSizeBefore\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
         int i = start;
         while (i < end && state != ScriptState.STOPPED && !shouldBreak) {
             // Check for continue flag
@@ -234,23 +213,8 @@ public class ScriptTask {
                 String funcName = funcCallMatcher.group(1);
                 String argsStr = funcCallMatcher.group(2);
                 
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:233\",\"message\":\"Function call detected\",\"data\":{\"taskId\":" + id + ",\"funcName\":\"" + funcName + "\",\"queueSizeBefore\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
-                
                 FunctionDef func = localFunctions.get(funcName);
                 if (func != null) {
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:240\",\"message\":\"Function found, parsing body\",\"data\":{\"taskId\":" + id + ",\"funcName\":\"" + funcName + "\",\"startLine\":" + func.startLine + ",\"endLine\":" + func.endLine + ",\"queueSizeBefore\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     // Parse arguments
                     List<String> arguments = new ArrayList<>();
                     if (!argsStr.trim().isEmpty()) {
@@ -275,14 +239,6 @@ public class ScriptTask {
                     
                     // Execute function body
                     parseLines(func.lines, func.startLine, func.endLine);
-                    
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:262\",\"message\":\"Function body parsed\",\"data\":{\"taskId\":" + id + ",\"funcName\":\"" + funcName + "\",\"queueSizeAfter\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     
                     // Restore variables
                     variables.clear();
@@ -369,24 +325,9 @@ public class ScriptTask {
                             conditionalBlocks.add(new ConditionalBlock(elseIfCondition, pos + 1, elseIfEnd));
                             }
                         } else if (type == 1) { // else
-                            // #region agent log
-                            try {
-                                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:363\",\"message\":\"Adding else block\",\"data\":{\"taskId\":" + id + ",\"pos\":" + pos + ",\"blockEnd\":" + blockEnd + ",\"startLine\":" + (pos + 1) + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                                fw.close();
-                            } catch (Exception e) {}
-                            // #endregion
                         conditionalBlocks.add(new ConditionalBlock(null, pos + 1, blockEnd)); // null condition = else
                     }
                 }
-                
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:370\",\"message\":\"Conditional blocks created\",\"data\":{\"taskId\":" + id + ",\"blocksCount\":" + conditionalBlocks.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
                 
                 commandQueue.add(new CommandEntry(new ConditionalCommand(this, lines, conditionalBlocks), new String[0]));
                 i = blockEnd + 1;
@@ -515,13 +456,6 @@ public class ScriptTask {
             
             String commandName = parts.get(0).toLowerCase();
             String[] args = parts.subList(1, parts.size()).toArray(new String[0]);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:470\",\"message\":\"Parsing command\",\"data\":{\"taskId\":" + id + ",\"line\":" + (i + 1) + ",\"commandName\":\"" + commandName + "\",\"queueSizeBefore\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             
             // Handle break and continue as special commands
             if (commandName.equals("break")) {
@@ -541,26 +475,12 @@ public class ScriptTask {
             if (command != null) {
                 commandQueue.add(new CommandEntry(command, args));
                 ScriptLogger.getInstance().debug("Queued command: " + commandName + " with " + args.length + " args");
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:488\",\"message\":\"Command queued\",\"data\":{\"taskId\":" + id + ",\"commandName\":\"" + commandName + "\",\"queueSizeAfter\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
             } else {
                 ScriptLogger.getInstance().warn("Unknown command at line " + currentLine + ": " + commandName);
             }
             
             i++;
         }
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.parseLines:496\",\"message\":\"parseLines finished\",\"data\":{\"taskId\":" + id + ",\"start\":" + start + ",\"end\":" + end + ",\"queueSizeAfter\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
     }
     
     /**
@@ -616,24 +536,8 @@ public class ScriptTask {
         List<int[]> chain = new ArrayList<>(); // Each entry: [position, type] where type: 0=else if, 1=else
         int level = 1;
         
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:582\",\"message\":\"Finding if-else chain\",\"data\":{\"taskId\":" + id + ",\"start\":" + start + ",\"end\":" + end + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
-        
         for (int i = start; i < end; i++) {
             String line = lines[i].trim();
-            
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:612\",\"message\":\"Processing line\",\"data\":{\"taskId\":" + id + ",\"line\":" + (i + 1) + ",\"content\":\"" + line + "\",\"level\":" + level + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             
             // Special handling for "} else {" or "} else if" - check BEFORE decreasing level
             // This is critical because the closing brace would decrease level to 0 before we check for else
@@ -682,22 +586,8 @@ public class ScriptTask {
             // Add else if or else to chain
             if (isElseIf) {
                 chain.add(new int[]{i, 0}); // 0 = else if
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:650\",\"message\":\"Added else if to chain\",\"data\":{\"taskId\":" + id + ",\"line\":" + (i + 1) + ",\"content\":\"" + line + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
             } else if (isElse) {
                 chain.add(new int[]{i, 1}); // 1 = else
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:660\",\"message\":\"Added else to chain\",\"data\":{\"taskId\":" + id + ",\"line\":" + (i + 1) + ",\"content\":\"" + line + "\",\"level\":" + level + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
             }
             
             // Check for block closers
@@ -748,26 +638,12 @@ public class ScriptTask {
                 // Otherwise, this is the end of the if-else chain
                 if (!foundElse) {
                 chain.add(0, new int[]{i, -1}); // Insert block end at beginning
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:699\",\"message\":\"Chain complete\",\"data\":{\"taskId\":" + id + ",\"chainSize\":" + chain.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                 return chain;
                 }
                 // If we found else/else if, continue - level will be managed by the else block
             }
         }
         chain.add(0, new int[]{end - 1, -1});
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.findIfElseChain:704\",\"message\":\"Chain complete (end reached)\",\"data\":{\"taskId\":" + id + ",\"chainSize\":" + chain.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
         return chain;
     }
     
@@ -959,23 +835,7 @@ public class ScriptTask {
      */
     private boolean evaluateCondition(String condition) {
         try {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                EnvironmentVariable healthVar = ScriptInterpreter.getInstance().getEnvironmentVariable("PLAYER_HEALTH");
-                String healthValue = healthVar != null ? healthVar.getValue() : "null";
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.evaluateCondition:910\",\"message\":\"Evaluating condition\",\"data\":{\"taskId\":" + id + ",\"condition\":\"" + condition + "\",\"healthValue\":\"" + healthValue + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             String processed = processVariables(condition);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.evaluateCondition:912\",\"message\":\"Condition processed\",\"data\":{\"taskId\":" + id + ",\"original\":\"" + condition + "\",\"processed\":\"" + processed + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             
             // Also replace variables WITHOUT $ prefix (for Rust-style syntax: if x > 3)
             for (Map.Entry<String, String> entry : variables.entrySet()) {
@@ -1061,13 +921,6 @@ public class ScriptTask {
                                 case "<" -> leftNum < rightNum;
                                 default -> false;
                             };
-                            // #region agent log
-                            try {
-                                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.evaluateCondition:1005\",\"message\":\"Condition result\",\"data\":{\"taskId\":" + id + ",\"condition\":\"" + condition + "\",\"left\":\"" + left + "\",\"right\":\"" + right + "\",\"leftNum\":" + leftNum + ",\"rightNum\":" + rightNum + ",\"op\":\"" + op + "\",\"result\":" + result + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\"}\n");
-                                fw.close();
-                            } catch (Exception e) {}
-                            // #endregion
                             return result;
                         } else {
                             return switch (op) {
@@ -1240,24 +1093,10 @@ public class ScriptTask {
         isProcessingCommand = true;
         CommandEntry entry = commandQueue.poll();
         executedCommands++;
-        // #region agent log
-        try {
-            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1007\",\"message\":\"Processing command\",\"data\":{\"taskId\":" + id + ",\"commandName\":\"" + (entry != null ? entry.command.getName() : "null") + "\",\"queueSize\":" + commandQueue.size() + ",\"pendingLoopMarker\":" + (pendingLoopMarker != null) + ",\"isProcessingCommand\":" + isProcessingCommand + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-            fw.close();
-        } catch (Exception e) {}
-        // #endregion
 
         // Handle loop marker specially
         if (entry.command instanceof LoopMarkerCommand) {
             LoopMarkerCommand loopCmd = (LoopMarkerCommand) entry.command;
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1202\",\"message\":\"Processing LoopMarkerCommand\",\"data\":{\"taskId\":" + id + ",\"startLine\":" + loopCmd.startLine + ",\"endLine\":" + loopCmd.endLine + ",\"queueSize\":" + commandQueue.size() + ",\"shouldBreak\":" + shouldBreak + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
                 
                 // Check queue size to prevent overflow
                 if (commandQueue.size() > MAX_QUEUE_SIZE) {
@@ -1281,25 +1120,11 @@ public class ScriptTask {
                 // Store loop marker for later re-queuing (don't add immediately)
                 pendingLoopMarker = loopCmd;
                 ScriptLogger.getInstance().debug("Task " + id + ": Stored pending loop marker (startLine=" + loopCmd.startLine + ", endLine=" + loopCmd.endLine + ")");
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                    fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1034\",\"message\":\"Stored pending loop marker\",\"data\":{\"taskId\":" + id + ",\"startLine\":" + loopCmd.startLine + ",\"endLine\":" + loopCmd.endLine + ",\"queueSize\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
             
             // Re-parse the loop body and add commands to queue
             int queueSizeBefore = commandQueue.size();
             parseLines(loopCmd.lines, loopCmd.startLine, loopCmd.endLine);
             int queueSizeAfter = commandQueue.size();
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1236\",\"message\":\"Loop iteration parsed\",\"data\":{\"taskId\":" + id + ",\"startLine\":" + loopCmd.startLine + ",\"endLine\":" + loopCmd.endLine + ",\"queueSizeBefore\":" + queueSizeBefore + ",\"queueSizeAfter\":" + queueSizeAfter + ",\"commandsQueued\":" + (queueSizeAfter - queueSizeBefore) + ",\"shouldBreak\":" + shouldBreak + ",\"shouldContinue\":" + shouldContinue + ",\"pendingLoopMarker\":" + (pendingLoopMarker != null) + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             ScriptLogger.getInstance().debug("Task " + id + ": Loop iteration parsed, queued " + (queueSizeAfter - queueSizeBefore) + " commands, shouldBreak=" + shouldBreak + ", shouldContinue=" + shouldContinue + ", pendingLoopMarker=" + (pendingLoopMarker != null));
             
                 // If break was triggered, clear pending loop marker
@@ -1345,22 +1170,8 @@ public class ScriptTask {
             ScriptInterpreter.getInstance().updateEnvironmentVariables();
             
             ConditionalCommand condCmd = (ConditionalCommand) entry.command;
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1108\",\"message\":\"Processing ConditionalCommand\",\"data\":{\"taskId\":" + id + ",\"queueSizeBefore\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             // Execute synchronously to ensure commands are added to queue before continuing
             condCmd.execute(new String[0]);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1115\",\"message\":\"ConditionalCommand executed\",\"data\":{\"taskId\":" + id + ",\"queueSizeAfter\":" + commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             isProcessingCommand = false;
             // Continue processing next command (which should be from the conditional block)
             processNextCommand();
@@ -1389,13 +1200,6 @@ public class ScriptTask {
                 .thenRun(() -> {
                         synchronized (processLock) {
                     isProcessingCommand = false;
-                        // #region agent log
-                        try {
-                            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTask.processNextCommand:1101\",\"message\":\"Command completed\",\"data\":{\"taskId\":" + id + ",\"commandName\":\"" + finalEntry.command.getName() + "\",\"queueSize\":" + commandQueue.size() + ",\"pendingLoopMarker\":" + (pendingLoopMarker != null) + ",\"isProcessingCommand\":" + isProcessingCommand + ",\"state\":\"" + state + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                            fw.close();
-                        } catch (Exception e) {}
-                        // #endregion
                         }
                         
                     if (state == ScriptState.RUNNING) {
@@ -1513,62 +1317,16 @@ public class ScriptTask {
         
         @Override
         public void execute(String[] args) {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1306\",\"message\":\"Evaluating conditional blocks\",\"data\":{\"taskId\":" + task.id + ",\"blocksCount\":" + blocks.size() + ",\"queueSizeBefore\":" + task.commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             for (ConditionalBlock block : blocks) {
                 if (block.condition == null) {
                     // else block - always execute
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        StringBuilder blockLines = new StringBuilder();
-                        for (int li = block.startLine; li < block.endLine && li < lines.length; li++) {
-                            blockLines.append("\"").append(li + 1).append(":").append(lines[li].trim()).append("\",");
-                        }
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1339\",\"message\":\"Executing else block\",\"data\":{\"taskId\":" + task.id + ",\"startLine\":" + block.startLine + ",\"endLine\":" + block.endLine + ",\"queueSizeBefore\":" + task.commandQueue.size() + ",\"blockLines\":[" + blockLines.toString() + "]},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     task.parseLines(lines, block.startLine, block.endLine);
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1352\",\"message\":\"Else block parsed\",\"data\":{\"taskId\":" + task.id + ",\"queueSizeAfter\":" + task.commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     break;
                 } else {
                     // if or else if - evaluate condition
                     boolean conditionResult = task.evaluateCondition(block.condition);
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1320\",\"message\":\"Evaluating condition\",\"data\":{\"taskId\":" + task.id + ",\"condition\":\"" + block.condition + "\",\"result\":" + conditionResult + ",\"startLine\":" + block.startLine + ",\"endLine\":" + block.endLine + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     if (conditionResult) {
-                        // #region agent log
-                        try {
-                            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1325\",\"message\":\"Executing conditional block\",\"data\":{\"taskId\":" + task.id + ",\"queueSizeBefore\":" + task.commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                            fw.close();
-                        } catch (Exception e) {}
-                        // #endregion
                         task.parseLines(lines, block.startLine, block.endLine);
-                        // #region agent log
-                        try {
-                            java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                            fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ConditionalCommand.execute:1332\",\"message\":\"Conditional block parsed\",\"data\":{\"taskId\":" + task.id + ",\"queueSizeAfter\":" + task.commandQueue.size() + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}\n");
-                            fw.close();
-                        } catch (Exception e) {}
-                        // #endregion
                         break;
                     }
                 }

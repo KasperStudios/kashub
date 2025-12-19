@@ -20,6 +20,37 @@ public class AnimationCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Visual";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Plays or controls player animations.\n\n" +
+               "Usage:\n" +
+               "  animation play <name> [duration]\n" +
+               "  animation stop [name]\n" +
+               "  animation list\n\n" +
+               "Parameters:\n" +
+               "  <name>     - Animation name to play\n" +
+               "  [duration] - Duration in ticks (default: 20)\n\n" +
+               "Actions:\n" +
+               "  play  - Start playing animation\n" +
+               "  stop  - Stop animation (or all if no name)\n" +
+               "  list  - Show active animations\n\n" +
+               "Examples:\n" +
+               "  animation play wave 40\n" +
+               "  animation play dance\n" +
+               "  animation stop wave\n" +
+               "  animation stop\n" +
+               "  animation list\n\n" +
+               "Notes:\n" +
+               "  - Animations are client-side only\n" +
+               "  - Other players won't see custom animations\n" +
+               "  - Duration is in game ticks (20 = 1 second)";
+    }
+
+    @Override
     public void execute(String[] args) {
         if (args.length == 0) return;
 

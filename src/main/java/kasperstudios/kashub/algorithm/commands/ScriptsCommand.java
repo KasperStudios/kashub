@@ -37,6 +37,48 @@ public class ScriptsCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Script Management";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Manage running scripts and tasks.\n\n" +
+               "Actions:\n" +
+               "  scripts list              - Show all tasks\n" +
+               "  scripts stop <id>         - Stop specific task\n" +
+               "  scripts pause <id>        - Pause task\n" +
+               "  scripts resume <id>       - Resume paused task\n" +
+               "  scripts restart <id>      - Restart task\n" +
+               "  scripts stopAll           - Stop all tasks\n" +
+               "  scripts pauseAll          - Pause all tasks\n" +
+               "  scripts resumeAll         - Resume all tasks\n" +
+               "  scripts stopByTag <tag>   - Stop by tag\n" +
+               "  scripts info <id>         - Task details\n" +
+               "  scripts stats             - Manager statistics\n" +
+               "  scripts enable            - Enable execution\n" +
+               "  scripts disable           - Disable execution\n" +
+               "  scripts clear             - Remove all tasks\n\n" +
+               "Task Info Fields:\n" +
+               "  - ID, Name, State\n" +
+               "  - Type, Uptime, Current Line\n" +
+               "  - Commands executed/queued\n" +
+               "  - Tags, Last Error\n\n" +
+               "Examples:\n" +
+               "  scripts list\n" +
+               "  scripts stop 1\n" +
+               "  scripts pause 2\n" +
+               "  scripts info 1\n" +
+               "  scripts stopByTag mining\n" +
+               "  scripts stats\n\n" +
+               "Notes:\n" +
+               "  - Task IDs are shown in 'list' output\n" +
+               "  - Paused tasks can be resumed\n" +
+               "  - Stopped tasks cannot be resumed\n" +
+               "  - Use tags to group related scripts";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length == 0) {
             printHelp();

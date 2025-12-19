@@ -25,6 +25,49 @@ public class OnEventCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Events";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Registers script to execute on game events.\n\n" +
+               "Usage:\n" +
+               "  onEvent <eventName> { <script> }\n\n" +
+               "Available Events:\n" +
+               "  onTick          - Every game tick (20/sec)\n" +
+               "  onDamage        - Player takes damage\n" +
+               "  onDeath         - Player dies\n" +
+               "  onRespawn       - Player respawns\n" +
+               "  onChat          - Chat message received\n" +
+               "  onBlockBreak    - Block broken\n" +
+               "  onBlockPlace    - Block placed\n" +
+               "  onItemPickup    - Item picked up\n" +
+               "  onEntityNearby  - Entity enters range\n" +
+               "  onHealthLow     - Health below threshold\n" +
+               "  onHungerLow     - Hunger below threshold\n\n" +
+               "Event Variables:\n" +
+               "  $event_name     - Event that triggered\n" +
+               "  $event_data     - Event-specific data\n" +
+               "  $event_time     - Timestamp\n\n" +
+               "Examples:\n" +
+               "  onEvent onDamage {\n" +
+               "    sound play alert\n" +
+               "    log Took damage!\n" +
+               "  }\n\n" +
+               "  onEvent onHealthLow {\n" +
+               "    eat\n" +
+               "  }\n\n" +
+               "  onEvent onChat {\n" +
+               "    log Chat: $event_data\n" +
+               "  }\n\n" +
+               "Notes:\n" +
+               "  - Events persist until script stops\n" +
+               "  - Multiple handlers per event allowed\n" +
+               "  - Use sparingly to avoid lag";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length < 2) {
             System.out.println("Использование: onEvent <eventName> { <script> }");

@@ -24,12 +24,48 @@ public class SneakCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Makes player sneak";
+        return "Makes player sneak (crouch)";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] or toggle - duration in ms or toggle";
+        return "[ms] | toggle | stop";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Controls player sneaking (crouching).\n\n" +
+               "Usage:\n" +
+               "  sneak                   - Start sneaking\n" +
+               "  sneak <ms>              - Sneak for duration\n" +
+               "  sneak toggle            - Toggle sneak on/off\n" +
+               "  sneak stop              - Stop sneaking\n\n" +
+               "Parameters:\n" +
+               "  ms  - Duration in milliseconds\n\n" +
+               "Details:\n" +
+               "  - Sneaking prevents falling off edges\n" +
+               "  - Reduces detection range by mobs\n" +
+               "  - Slows movement speed\n" +
+               "  - 'toggle' remembers state between calls\n" +
+               "  - Without duration: starts but doesn't stop\n\n" +
+               "Examples:\n" +
+               "  sneak                   // Start sneaking\n" +
+               "  sneak 2000              // Sneak for 2 seconds\n" +
+               "  sneak toggle            // Toggle on\n" +
+               "  sneak toggle            // Toggle off\n" +
+               "  sneak stop              // Force stop\n\n" +
+               "Bridge building pattern:\n" +
+               "  sneak toggle\n" +
+               "  loop 10 {\n" +
+               "      place\n" +
+               "      input back 200\n" +
+               "  }\n" +
+               "  sneak stop";
     }
 
     @Override

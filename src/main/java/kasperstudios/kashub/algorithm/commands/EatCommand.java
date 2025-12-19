@@ -33,7 +33,38 @@ public class EatCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[itemName] - food name (optional, eats best available if not specified)";
+        return "[food] - food name (optional)";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Interaction";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Eats food from inventory to restore hunger.\n\n" +
+               "Usage:\n" +
+               "  eat                     - Eat best food available\n" +
+               "  eat <food>              - Eat specific food\n\n" +
+               "Parameters:\n" +
+               "  food  - Food item name (partial match)\n\n" +
+               "Details:\n" +
+               "  - Without args: finds food with highest nutrition\n" +
+               "  - Automatically selects food in hotbar or swaps from inventory\n" +
+               "  - Holds right-click for ~1.7 seconds (eating time)\n" +
+               "  - Async version waits for eating to complete\n" +
+               "  - Food names use partial matching\n\n" +
+               "Examples:\n" +
+               "  eat                     // Eat best food\n" +
+               "  eat golden_apple        // Eat golden apple\n" +
+               "  eat steak               // Eat cooked beef\n" +
+               "  eat bread               // Eat bread\n\n" +
+               "Auto-eat script example:\n" +
+               "  if $PLAYER_FOOD < 10 {\n" +
+               "      eat\n" +
+               "  }\n\n" +
+               "Note: Player must have food in inventory.";
     }
 
     @Override

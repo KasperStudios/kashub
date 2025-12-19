@@ -46,20 +46,41 @@ public class AttackCommand implements Command {
 
     @Override
     public String getCategory() {
-        return "Interaction";
+        return "Combat";
     }
     
     @Override
     public String getDetailedHelp() {
-        return "Performs attack action with current item.\n\n" +
-               "Modes:\n" +
-               "  attack       - Single attack\n" +
-               "  attack once  - Single attack\n" +
-               "  attack hold  - Hold attack button\n" +
-               "  attack release - Release attack\n\n" +
-               "Use with lookAt for targeting:\n" +
-               "  lookAt entity zombie\n" +
-               "  attack";
+        return "Attacks nearest mobs within specified radius.\n\n" +
+               "Usage:\n" +
+               "  attack                      - Attack nearest hostile\n" +
+               "  attack stop                 - Stop attacking\n" +
+               "  attack <range>              - Attack within range\n" +
+               "  attack <range> <type>       - Attack specific type\n" +
+               "  attack <range> <type> <count> - Attack N times\n\n" +
+               "Target Types:\n" +
+               "  hostile  - Hostile mobs (default)\n" +
+               "  passive  - Passive animals\n" +
+               "  player   - Other players\n" +
+               "  all      - Any living entity\n" +
+               "  <name>   - Specific entity (e.g., zombie, skeleton)\n\n" +
+               "Examples:\n" +
+               "  attack\n" +
+               "  attack 10\n" +
+               "  attack 5 hostile\n" +
+               "  attack 8 zombie 3\n" +
+               "  attack 10 player 1\n" +
+               "  attack stop\n\n" +
+               "Behavior:\n" +
+               "  - Auto-aims at target\n" +
+               "  - Swings main hand\n" +
+               "  - Finds nearest matching entity\n" +
+               "  - Async version attacks repeatedly\n\n" +
+               "Notes:\n" +
+               "  - Range is in blocks (default: 5)\n" +
+               "  - Count is number of attacks (default: 1)\n" +
+               "  - 500ms delay between attacks\n" +
+               "  - Use 'stop' to cancel attack loop";
     }
 
     @Override

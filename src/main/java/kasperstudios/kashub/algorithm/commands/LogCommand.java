@@ -25,6 +25,34 @@ public class LogCommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "Output";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Writes message to script log file.\n\n" +
+               "Usage:\n" +
+               "  log <message>           - Log with INFO level\n" +
+               "  log <level> <message>   - Log with specified level\n\n" +
+               "Log Levels:\n" +
+               "  debug - Detailed debug information\n" +
+               "  info  - General information (default)\n" +
+               "  warn  - Warning messages\n" +
+               "  error - Error messages\n\n" +
+               "Examples:\n" +
+               "  log Script started\n" +
+               "  log info Player position: $player_x, $player_y, $player_z\n" +
+               "  log warn Low health detected!\n" +
+               "  log error Failed to find target\n" +
+               "  log debug Variable value: $myVar\n\n" +
+               "Notes:\n" +
+               "  - Logs are saved to kashub/logs/ folder\n" +
+               "  - Variables ($var) are expanded in messages\n" +
+               "  - Use for debugging scripts";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length == 0) {
             System.out.println("Использование: log [level] <message>");

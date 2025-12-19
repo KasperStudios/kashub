@@ -24,7 +24,30 @@ public class JumpCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "<count> - number of jumps";
+        return "[count] - number of jumps (default: 1)";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Makes the player jump one or more times.\n\n" +
+               "Usage:\n" +
+               "  jump         - Single jump\n" +
+               "  jump 3       - Jump 3 times\n" +
+               "  jump 10      - Jump 10 times\n\n" +
+               "Details:\n" +
+               "  - Each jump has ~200ms delay between them\n" +
+               "  - Player must be on ground to jump\n" +
+               "  - Works in water (swimming up)\n" +
+               "  - Async execution waits for all jumps to complete\n\n" +
+               "Examples:\n" +
+               "  jump              // Single jump\n" +
+               "  jump 5            // Jump 5 times\n" +
+               "  loop 3 { jump }   // Jump in a loop";
     }
 
     @Override

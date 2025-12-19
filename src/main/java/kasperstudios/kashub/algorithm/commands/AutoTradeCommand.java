@@ -63,6 +63,52 @@ public class AutoTradeCommand implements Command {
     public String getParameters() {
         return "config|target|start|stop|scan|offers|buy <args>";
     }
+
+    @Override
+    public String getCategory() {
+        return "Automation";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Automated trading with villagers.\n\n" +
+               "Usage:\n" +
+               "  autoTrade config <radius> [maxEmeralds] [mode]\n" +
+               "  autoTrade target <item1,item2,...>\n" +
+               "  autoTrade scan\n" +
+               "  autoTrade offers\n" +
+               "  autoTrade buy <index> [count]\n" +
+               "  autoTrade start\n" +
+               "  autoTrade stop\n\n" +
+               "Actions:\n" +
+               "  config - Set search radius, max emerald cost, mode\n" +
+               "  target - Set items to buy (comma-separated)\n" +
+               "  scan   - Find nearby merchants\n" +
+               "  offers - Show available trades\n" +
+               "  buy    - Buy specific trade by index\n" +
+               "  start  - Start auto-trading\n" +
+               "  stop   - Stop auto-trading\n\n" +
+               "Modes:\n" +
+               "  cheapest - Prioritize lowest cost\n" +
+               "  fastest  - Prioritize closest merchant\n" +
+               "  custom   - Use target list priority\n\n" +
+               "Examples:\n" +
+               "  autoTrade config 32 64 cheapest\n" +
+               "  autoTrade target mending,silk_touch\n" +
+               "  autoTrade scan\n" +
+               "  autoTrade offers\n" +
+               "  autoTrade buy 0 5\n" +
+               "  autoTrade start\n\n" +
+               "Variables set:\n" +
+               "  $autoTrade_merchantCount - Found merchants\n" +
+               "  $autoTrade_offersCount   - Available trades\n" +
+               "  $autoTrade_buySuccess    - Last buy result\n" +
+               "  $autoTrade_active        - Is trading active\n\n" +
+               "Notes:\n" +
+               "  - Must be near villager for offers/buy\n" +
+               "  - Disabled trades are skipped\n" +
+               "  - Works with villagers and wandering traders";
+    }
     
     @Override
     public void execute(String[] args) throws Exception {

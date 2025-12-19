@@ -198,7 +198,6 @@ interact
 ```
 scan blocks|view|nearest|ores
 vision player/entity/block
-http get/post
 sound play <id>
 onevent <event> {...}
 ```
@@ -213,11 +212,6 @@ onevent tick
 end
 ```
 - Available events: `tick`, `join`, `leave`, custom triggers
-
-### HTTP Service
-- `http get <url>` sets `$http_status`, `$http_body`
-- Inline scripts via `http inline <code>`
-- Requires API enabled in config
 
 ### AI Command
 - `ai prompt <text>` uses configured AI service (Groq/OpenAI)
@@ -262,9 +256,9 @@ Pathfinding runs each tick (client-side). Handles stairs/jumps, avoids obstacles
 - Uses `inventory check`, `scan ores`, `pathfind sethome`
 - Pattern-based strip mining with status prints
 
-### HTTP, Vision, Tasks, Animations
+### Vision, Tasks, Animations
 See bundled scripts in `assets/kashub/scripts/`:
-- `example_http.kh`, `example_vision.kh`, `example_tasks.kh`, etc.
+- `example_vision.kh`, `example_tasks.kh`, etc.
 
 ## Tips & Best Practices
 1. **Keybinds**: Use small scripts for hotkey automation (e.g., auto-eat, auto-jump)
@@ -535,11 +529,49 @@ eval {
 - Requires JDK (not JRE) for compilation
 - Disabled by default for safety
 
+## Script Marketplace (Coming Soon)
+
+The Script Marketplace will provide access to verified, community-created scripts hosted on GitHub.
+
+### Features (Planned)
+- **Browse Scripts**: Search and filter scripts by category, rating, downloads
+- **Categories**: automation, utility, farming, building, combat, navigation, misc
+- **Verified Scripts**: All scripts are reviewed for safety and quality
+- **Signature Verification**: Scripts are cryptographically signed
+- **Auto-Updates**: Get notified when installed scripts have updates
+- **Ratings & Reviews**: Community feedback on scripts
+
+### Configuration
+Marketplace settings are stored in `config/kashub/marketplace.json`:
+```json
+{
+  "enabled": true,
+  "repositoryUrl": "https://github.com/kasperstudios/kashub-scripts",
+  "cacheEnabled": true,
+  "cacheExpirationMinutes": 60,
+  "autoCheckUpdates": true,
+  "verifySignatures": true,
+  "allowUnsignedScripts": false
+}
+```
+
+### Script Categories
+| Category | Description |
+|----------|-------------|
+| automation | General automation scripts |
+| utility | Helper scripts and tools |
+| farming | Crop farming, animal breeding |
+| building | Construction helpers |
+| combat | Combat automation |
+| navigation | Movement and pathfinding |
+| misc | Other scripts |
+
 ## Future Extensions
 - Full inventory auto-stash (pathfind to chest + deposit)
 - Advanced pathfinding (multi-floor, nether portals)
 - Script scheduler & macros
 - Recursive crafting (auto-craft components)
+- **Script Marketplace** - Download verified scripts from GitHub
 
 ---
 Happy scripting ⚡

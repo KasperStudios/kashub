@@ -37,6 +37,40 @@ public class AICommand implements Command {
     }
 
     @Override
+    public String getCategory() {
+        return "AI";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "AI assistant with script manipulation tools.\n\n" +
+               "Usage:\n" +
+               "  ai on       - Enable AI assistant\n" +
+               "  ai off      - Disable AI assistant\n" +
+               "  ai test     - Test AI connection\n" +
+               "  ai <message> - Send message to AI\n\n" +
+               "Features:\n" +
+               "  - Natural language script generation\n" +
+               "  - Context-aware responses (health, position, dimension)\n" +
+               "  - Script manipulation tools\n" +
+               "  - In-game chat integration\n\n" +
+               "Examples:\n" +
+               "  ai on\n" +
+               "  ai test\n" +
+               "  ai How do I mine diamonds?\n" +
+               "  ai Create a script to farm wheat\n" +
+               "  ai off\n\n" +
+               "Requirements:\n" +
+               "  - AI integration must be enabled in config\n" +
+               "  - Valid API key configured\n" +
+               "  - Internet connection required\n\n" +
+               "Notes:\n" +
+               "  - Responses appear in game chat\n" +
+               "  - AI can execute scripts on your behalf\n" +
+               "  - Use responsibly on servers";
+    }
+
+    @Override
     public void execute(String[] args) throws Exception {
         if (args.length < 1) {
             KashubConfig config = KashubConfig.getInstance();

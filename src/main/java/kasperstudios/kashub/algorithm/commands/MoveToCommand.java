@@ -34,7 +34,37 @@ public class MoveToCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "<x> <y> <z> [speed] - coordinates and optional speed (0.1-1.0)";
+        return "<x> <y> <z> [speed] | stop";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Smoothly moves the player to target coordinates.\n\n" +
+               "Usage:\n" +
+               "  moveTo <x> <y> <z>           - Move to absolute coords\n" +
+               "  moveTo <x> <y> <z> <speed>   - Move with custom speed\n" +
+               "  moveTo ~10 ~ ~5              - Relative coordinates\n" +
+               "  moveTo stop                  - Stop current movement\n\n" +
+               "Parameters:\n" +
+               "  x, y, z  - Target coordinates (absolute or relative with ~)\n" +
+               "  speed    - Movement speed 0.1-1.0 (default: 0.2)\n\n" +
+               "Details:\n" +
+               "  - Uses smooth interpolation (not teleport)\n" +
+               "  - Stops when within 0.5 blocks of target\n" +
+               "  - Can be interrupted with 'moveTo stop'\n" +
+               "  - Relative coords: ~5 means current + 5\n" +
+               "  - Async: script waits until movement complete\n\n" +
+               "Examples:\n" +
+               "  moveTo 100 64 200           // Go to coords\n" +
+               "  moveTo ~10 ~ ~0             // Move 10 blocks in X\n" +
+               "  moveTo 0 100 0 0.5          // Move at half speed\n" +
+               "  moveTo stop                 // Cancel movement\n\n" +
+               "Note: For pathfinding around obstacles, use 'pathfind' instead.";
     }
 
     @Override

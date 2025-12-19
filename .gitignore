@@ -4,6 +4,7 @@ build
 .idea
 .vscode
 .cursor
+.kiro
 .gradle
 .gradlew
 .gradlew.bat

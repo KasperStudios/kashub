@@ -81,8 +81,6 @@ public class SettingsDialog extends Screen {
             () -> config.sandboxMode, v -> config.sandboxMode = v));
         settings.add(new SettingEntry("Allow Cheats", "Enable cheat commands",
             () -> config.allowCheats, v -> config.allowCheats = v));
-        settings.add(new SettingEntry("Allow HTTP", "Enable HTTP requests",
-            () -> config.allowHttpRequests, v -> config.allowHttpRequests = v));
         settings.add(new SettingEntry("Allow AI", "Enable AI integration",
             () -> config.allowAiIntegration, v -> config.allowAiIntegration = v));
         settings.add(new SettingEntry("Allow Eval ⚠", "Execute Java code (DANGEROUS!)",

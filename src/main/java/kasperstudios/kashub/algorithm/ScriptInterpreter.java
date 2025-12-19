@@ -120,13 +120,6 @@ private final VariableStore variableStore = new VariableStore();
             float health = mc.player.getHealth();
             String healthStr = String.format("%.1f", health);
             updateEnvVar("PLAYER_HEALTH", healthStr);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptInterpreter.updateEnvironmentVariables:120\",\"message\":\"Updated PLAYER_HEALTH\",\"data\":{\"health\":" + health + ",\"healthStr\":\"" + healthStr + "\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\"}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
             updateEnvVar("PLAYER_FOOD", String.valueOf(mc.player.getHungerManager().getFoodLevel()));
             updateEnvVar("PLAYER_XP", String.valueOf(mc.player.experienceLevel));
             updateEnvVar("PLAYER_LEVEL", String.valueOf(mc.player.experienceLevel));
@@ -139,13 +132,8 @@ private final VariableStore variableStore = new VariableStore();
             updateEnvVar("DIMENSION", mc.player.getWorld().getRegistryKey().getValue().toString());
             updateEnvVar("IS_SNEAKING", String.valueOf(mc.player.isSneaking()));
             updateEnvVar("IS_SPRINTING", String.valueOf(mc.player.isSprinting()));
-            updateEnvVar("GAME_MODE", mc.player.isCreative() ? "creative" : "survival");
-            updateEnvVar("DIMENSION", mc.player.getWorld().getRegistryKey().getValue().toString());
             updateEnvVar("IS_RIDING", String.valueOf(mc.player.isRiding()));
-            updateEnvVar("IS_SPRINTING", String.valueOf(mc.player.isSprinting()));
             updateEnvVar("IS_SWIMMING", String.valueOf(mc.player.isSwimming()));
-            updateEnvVar("IS_SNEAKING", String.valueOf(mc.player.isSneaking()));
-            updateEnvVar("IS_SPRINTING", String.valueOf(mc.player.isSprinting()));
             
             // Update editor hints
             CodeCompletionManager.updateEnvironmentVariables();

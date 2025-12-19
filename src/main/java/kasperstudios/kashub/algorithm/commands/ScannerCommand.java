@@ -60,6 +60,51 @@ public class ScannerCommand implements Command {
     public String getParameters() {
         return "blocks|entities <types> [options]";
     }
+
+    @Override
+    public String getCategory() {
+        return "Scanner";
+    }
+
+    @Override
+    public String getDetailedHelp() {
+        return "Advanced block and entity scanning with caching.\n\n" +
+               "Usage:\n" +
+               "  scanner blocks <types> [options]\n" +
+               "  scanner entities <types> [options]\n" +
+               "  scanner cache clear\n\n" +
+               "Type Filters:\n" +
+               "  diamond_ore,iron_ore - Specific blocks\n" +
+               "  *_ore               - Wildcard pattern\n" +
+               "  hostile,passive     - Entity categories\n" +
+               "  villager,zombie     - Specific entities\n" +
+               "  *                   - All (except air)\n\n" +
+               "Options:\n" +
+               "  radius=N       - Search radius (max 64)\n" +
+               "  yMin=N         - Minimum Y level\n" +
+               "  yMax=N         - Maximum Y level\n" +
+               "  sortBy=distance|count|health\n" +
+               "  limit=N        - Max results\n" +
+               "  excludeAir=true/false\n" +
+               "  healthMin=N    - Min entity health\n" +
+               "  hasAI=true/false\n\n" +
+               "Examples:\n" +
+               "  scanner blocks diamond_ore radius=16\n" +
+               "  scanner blocks *_ore yMin=-64 yMax=16\n" +
+               "  scanner entities hostile radius=32\n" +
+               "  scanner entities villager sortBy=distance\n" +
+               "  scanner cache clear\n\n" +
+               "Variables set:\n" +
+               "  $scanner_count        - Total found\n" +
+               "  $scanner_found        - true/false\n" +
+               "  $scanner_nearest_x/y/z - Nearest position\n" +
+               "  $scanner_nearest_dist  - Distance\n" +
+               "  $scanner_N_x/y/z/block - Result N details\n\n" +
+               "Notes:\n" +
+               "  - Results are cached for 5 seconds\n" +
+               "  - Async scanning for large areas\n" +
+               "  - Use 'scan' for simpler scanning";
+    }
     
     @Override
     public void execute(String[] args) throws Exception {

@@ -24,7 +24,38 @@ public class DropItemCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[itemName] [count] or all - item name and count, or all items";
+        return "[item] [count] | all | stack";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Inventory";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Drops items from player's inventory.\n\n" +
+               "Usage:\n" +
+               "  drop                    - Drop 1 item from hand\n" +
+               "  drop stack              - Drop entire stack from hand\n" +
+               "  drop all                - Drop ALL items (empties inventory!)\n" +
+               "  drop <item>             - Drop 1 of specified item\n" +
+               "  drop <item> <count>     - Drop specific amount\n\n" +
+               "Parameters:\n" +
+               "  item   - Item name (partial match, e.g. 'diamond')\n" +
+               "  count  - Number of items to drop\n\n" +
+               "Details:\n" +
+               "  - Item names use partial matching\n" +
+               "  - 'diamond' matches 'diamond', 'diamond_sword', etc.\n" +
+               "  - Items are dropped in front of player\n" +
+               "  - 'all' drops EVERYTHING - use with caution!\n\n" +
+               "Examples:\n" +
+               "  drop                    // Drop 1 from hand\n" +
+               "  drop stack              // Drop full stack\n" +
+               "  drop cobblestone 64     // Drop 64 cobblestone\n" +
+               "  drop diamond            // Drop 1 diamond\n" +
+               "  drop all                // Empty inventory\n\n" +
+               "Warning: 'drop all' cannot be undone!";
     }
 
     @Override

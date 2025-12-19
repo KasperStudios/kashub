@@ -25,7 +25,43 @@ public class InteractCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[block|entity]";
+        return "[block|entity|auto]";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Interaction";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Right-clicks on targeted block or entity.\n\n" +
+               "Usage:\n" +
+               "  interact                - Auto-detect target type\n" +
+               "  interact block          - Only interact with blocks\n" +
+               "  interact entity         - Only interact with entities\n\n" +
+               "Details:\n" +
+               "  - Simulates right-click action\n" +
+               "  - 'auto' mode detects what player is looking at\n" +
+               "  - Block interactions: open chests, doors, buttons, etc.\n" +
+               "  - Entity interactions: trade with villagers, ride horses, etc.\n" +
+               "  - Uses item in main hand if applicable\n\n" +
+               "Block Examples:\n" +
+               "  - Chests, barrels, shulker boxes (opens GUI)\n" +
+               "  - Doors, trapdoors, fence gates (toggles)\n" +
+               "  - Buttons, levers (activates)\n" +
+               "  - Crafting table, furnace (opens GUI)\n" +
+               "  - Beds (sleep if night)\n\n" +
+               "Entity Examples:\n" +
+               "  - Villagers (opens trade GUI)\n" +
+               "  - Horses, pigs, boats (mount)\n" +
+               "  - Item frames (rotate item)\n" +
+               "  - Armor stands (equip armor)\n\n" +
+               "Examples:\n" +
+               "  lookAt entity villager\n" +
+               "  interact entity         // Open trade GUI\n\n" +
+               "  lookAt 100 64 200\n" +
+               "  interact block          // Open chest at coords";
     }
 
     @Override

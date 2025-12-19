@@ -24,6 +24,45 @@ public class UseItemCommand implements Command {
     public String getParameters() {
         return "[hold <ticks>|release|offhand]";
     }
+    
+    @Override
+    public String getCategory() {
+        return "Interaction";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Uses item in hand (simulates right-click).\n\n" +
+               "Usage:\n" +
+               "  useItem                 - Single right-click\n" +
+               "  useItem hold            - Hold right-click indefinitely\n" +
+               "  useItem hold <ticks>    - Hold for specified ticks\n" +
+               "  useItem release         - Release held right-click\n" +
+               "  useItem offhand         - Use item in offhand\n\n" +
+               "Parameters:\n" +
+               "  ticks  - Duration in game ticks (20 ticks = 1 second)\n\n" +
+               "Details:\n" +
+               "  - Single use: one right-click action\n" +
+               "  - Hold mode: keeps right-click pressed\n" +
+               "  - Useful for bows, shields, eating, fishing\n" +
+               "  - 'offhand' uses item in left hand slot\n\n" +
+               "Item-specific behaviors:\n" +
+               "  - Bow: hold to charge, release to shoot\n" +
+               "  - Shield: hold to block\n" +
+               "  - Food: hold to eat (use 'eat' command instead)\n" +
+               "  - Fishing rod: cast/reel\n" +
+               "  - Ender pearl: throw\n" +
+               "  - Bucket: place/collect liquid\n\n" +
+               "Examples:\n" +
+               "  useItem                 // Single use\n" +
+               "  useItem hold 40         // Hold for 2 seconds\n" +
+               "  useItem release         // Stop holding\n" +
+               "  useItem offhand         // Use shield/totem\n\n" +
+               "Bow shooting pattern:\n" +
+               "  selectSlot item bow\n" +
+               "  useItem hold 20         // Charge bow\n" +
+               "  useItem release         // Shoot";
+    }
 
     @Override
     public void execute(String[] args) {

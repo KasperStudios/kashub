@@ -33,6 +33,39 @@ public class RunToCommand implements Command {
   }
 
   @Override
+  public String getCategory() {
+    return "Movement";
+  }
+
+  @Override
+  public String getDetailedHelp() {
+    return "Makes player run to specified coordinates.\n\n" +
+           "Usage:\n" +
+           "  run <x> <y> <z>     - Run to absolute coords\n" +
+           "  run ~<dx> ~<dy> ~<dz> - Run to relative coords\n" +
+           "  run stop            - Stop running\n\n" +
+           "Coordinate Types:\n" +
+           "  100 64 200   - Absolute coordinates\n" +
+           "  ~10 ~ ~-5    - Relative to player\n" +
+           "  ~            - Current coordinate\n\n" +
+           "Examples:\n" +
+           "  run 100 64 200\n" +
+           "  run ~10 ~ ~10\n" +
+           "  run ~ ~5 ~\n" +
+           "  run stop\n\n" +
+           "Behavior:\n" +
+           "  - Continuously moves toward target\n" +
+           "  - Stops when within 1 block of target\n" +
+           "  - Does not pathfind around obstacles\n" +
+           "  - Y coordinate affects vertical velocity\n\n" +
+           "Notes:\n" +
+           "  - Use 'moveTo' for single-step movement\n" +
+           "  - Combine with 'jump' for obstacles\n" +
+           "  - Async version waits until arrival\n" +
+           "  - Call 'run stop' to cancel";
+  }
+
+  @Override
   public void execute(String[] args) throws Exception {
     MinecraftClient client = MinecraftClient.getInstance();
     ClientPlayerEntity player = client.player;

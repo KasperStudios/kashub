@@ -8,7 +8,6 @@ import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.editor.ModernEditorScreen;
 import kasperstudios.kashub.network.AnimationManager;
 import kasperstudios.kashub.runtime.ScriptTaskManager;
-import kasperstudios.kashub.services.HttpService;
 import kasperstudios.kashub.util.ScriptFileWatcher;
 import kasperstudios.kashub.util.ScriptLogger;
 import net.fabricmc.api.ClientModInitializer;
@@ -84,9 +83,6 @@ public class KashubClient implements ClientModInitializer {
                 
                 // Process script tasks
                 ScriptTaskManager.getInstance().tick();
-                
-                // Process HTTP callbacks
-                HttpService.getInstance().tick();
                 
                 // Process animations
                 AnimationManager.getInstance().tick();

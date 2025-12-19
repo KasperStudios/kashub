@@ -31,6 +31,7 @@ public class DocsDialog extends Screen {
     private List<DocSection> filteredSections = new ArrayList<>();
     private int selectedSection = 0;
     private int scrollY = 0;
+    private int scrollX = 0; // Horizontal scroll for content
     private int sidebarScrollY = 0;
     
     private String searchQuery = "";
@@ -518,7 +519,6 @@ public class DocsDialog extends Screen {
     private void renderContent(DrawContext context, int dx, int dy, int mouseX, int mouseY) {
         int contentWidth = getDialogWidth() - SIDEBAR_WIDTH;
         int contentHeight = getDialogHeight() - HEADER_HEIGHT;
-        int maxTextWidth = contentWidth - 24;
         
         List<DocSection> displaySections = filteredSections.isEmpty() ? sections : filteredSections;
         if (selectedSection >= displaySections.size()) {
@@ -535,21 +535,19 @@ public class DocsDialog extends Screen {
         for (String line : section.lines) {
             if (y > dy - lineHeight && y < dy + contentHeight) {
                 int color = theme.textColor;
-                int xOffset = 12;
+                int xOffset = 12 - scrollX; // Apply horizontal scroll
                 
+                // Display full line without truncation - horizontal scroll handles overflow
                 String displayLine = line;
-                if (textRenderer.getWidth(line) > maxTextWidth) {
-                    displayLine = truncateText(line, maxTextWidth - 10) + "...";
-                }
                 
                 if (line.startsWith("# ")) {
                     color = theme.accentColor;
-                    displayLine = displayLine.substring(Math.min(2, displayLine.length()));
+                    displayLine = line.substring(2);
                     context.drawText(textRenderer, displayLine, dx + xOffset, y, color, true);
                     y += 4;
                 } else if (line.startsWith("## ")) {
                     color = theme.functionColor;
-                    displayLine = displayLine.substring(Math.min(3, displayLine.length()));
+                    displayLine = line.substring(3);
                     y += 4;
                     context.drawText(textRenderer, displayLine, dx + xOffset, y, color, true);
                 } else if (line.startsWith("//") || line.startsWith("  ")) {
@@ -607,6 +605,20 @@ public class DocsDialog extends Screen {
         return height;
     }
     
+    /**
+     * Calculate maximum line width in section for horizontal scrolling
+     */
+    private int calculateMaxLineWidth(DocSection section) {
+        int maxWidth = 0;
+        for (String line : section.lines) {
+            int width = textRenderer.getWidth(line);
+            if (width > maxWidth) {
+                maxWidth = width;
+            }
+        }
+        return maxWidth;
+    }
+    
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int dx = getDialogX();
@@ -630,6 +642,7 @@ public class DocsDialog extends Screen {
             if (index >= 0 && index < displaySections.size()) {
                 selectedSection = index;
                 scrollY = 0;
+                scrollX = 0; // Reset horizontal scroll when changing section
                 return true;
             }
         }
@@ -655,13 +668,22 @@ public class DocsDialog extends Screen {
         // Content scroll
         if (mouseX >= dx + SIDEBAR_WIDTH && mouseX < dx + getDialogWidth()) {
             int contentHeight = getDialogHeight() - HEADER_HEIGHT;
+            int contentWidth = getDialogWidth() - SIDEBAR_WIDTH;
             List<DocSection> displaySections = filteredSections.isEmpty() ? sections : filteredSections;
             if (selectedSection < displaySections.size()) {
                 DocSection section = displaySections.get(selectedSection);
-                // Calculate total height accounting for header spacing
-                int totalHeight = calculateSectionHeight(section) + 48; // Extra padding at bottom
-                int maxScroll = Math.max(0, totalHeight - contentHeight);
-                scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 36)));
+                
+                // Horizontal scroll with Shift key
+                if (hasShiftDown()) {
+                    int maxLineWidth = calculateMaxLineWidth(section);
+                    int maxScrollX = Math.max(0, maxLineWidth - contentWidth + 40);
+                    scrollX = Math.max(0, Math.min(maxScrollX, scrollX - (int)(verticalAmount * 36)));
+                } else {
+                    // Vertical scroll
+                    int totalHeight = calculateSectionHeight(section) + 48;
+                    int maxScroll = Math.max(0, totalHeight - contentHeight);
+                    scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 36)));
+                }
             }
             return true;
         }

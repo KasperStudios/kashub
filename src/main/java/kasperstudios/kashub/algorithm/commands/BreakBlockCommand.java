@@ -22,7 +22,34 @@ public class BreakBlockCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[x y z]";
+        return "[x y z] - optional coordinates";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Interaction";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Breaks a block at specified position or crosshair target.\n\n" +
+               "Usage:\n" +
+               "  breakBlock              - Break block at crosshair\n" +
+               "  breakBlock <x> <y> <z>  - Break block at coordinates\n\n" +
+               "Details:\n" +
+               "  - Without args: breaks block player is looking at\n" +
+               "  - With coords: breaks block at exact position\n" +
+               "  - Simulates left-click attack action\n" +
+               "  - Respects tool requirements (pickaxe for stone, etc.)\n" +
+               "  - Breaking time depends on tool and block hardness\n" +
+               "  - Does NOT wait for block to fully break\n\n" +
+               "Examples:\n" +
+               "  breakBlock                  // Break targeted block\n" +
+               "  breakBlock 100 64 200       // Break at coords\n" +
+               "  loop { breakBlock; wait 50 } // Mining loop\n\n" +
+               "Tip: Use with 'lookAt' to target specific blocks:\n" +
+               "  lookAt 100 64 200\n" +
+               "  breakBlock";
     }
 
     @Override

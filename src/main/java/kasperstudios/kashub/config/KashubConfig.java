@@ -3,7 +3,6 @@ package kasperstudios.kashub.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
@@ -38,12 +37,8 @@ public class KashubConfig {
     public boolean allowNetworkAccess = false;
     public boolean allowEval = false; // Разрешить выполнение Java-кода через eval
 
-    // Настройки HTTP/API
-    public boolean allowHttpRequests = false;
-    public boolean allowRemoteScripts = false;
+    // AI Integration settings
     public boolean allowAiIntegration = false;
-    public List<String> httpWhitelistedDomains = new ArrayList<>();
-    public List<String> remoteScriptSources = new ArrayList<>();
     
     // AI Settings
     public enum AiProvider { OFF, GROQ, MEGALLM, CUSTOM }

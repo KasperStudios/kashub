@@ -38,12 +38,10 @@ public class CommandRegistry {
         registerCommand(new EquipArmorCommand());
         registerCommand(new FullBrightCommand());
         registerCommand(new GetBlockCommand());
-        registerCommand(new HttpCommand());
         registerCommand(new InputCommand());
         registerCommand(new InteractCommand());
         registerCommand(new InventoryCommand());
         registerCommand(new JumpCommand());
-        registerCommand(new LoadScriptCommand());
         registerCommand(new LogCommand());
         registerCommand(new LookAtCommand());
         registerCommand(new LoopCommand());

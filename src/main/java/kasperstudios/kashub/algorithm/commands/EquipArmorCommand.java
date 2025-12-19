@@ -26,7 +26,39 @@ public class EquipArmorCommand implements Command {
 
     @Override
     public String getParameters() {
-        return "[type] - armor type (diamond, iron, gold, netherite, leather, chainmail) or 'best'";
+        return "[type] - armor material or 'best'";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Inventory";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Automatically equips armor from inventory.\n\n" +
+               "Usage:\n" +
+               "  equipArmor              - Equip best armor available\n" +
+               "  equipArmor best         - Same as above\n" +
+               "  equipArmor <type>       - Equip specific armor type\n\n" +
+               "Armor Types:\n" +
+               "  netherite  - Best protection\n" +
+               "  diamond    - High protection\n" +
+               "  iron       - Medium protection\n" +
+               "  chainmail  - Medium protection\n" +
+               "  gold       - Low protection (high enchantability)\n" +
+               "  leather    - Lowest protection (dyeable)\n\n" +
+               "Details:\n" +
+               "  - Equips all 4 pieces: helmet, chestplate, leggings, boots\n" +
+               "  - 'best' mode selects highest protection value\n" +
+               "  - Uses shift-click for quick equip\n" +
+               "  - Searches entire inventory, not just hotbar\n\n" +
+               "Examples:\n" +
+               "  equipArmor              // Best available\n" +
+               "  equipArmor diamond      // Diamond set\n" +
+               "  equipArmor netherite    // Netherite set\n" +
+               "  equipArmor iron         // Iron set\n\n" +
+               "Note: Only equips armor found in inventory.";
     }
 
     @Override

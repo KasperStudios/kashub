@@ -21,7 +21,7 @@ import net.minecraft.text.Text;
 
 /**
  * Modern fullscreen code editor for Kashub scripts
- * v0.6.0 Beta - Simplified UI: No console panel, no right tabs
+ * Simplified UI: No console panel, no right tabs
  * Editor takes 100% of available space (minus file panel)
  */
 public class ModernEditorScreen extends Screen {
@@ -127,7 +127,7 @@ public class ModernEditorScreen extends Screen {
         }
         
         // Log startup
-        ScriptLogger.getInstance().info("Kashub Editor v0.6.0 Beta ready");
+        ScriptLogger.getInstance().info("Kashub Editor v" + kasperstudios.kashub.Kashub.VERSION + " ready");
     }
     
     @Override
@@ -185,7 +185,7 @@ public class ModernEditorScreen extends Screen {
         
         // Logo text
         context.drawText(this.textRenderer, "⚡ KASHUB", 16, logoY, theme.accentColor, true);
-        context.drawText(this.textRenderer, "v0.6.0 Beta", LEFT_PANEL_WIDTH - 40, logoY + 4, theme.textDimColor, false);
+        context.drawText(this.textRenderer, "v" + kasperstudios.kashub.Kashub.VERSION, LEFT_PANEL_WIDTH - 40, logoY + 4, theme.textDimColor, false);
         
         // Separator
         context.fill(10, TOOLBAR_HEIGHT - 2, LEFT_PANEL_WIDTH - 10, TOOLBAR_HEIGHT - 1, theme.accentColor & 0x44FFFFFF);

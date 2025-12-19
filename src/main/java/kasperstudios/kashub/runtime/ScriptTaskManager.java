@@ -114,13 +114,6 @@ public class ScriptTaskManager {
             if (task.getState() == ScriptState.RUNNING) {
                 runningCount++;
                 try {
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("c:\\Users\\kasperenok\\Desktop\\projects\\kashub\\.cursor\\debug.log", true);
-                        fw.write("{\"timestamp\":" + System.currentTimeMillis() + ",\"location\":\"ScriptTaskManager.tick:117\",\"message\":\"Calling tick on task\",\"data\":{\"taskId\":" + task.getId() + ",\"taskName\":\"" + task.getName() + "\",\"processed\":" + processed + "},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"C\"}\n");
-                        fw.close();
-                    } catch (Exception e) {}
-                    // #endregion
                     task.tick();
                     processed++;
                 } catch (Exception e) {

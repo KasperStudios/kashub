@@ -22,12 +22,49 @@ public class SwimCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Makes player swim";
+        return "Makes player swim in water";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] or up/down/forward - swimming direction";
+        return "[direction] [ms] - up/down/forward";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Controls player swimming in water.\n\n" +
+               "Usage:\n" +
+               "  swim                    - Swim forward (1 second)\n" +
+               "  swim <direction>        - Swim in direction (1 second)\n" +
+               "  swim <direction> <ms>   - Swim for duration\n" +
+               "  swim <ms>               - Swim forward for duration\n\n" +
+               "Directions:\n" +
+               "  forward  - Swim in look direction (default)\n" +
+               "  up       - Swim upward (surface)\n" +
+               "  down     - Swim downward (dive)\n\n" +
+               "Parameters:\n" +
+               "  ms  - Duration in milliseconds (default: 1000)\n\n" +
+               "Details:\n" +
+               "  - Only works when player is in water\n" +
+               "  - 'up' uses jump key (surfaces faster)\n" +
+               "  - 'down' uses sneak key (sinks)\n" +
+               "  - 'forward' uses forward movement key\n" +
+               "  - Automatically releases keys after duration\n\n" +
+               "Examples:\n" +
+               "  swim                    // Swim forward 1s\n" +
+               "  swim up                 // Surface\n" +
+               "  swim down 2000          // Dive for 2s\n" +
+               "  swim forward 5000       // Swim forward 5s\n\n" +
+               "Underwater exploration:\n" +
+               "  swim down 3000\n" +
+               "  wait 1000\n" +
+               "  swim forward 5000\n" +
+               "  swim up 3000";
     }
 
     @Override

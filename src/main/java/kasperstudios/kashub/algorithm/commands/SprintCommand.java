@@ -23,12 +23,44 @@ public class SprintCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Makes player sprint";
+        return "Makes player sprint (run fast)";
     }
 
     @Override
     public String getParameters() {
-        return "[duration_ms] or toggle/stop - duration in ms or toggle";
+        return "[ms] | toggle | stop";
+    }
+    
+    @Override
+    public String getCategory() {
+        return "Movement";
+    }
+    
+    @Override
+    public String getDetailedHelp() {
+        return "Controls player sprinting (fast running).\n\n" +
+               "Usage:\n" +
+               "  sprint                  - Start sprinting\n" +
+               "  sprint <ms>             - Sprint for duration\n" +
+               "  sprint toggle           - Toggle sprint on/off\n" +
+               "  sprint stop             - Stop sprinting\n\n" +
+               "Parameters:\n" +
+               "  ms  - Duration in milliseconds\n\n" +
+               "Details:\n" +
+               "  - Sprinting increases movement speed ~30%\n" +
+               "  - Drains hunger faster\n" +
+               "  - Stops when hitting obstacles\n" +
+               "  - Requires hunger > 6 (3 drumsticks)\n" +
+               "  - 'toggle' remembers state between calls\n\n" +
+               "Examples:\n" +
+               "  sprint                  // Start sprinting\n" +
+               "  sprint 5000             // Sprint for 5 seconds\n" +
+               "  sprint toggle           // Toggle on\n" +
+               "  sprint stop             // Force stop\n\n" +
+               "Fast travel pattern:\n" +
+               "  sprint toggle\n" +
+               "  pathfind 1000 64 1000\n" +
+               "  sprint stop";
     }
 
     @Override
