@@ -3,6 +3,12 @@ name: Discord Notify
 on:
   push:
     branches: [ main ]
+  pull_request:
+    types: [ opened, closed ]
+  issues:
+    types: [ opened, closed ]
+  release:
+    types: [ published ]
 
 jobs:
   notify:
@@ -11,14 +17,41 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Send Discord message
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          EVENT_NAME: ${{ github.event_name }}
+          ROLE_ID: "1451606112309608741"
         run: |
-          curl -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+          if [ "$EVENT_NAME" = "push" ]; then
+            TITLE="📤 New commit to ${{ github.ref_name }}"
+            DESC="${{ github.event.head_commit.message }}"
+            URL="${{ github.event.head_commit.url }}"
+            PING="<@&$ROLE_ID>"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            TITLE="🔀 Pull Request: ${{ github.event.pull_request.title }}"
+            DESC="Status: ${{ github.event.action }}"
+            URL="${{ github.event.pull_request.html_url }}"
+            PING=""
+          elif [ "$EVENT_NAME" = "issues" ]; then
+            TITLE="🐛 Issue: ${{ github.event.issue.title }}"
+            DESC="Status: ${{ github.event.action }}"
+            URL="${{ github.event.issue.html_url }}"
+            PING=""
+          elif [ "$EVENT_NAME" = "release" ]; then
+            TITLE="🚀 Release: ${{ github.event.release.tag_name }}"
+            DESC="${{ github.event.release.name }}"
+            URL="${{ github.event.release.html_url }}"
+            PING=""
+          fi
+          
+          curl -X POST "$WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
-            -d '{
-              "content": "New push to main!",
-              "embeds": [{
-                "title": "Repository: ${{ github.repository }}",
-                "description": "Branch: ${{ github.ref_name }}",
-                "color": 3447003
+            -d "{
+              \"content\": \"$PING\",
+              \"embeds\": [{
+                \"title\": \"$TITLE\",
+                \"description\": \"$DESC\",
+                \"url\": \"$URL\",
+                \"color\": 3447003
               }]
-            }'
+            }"
