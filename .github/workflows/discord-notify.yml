@@ -27,31 +27,44 @@ jobs:
             DESC="${{ github.event.head_commit.message }}"
             URL="${{ github.event.head_commit.url }}"
             PING="<@&$ROLE_ID>"
+            IMAGE="${{ github.event.head_commit.author.avatar_url }}"
           elif [ "$EVENT_NAME" = "pull_request" ]; then
-            TITLE="🔀 Pull Request: ${{ github.event.pull_request.title }}"
+            TITLE="🔀 [${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
             DESC="Status: ${{ github.event.action }}"
             URL="${{ github.event.pull_request.html_url }}"
             PING=""
+            IMAGE="${{ github.event.pull_request.user.avatar_url }}"
           elif [ "$EVENT_NAME" = "issues" ]; then
-            TITLE="🐛 Issue: ${{ github.event.issue.title }}"
+            TITLE="🐛 [${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
             DESC="Status: ${{ github.event.action }}"
             URL="${{ github.event.issue.html_url }}"
             PING=""
+            IMAGE="${{ github.event.issue.user.avatar_url }}"
           elif [ "$EVENT_NAME" = "release" ]; then
-            TITLE="🚀 Release: ${{ github.event.release.tag_name }}"
+            TITLE="🚀 ${{ github.event.release.tag_name }}"
             DESC="${{ github.event.release.name }}"
             URL="${{ github.event.release.html_url }}"
             PING=""
+            IMAGE=""
           fi
+          
+          cat > /tmp/payload.json <<EOF
+          {
+            "content": "$PING",
+            "embeds": [{
+              "title": "$TITLE",
+              "description": "$DESC",
+              "url": "$URL",
+              "thumbnail": {
+                "url": "$IMAGE",
+                "height": 0,
+                "width": 0
+              },
+              "color": 3447003
+            }]
+          }
+          EOF
           
           curl -X POST "$WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
-            -d "{
-              \"content\": \"$PING\",
-              \"embeds\": [{
-                \"title\": \"$TITLE\",
-                \"description\": \"$DESC\",
-                \"url\": \"$URL\",
-                \"color\": 3447003
-              }]
-            }"
+            -d @/tmp/payload.json
