@@ -1,4 +1,4 @@
-name: Discord Notification
+name: Discord Notify
 
 on:
   push:
@@ -7,9 +7,18 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    environment: DISCORD_WEBHOOK  # ← указываешь какой environment использовать
     steps:
-      - name: Send to Discord
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
+      - uses: actions/checkout@v3
+      
+      - name: Send Discord message
+        run: |
+          curl -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "content": "New push to main!",
+              "embeds": [{
+                "title": "Repository: ${{ github.repository }}",
+                "description": "Branch: ${{ github.ref_name }}",
+                "color": 3447003
+              }]
+            }'
