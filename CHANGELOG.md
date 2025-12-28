@@ -2,6 +2,78 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v0.7.0 beta] - 2025-12-21
+
+### 🔥 Major Features
+
+#### VSCode Integration & API Server
+- **HTTP API Server** for external tool integration (VSCode, custom tools)
+  - Default port: 25566 (configurable)
+  - REST endpoints for script management
+  - CORS support for web-based tools
+  
+- **WebSocket Server** for real-time communication
+  - Default port: 25567 (configurable)
+  - Live script output streaming
+  - Task state change notifications
+  - Error broadcasting
+
+- **VSCode Extension** (separate package: kashub-vscode)
+  - Full KHScript syntax highlighting
+  - IntelliSense with online/offline modes
+  - Real-time validation powered by actual Kashub parser
+  - Kashub Console panel for live output
+  - Run scripts directly from VSCode (Ctrl+Shift+K)
+  - Environment variables viewer
+  - Task management
+
+### ✨ API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/status` | GET | Mod status, player info, task stats |
+| `/api/validate` | POST | Validate KHScript code |
+| `/api/autocomplete` | POST | Get autocomplete suggestions |
+| `/api/run` | POST | Execute script code |
+| `/api/tasks` | GET | List all running tasks |
+| `/api/tasks/{id}/stop` | POST | Stop a specific task |
+| `/api/tasks/{id}/pause` | POST | Pause a specific task |
+| `/api/tasks/{id}/resume` | POST | Resume a paused task |
+| `/api/variables` | GET | Get all environment variables |
+
+### ✨ WebSocket Events
+
+| Event | Description |
+|-------|-------------|
+| `script_output` | Script print/log output |
+| `script_error` | Script execution errors |
+| `task_state_change` | Task started/stopped/paused |
+| `variable_update` | Environment variable changed |
+
+### ⚙️ New Configuration Options
+
+```json
+{
+  "apiEnabled": true,
+  "apiPort": 25566,
+  "apiWebSocketPort": 25567,
+  "apiRequireAuth": false
+}
+```
+
+### 🔧 Improvements
+
+- Print and Log commands now broadcast to WebSocket for VSCode console
+- Better error messages with line numbers
+- Improved command validation
+
+### 📝 Notes
+- API server starts automatically when mod loads (if enabled)
+- VSCode extension available separately
+- Works with hot-reload from v0.6.0
+
+---
+
 ## [v0.6.1] - 2025-12-19
 
 ### ⚙️ IBug Fixes

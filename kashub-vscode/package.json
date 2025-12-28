@@ -1,0 +1,136 @@
+{
+  "name": "kashub-vscode",
+  "displayName": "Kashub Script Language Support",
+  "description": "Full language support for Kashub (.kh) scripts with real-time debugging and live connection to Minecraft",
+  "version": "0.1.1",
+  "publisher": "kasperenok",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kasperenok/kashub-vscode"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Snippets"
+  ],
+  "keywords": [
+    "kashub",
+    "minecraft",
+    "scripting",
+    "automation",
+    "khscript"
+  ],
+  "activationEvents": [
+    "onLanguage:khscript",
+    "onCommand:kashub.runScript",
+    "onCommand:kashub.openConsole"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "khscript",
+        "aliases": ["KHScript", "Kashub Script"],
+        "extensions": [".kh", ".khs", ".khscript"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "khscript",
+        "scopeName": "source.khscript",
+        "path": "./syntaxes/khscript.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "khscript",
+        "path": "./snippets/khscript.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "kashub.runScript",
+        "title": "Kashub: Run Current Script",
+        "icon": "$(play)"
+      },
+      {
+        "command": "kashub.openConsole",
+        "title": "Kashub: Open Console",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "kashub.showVariables",
+        "title": "Kashub: Show Variables"
+      },
+      {
+        "command": "kashub.stopAllTasks",
+        "title": "Kashub: Stop All Tasks"
+      },
+      {
+        "command": "kashub.reconnect",
+        "title": "Kashub: Reconnect to Mod"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kashub.runScript",
+        "key": "ctrl+shift+k",
+        "when": "editorLangId == khscript"
+      },
+      {
+        "command": "kashub.openConsole",
+        "key": "ctrl+shift+`",
+        "when": "editorLangId == khscript"
+      }
+    ],
+    "configuration": {
+      "title": "Kashub",
+      "properties": {
+        "kashub.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:25566",
+          "description": "Kashub API server URL"
+        },
+        "kashub.wsUrl": {
+          "type": "string",
+          "default": "ws://localhost:25567",
+          "description": "Kashub WebSocket server URL"
+        },
+        "kashub.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to Kashub when VS Code starts"
+        },
+        "kashub.showConsoleOnRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open console when running a script"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.0.0",
+    "@types/ws": "^8.5.0",
+    "typescript": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ws": "^8.14.0"
+  }
+}

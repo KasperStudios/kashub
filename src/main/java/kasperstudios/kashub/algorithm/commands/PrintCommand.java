@@ -1,6 +1,8 @@
 package kasperstudios.kashub.algorithm.commands;
 
 import kasperstudios.kashub.algorithm.Command;
+import kasperstudios.kashub.api.server.KashubAPIServer;
+import kasperstudios.kashub.api.server.events.ScriptOutputEvent;
 import kasperstudios.kashub.util.ScriptLogger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -54,5 +56,13 @@ public class PrintCommand implements Command {
                 client.player.sendMessage(Text.literal("§5[KH] §f" + message), false);
             }
         });
+        
+        // Broadcast to VSCode via WebSocket
+        KashubAPIServer.broadcast(new ScriptOutputEvent(
+            0, // TODO: get current task ID
+            message,
+            "info",
+            System.currentTimeMillis()
+        ));
     }
 }

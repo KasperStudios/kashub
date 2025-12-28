@@ -78,6 +78,12 @@ public class KashubConfig {
     public boolean logToFile = true;
     public boolean logToChat = false;
     
+    // API Server settings (VSCode integration)
+    public boolean apiEnabled = true; // Enable API server for VSCode integration
+    public int apiPort = 25566; // HTTP API port (25565 is Minecraft default, so use 25566)
+    public int apiWebSocketPort = 25567; // WebSocket port for real-time updates
+    public boolean apiRequireAuth = false; // Require authentication (future feature)
+    
     // Последний открытый скрипт
     public String lastOpenedScript = null;
     

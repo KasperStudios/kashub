@@ -182,12 +182,17 @@ public class ModernTextArea {
             RenderSystem.disableScissor();
         }
         
-        // Cursor
+        // Cursor - render with proper clipping
         if (focused && (System.currentTimeMillis() - cursorBlinkTime) % 1000 < 500) {
             int cursorX = x + LINE_NUMBER_WIDTH + PADDING + getTextWidth(getCurrentLineBeforeCursor()) - scrollX;
             int cursorY = y + (cursorLine - scrollY) * LINE_HEIGHT + PADDING;
             
-            if (cursorY >= y && cursorY < y + height - LINE_HEIGHT) {
+            // Only render cursor if it's within visible area (both vertically and horizontally)
+            int codeAreaLeft = x + LINE_NUMBER_WIDTH;
+            int codeAreaRight = x + width - 8; // Account for scrollbar
+            
+            if (cursorY >= y && cursorY < y + height - LINE_HEIGHT &&
+                cursorX >= codeAreaLeft && cursorX < codeAreaRight) {
                 context.fill(cursorX, cursorY - 1, cursorX + 2, cursorY + LINE_HEIGHT - 1, theme.cursorColor);
             }
         }
@@ -498,8 +503,14 @@ public class ModernTextArea {
         }
         
         // Handle selection with Shift+Arrow keys
-        if (shiftPressed && (keyCode == 262 || keyCode == 263 || keyCode == 264 || keyCode == 265)) {
-            startSelection();
+        if (shiftPressed && (keyCode == 262 || keyCode == 263 || keyCode == 264 || keyCode == 265 ||
+                             keyCode == 268 || keyCode == 269)) {
+            // Start selection from current position BEFORE moving cursor
+            if (!hasSelection) {
+                selectionStartLine = cursorLine;
+                selectionStartColumn = cursorColumn;
+                hasSelection = true;
+            }
         }
         
         // Clear selection on non-shift navigation

@@ -1370,10 +1370,12 @@ public class ScriptTask {
         pendingLoopMarker = null; // Clear pending loop marker
         shouldBreak = false; // Reset break flag
         shouldContinue = false; // Reset continue flag
+        localFunctions.clear(); // Clear local functions to prevent memory leaks
+        variables.clear(); // Clear local variables
         if (currentCommandFuture != null && !currentCommandFuture.isDone()) {
             currentCommandFuture.cancel(true);
         }
-        ScriptLogger.getInstance().info("Task " + id + " (" + name + ") stopped, loop state cleared");
+        ScriptLogger.getInstance().info("Task " + id + " (" + name + ") stopped, all state cleared");
     }
 
     public void restart() {

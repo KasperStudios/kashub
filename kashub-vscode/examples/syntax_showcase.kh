@@ -1,0 +1,311 @@
+// KHScript Syntax Showcase
+// This file demonstrates all syntax highlighting features
+
+// ============================================
+// 1. COMMENTS
+// ============================================
+// Single line comment
+/* Multi-line
+   comment block */
+
+// ============================================
+// 2. VARIABLES
+// ============================================
+
+// User variables (lowercase)
+let myVar = 10
+const MAX_HEALTH = 20
+playerName = "Steve"
+
+// Environment variables (uppercase with $)
+print "Player X: $PLAYER_X"
+print "Health: $PLAYER_HEALTH"
+print "Food: $PLAYER_FOOD"
+
+// Variables in strings
+print "Position: $PLAYER_X, $PLAYER_Y, $PLAYER_Z"
+log info "Player $PLAYER_NAME has $PLAYER_HEALTH HP"
+
+// ============================================
+// 3. CONTROL FLOW
+// ============================================
+
+// If statement
+if ($PLAYER_HEALTH < 10) {
+    print "Low health!"
+    eat golden_apple
+}
+
+// If-else
+if ($PLAYER_FOOD < 5) {
+    eat
+} else {
+    print "Food is OK"
+}
+
+// While loop
+while ($PLAYER_HEALTH < 20) {
+    eat
+    wait 1000
+}
+
+// For loop
+for (i = 0; i < 10; i++) {
+    jump
+    wait 500
+}
+
+// Loop N times
+loop 5 {
+    print "Iteration"
+    wait 100
+}
+
+// ============================================
+// 4. OPERATORS
+// ============================================
+
+// Comparison
+if (x == 10) { }
+if (x != 5) { }
+if (x > 0) { }
+if (x >= 10) { }
+if (x < 100) { }
+if (x <= 50) { }
+
+// Logical
+if (x > 0 && y < 10) { }
+if (a || b) { }
+if (!condition) { }
+
+// Arithmetic
+result = x + y
+result = x - y
+result = x * y
+result = x / y
+result = x % y
+counter++
+counter--
+
+// Assignment
+x = 10
+x += 5
+x -= 3
+x *= 2
+x /= 4
+
+// Ternary
+value = condition ? 10 : 20
+
+// ============================================
+// 5. COMMANDS
+// ============================================
+
+// Output commands
+print "Hello World"
+log info "Script started"
+chat "Hello everyone!"
+
+// Movement commands
+moveTo 100 64 200
+run 50 70 150
+jump 3
+sneak toggle
+sprint true
+swim forward 5
+stop
+tp ~10 ~ ~10
+lookAt 100 64 200
+
+// Combat commands
+attack 5 hostile
+setHealth 20
+
+// Interaction commands
+interact block
+placeBlock 100 64 200 stone
+breakBlock 100 64 200
+useItem diamond_pickaxe
+eat golden_apple
+dropItem dirt 64
+equipArmor best
+
+// Inventory commands
+inventory
+selectSlot 1
+selectSlot item diamond_pickaxe
+autoCraft check diamond_pickaxe
+autoTrade
+
+// Scanner commands
+scan blocks 10
+scanner entities 20
+vision target 50
+
+// Visual commands
+fullbright toggle
+animation play wave
+
+// System commands
+sound play block.note_block.pling
+input jump
+ai analyze
+onEvent onDamage { print "Ouch!" }
+scripts list
+eval "print 'Dynamic code'"
+getBlock 100 64 200
+speed 2.0
+crashguard enable
+
+// Utility
+wait 1000
+
+// ============================================
+// 6. FUNCTIONS
+// ============================================
+
+// Function definition
+fn greet(name) {
+    print "Hello, $name!"
+}
+
+// Function call
+greet("Steve")
+
+// Function with multiple parameters
+function calculateDistance(x1, y1, x2, y2) {
+    dx = x2 - x1
+    dy = y2 - y1
+    return dx * dx + dy * dy
+}
+
+// ============================================
+// 7. EVENTS
+// ============================================
+
+onEvent onTick {
+    // Runs every second
+    if ($PLAYER_HEALTH < 10) {
+        print "Warning: Low health!"
+    }
+}
+
+onEvent onDamage {
+    print "Took damage! Health: $PLAYER_HEALTH"
+    if ($PLAYER_HEALTH < 5) {
+        eat golden_apple
+    }
+}
+
+onEvent onChat {
+    log info "Chat: $event_message"
+}
+
+// ============================================
+// 8. SPECIAL KEYWORDS
+// ============================================
+
+// Command-specific keywords
+autoCraft check diamond_pickaxe
+autoCraft recipe diamond_pickaxe 1
+autoCraft missing diamond_pickaxe
+autoCraft list pickaxe
+
+equipArmor best
+equipArmor diamond
+
+selectSlot item diamond_sword
+selectSlot 1
+
+dropItem all
+dropItem dirt 64
+
+sneak toggle
+sprint true
+
+input move forward true
+input move back false
+input look 90 0
+input hotbar 1
+
+vision target 50
+vision block 10
+vision entity 20
+vision nearest hostile 30
+
+attack 5 hostile 3
+attack 10 passive
+attack 15 player
+attack 20 all
+
+// ============================================
+// 9. NUMBERS & STRINGS
+// ============================================
+
+// Numbers
+integer = 42
+float = 3.14
+negative = -10
+zero = 0
+
+// Strings
+singleQuote = 'Hello'
+doubleQuote = "World"
+withEscape = "Line 1\nLine 2"
+withVariable = "Health: $PLAYER_HEALTH"
+
+// ============================================
+// 10. CONSTANTS
+// ============================================
+
+true
+false
+null
+nil
+undefined
+
+// ============================================
+// 11. COMPLEX EXAMPLE
+// ============================================
+
+// Auto-mining script with health monitoring
+fn autoMine(duration) {
+    let startTime = $WORLD_TIME
+    let mined = 0
+    
+    while ($WORLD_TIME - startTime < duration) {
+        // Check health
+        if ($PLAYER_HEALTH < 10) {
+            print "Low health! Eating..."
+            eat
+            wait 2000
+        }
+        
+        // Check hunger
+        if ($PLAYER_FOOD < 10) {
+            print "Hungry! Eating..."
+            eat
+            wait 1000
+        }
+        
+        // Mine block
+        lookAt 0 -90 0
+        breakBlock
+        wait 500
+        
+        // Move forward
+        moveTo $PLAYER_X $PLAYER_Y ($PLAYER_Z + 1)
+        wait 200
+        
+        mined++
+        
+        if (mined % 10 == 0) {
+            print "Mined $mined blocks"
+        }
+    }
+    
+    print "Mining complete! Total: $mined blocks"
+}
+
+// Run the script
+autoMine(60000)

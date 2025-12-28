@@ -1,6 +1,8 @@
 package kasperstudios.kashub.algorithm.commands;
 
 import kasperstudios.kashub.algorithm.Command;
+import kasperstudios.kashub.api.server.KashubAPIServer;
+import kasperstudios.kashub.api.server.events.ScriptOutputEvent;
 import kasperstudios.kashub.util.ScriptLogger;
 
 /**
@@ -83,5 +85,14 @@ public class LogCommand implements Command {
         }
 
         logger.log(level, message);
+        
+        // Broadcast to VSCode via WebSocket
+        String wsLevel = level.name().toLowerCase();
+        KashubAPIServer.broadcast(new ScriptOutputEvent(
+            0, // TODO: get current task ID
+            message,
+            wsLevel,
+            System.currentTimeMillis()
+        ));
     }
 }

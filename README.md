@@ -15,7 +15,15 @@
 - **Event System** - React to game events (damage, chat, ticks, etc.)
 - **Debug Tools** - Breakpoints, step-through debugging, variable watching
 
-### v0.6.1 Features (Latest)
+### v0.7.0 Features (Latest) 🔥
+- **🔌 VSCode Integration** - Full IDE support with dedicated VSCode extension
+- **🌐 HTTP API Server** - REST API for external tool integration (port 25566)
+- **📡 WebSocket Server** - Real-time script output streaming (port 25567)
+- **💡 IntelliSense** - Autocomplete powered by actual Kashub parser
+- **🖥️ Kashub Console** - Live output panel in VSCode
+- **⚡ Run from VSCode** - Execute scripts with Ctrl+Shift+K
+
+### v0.6.1 Features
 - **🔧 Improved Stability** - Removed debug logging, cleaner codebase
 - **📚 Better Documentation** - Full command descriptions without truncation, horizontal scrolling in docs
 - **🔒 Enhanced Security** - Removed HTTP script commands for safer scripting
@@ -50,6 +58,47 @@
 | `F9` | Toggle breakpoint (in editor) |
 | `F5` | Run/Continue script |
 | `F10` | Step over (debug mode) |
+
+## 🔌 VSCode Integration (v0.7.0+)
+
+Kashub now includes full VSCode integration for professional development experience!
+
+### Installation
+
+1. Install the **Kashub VSCode Extension** from the `kashub-vscode` folder
+2. Start Minecraft with Kashub mod
+3. Open any `.kh` file in VSCode
+4. The extension will auto-connect to the mod
+
+### Features
+
+- **Syntax Highlighting** - Full KHScript language support
+- **IntelliSense** - Autocomplete powered by actual Kashub parser
+- **Real-time Validation** - Errors highlighted as you type
+- **Kashub Console** - Live script output in VSCode
+- **Run Scripts** - Press `Ctrl+Shift+K` to run current script
+- **Variables Viewer** - See all environment variables
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/status` | GET | Mod status, player info |
+| `/api/validate` | POST | Validate script code |
+| `/api/autocomplete` | POST | Get suggestions |
+| `/api/run` | POST | Execute script |
+| `/api/tasks` | GET | List running tasks |
+| `/api/variables` | GET | Get environment variables |
+
+### Configuration
+
+```json
+{
+  "apiEnabled": true,
+  "apiPort": 25566,
+  "apiWebSocketPort": 25567
+}
+```
 
 ## 📝 KHScript Syntax
 

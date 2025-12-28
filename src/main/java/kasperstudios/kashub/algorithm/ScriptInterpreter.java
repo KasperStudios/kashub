@@ -34,12 +34,16 @@ private static ScriptInterpreter instance;
     private boolean isProcessing = false;
     private boolean shouldStop = false;
     private final Queue<CommandEntry> commandQueue = new LinkedList<>();
-private final VariableStore variableStore = new VariableStore();
+    private final VariableStore variableStore = new VariableStore();
     private final Map<String, String> variables = new HashMap<>(); // Legacy compatibility
     private final Map<String, Function> functions = new HashMap<>();
     private String currentScriptName = "unknown";
     private int currentLoopDepth = 0;
     private final Map<String, EnvironmentVariable> environmentVariables = new HashMap<>();
+    
+    // Return value support for functions
+    private String returnValue = null;
+    private boolean hasReturned = false;
     
     // Patterns for parsing - updated for Rust/JS style syntax
     private static final Pattern LET_PATTERN = Pattern.compile("^\\s*let\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*=\\s*(.+)$");
@@ -50,11 +54,13 @@ private final VariableStore variableStore = new VariableStore();
     private static final Pattern FOR_PATTERN = Pattern.compile("^\\s*for\\s*\\((.*)\\)\\s*\\{?\\s*$");
     private static final Pattern FUNCTION_PATTERN = Pattern.compile("^\\s*(?:fn|function)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*\\{?\\s*$");
     private static final Pattern FUNCTION_CALL_PATTERN = Pattern.compile("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*$");
+    private static final Pattern RETURN_PATTERN = Pattern.compile("^\\s*return(?:\\s+(.*))?$");
     private static final Pattern ENV_VAR_PATTERN = Pattern.compile("\\$([A-Z_][A-Z0-9_]*)");
     private static final Pattern USER_VAR_PATTERN = Pattern.compile("\\$([a-z_][a-z0-9_]*)");
     private static final Pattern ELSE_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s*\\{?\\s*$");
     private static final Pattern ELSE_IF_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s+if\\s+(.+?)\\s*\\{\\s*$|^\\s*\\}?\\s*else\\s+if\\s*\\((.*)\\)\\s*\\{?\\s*$");
     private static final Pattern LOOP_PATTERN = Pattern.compile("^\\s*loop(?:\\s+(\\d+))?\\s*\\{?\\s*$");
+    private static final Pattern VARIABLE_ASSIGN_WITH_FUNC = Pattern.compile("^\\s*(?:let\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*=\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*)\\)\\s*$");
 
     // Private constructor for singleton
     private ScriptInterpreter() {
@@ -160,9 +166,27 @@ private final VariableStore variableStore = new VariableStore();
         String[] lines = code.split("\\r?\\n");
         int i = 0;
         while (i < lines.length) {
+            // Check for early return from function
+            if (hasReturned) {
+                break;
+            }
+            
             String line = lines[i].trim();
             if (!line.isEmpty() && !line.startsWith("//")) {
                 try {
+                    // Check for return statement FIRST
+                    Matcher returnMatcher = RETURN_PATTERN.matcher(line);
+                    if (returnMatcher.find()) {
+                        String returnExpr = returnMatcher.group(1);
+                        if (returnExpr != null && !returnExpr.trim().isEmpty()) {
+                            returnValue = evaluateExpression(returnExpr.trim());
+                        } else {
+                            returnValue = null;
+                        }
+                        hasReturned = true;
+                        break;
+                    }
+                    
                     // Check for function definition
                     Matcher funcMatcher = FUNCTION_PATTERN.matcher(line);
                     if (funcMatcher.find()) {
@@ -191,39 +215,28 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-                    // Check for function call
-                    Matcher funcCallMatcher = FUNCTION_CALL_PATTERN.matcher(line);
-                    if (funcCallMatcher.find()) {
-                        String funcName = funcCallMatcher.group(1);
-                        String argsStr = funcCallMatcher.group(2);
-                        List<String> arguments = new ArrayList<>();
-                        if (!argsStr.trim().isEmpty()) {
-                            arguments.addAll(Arrays.asList(argsStr.split(",")));
-                            arguments.replaceAll(String::trim);
-                        }
+                    // Check for variable assignment with function call: let x = func(args) or x = func(args)
+                    Matcher varFuncMatcher = VARIABLE_ASSIGN_WITH_FUNC.matcher(line);
+                    if (varFuncMatcher.find()) {
+                        String varName = varFuncMatcher.group(1);
+                        String funcName = varFuncMatcher.group(2);
+                        String argsStr = varFuncMatcher.group(3);
                         
+                        // Check if it's a user-defined function
                         Function func = functions.get(funcName);
                         if (func != null) {
-                            // Save current variable values
-                            Map<String, String> oldVars = new HashMap<>(variables);
-                            
-                            // Set function parameters
-                            List<String> params = func.getParameters();
-                            for (int j = 0; j < params.size() && j < arguments.size(); j++) {
-                                variables.put(params.get(j), arguments.get(j));
+                            String result = executeFunction(func, argsStr);
+                            try {
+                                variableStore.set(varName, result);
+                                variables.put(varName, result);
+                                CodeCompletionManager.addUserVariable(varName);
+                            } catch (IllegalStateException e) {
+                                LOGGER.error("Variable error at line {}: {}", i + 1, e.getMessage());
                             }
-                            
-                            // Execute function body
-                            parseCommands(func.getBody());
-                            
-                            // Restore variable values
-                            variables.clear();
-                            variables.putAll(oldVars);
-                        } else {
-                            LOGGER.warn("Function not found: {}", funcName);
+                            i++;
+                            continue;
                         }
-                        i++;
-                        continue;
+                        // If not a function, fall through to normal variable assignment
                     }
 
                     // Check for const declaration (const MAX = 100)
@@ -233,7 +246,7 @@ private final VariableStore variableStore = new VariableStore();
                         String varValue = evaluateExpression(constMatcher.group(2).trim());
                         try {
                             variableStore.declareConst(varName, varValue);
-                            variables.put(varName, varValue); // Legacy compatibility
+                            variables.put(varName, varValue);
                             CodeCompletionManager.addUserVariable(varName);
                         } catch (IllegalStateException e) {
                             LOGGER.error("Const error at line {}: {}", i + 1, e.getMessage());
@@ -249,7 +262,7 @@ private final VariableStore variableStore = new VariableStore();
                         String varValue = evaluateExpression(letMatcher.group(2).trim());
                         try {
                             variableStore.declareLet(varName, varValue);
-                            variables.put(varName, varValue); // Legacy compatibility
+                            variables.put(varName, varValue);
                             CodeCompletionManager.addUserVariable(varName);
                         } catch (IllegalStateException e) {
                             LOGGER.error("Let error at line {}: {}", i + 1, e.getMessage());
@@ -265,7 +278,7 @@ private final VariableStore variableStore = new VariableStore();
                         String varValue = evaluateExpression(varMatcher.group(2).trim());
                         try {
                             variableStore.set(varName, varValue);
-                            variables.put(varName, varValue); // Legacy compatibility
+                            variables.put(varName, varValue);
                             CodeCompletionManager.addUserVariable(varName);
                         } catch (IllegalStateException e) {
                             LOGGER.error("Variable error at line {}: {}", i + 1, e.getMessage());
@@ -274,34 +287,16 @@ private final VariableStore variableStore = new VariableStore();
                         continue;
                     }
 
-
-                    // Check for conditional statements
+                    // Check for conditional statements with else support
                     Matcher ifMatcher = IF_PATTERN.matcher(line);
                     if (ifMatcher.find()) {
-                        // Support both Rust-style (if cond {) and legacy (if (cond) {)
-                        String condition = ifMatcher.group(1) != null ? ifMatcher.group(1) : ifMatcher.group(2);
-                        StringBuilder ifBlock = new StringBuilder();
-                        int blockLevel = 1;
-                        i++;
-                        while (i < lines.length && blockLevel > 0) {
-                            String blockLine = lines[i].trim();
-                            if (blockLine.contains("{")) blockLevel++;
-                            if (blockLine.contains("}")) blockLevel--;
-                            if (blockLevel > 0) {
-                                ifBlock.append(blockLine).append("\n");
-                            }
-                            i++;
-                        }
-                        if (evaluateCondition(condition)) {
-                            parseCommands(ifBlock.toString());
-                        }
+                        i = processIfElseBlock(lines, i, ifMatcher, commands);
                         continue;
                     }
 
-                    // Check for while loop
+                    // Check for while loop with environment variable updates
                     Matcher whileMatcher = WHILE_PATTERN.matcher(line);
                     if (whileMatcher.find()) {
-                        // Support both Rust-style (while cond {) and legacy (while (cond) {)
                         String condition = whileMatcher.group(1) != null ? whileMatcher.group(1) : whileMatcher.group(2);
                         StringBuilder whileBlock = new StringBuilder();
                         int blockLevel = 1;
@@ -315,8 +310,48 @@ private final VariableStore variableStore = new VariableStore();
                             }
                             i++;
                         }
-                        while (evaluateCondition(condition)) {
+                        
+                        // Execute while loop with environment updates
+                        int maxIterations = 10000; // Safety limit
+                        int iterations = 0;
+                        while (iterations < maxIterations) {
+                            updateEnvironmentVariables(); // Update env vars before each check
+                            if (!evaluateCondition(condition)) {
+                                break;
+                            }
                             parseCommands(whileBlock.toString());
+                            if (hasReturned) break; // Support return inside while
+                            iterations++;
+                        }
+                        if (iterations >= maxIterations) {
+                            LOGGER.warn("While loop exceeded max iterations at line {}", i);
+                        }
+                        continue;
+                    }
+
+                    // Check for loop (infinite or counted)
+                    Matcher loopMatcher = LOOP_PATTERN.matcher(line);
+                    if (loopMatcher.find()) {
+                        String countStr = loopMatcher.group(1);
+                        int loopCount = countStr != null ? Integer.parseInt(countStr) : Integer.MAX_VALUE;
+                        
+                        StringBuilder loopBlock = new StringBuilder();
+                        int blockLevel = 1;
+                        i++;
+                        while (i < lines.length && blockLevel > 0) {
+                            String blockLine = lines[i].trim();
+                            if (blockLine.contains("{")) blockLevel++;
+                            if (blockLine.contains("}")) blockLevel--;
+                            if (blockLevel > 0) {
+                                loopBlock.append(blockLine).append("\n");
+                            }
+                            i++;
+                        }
+                        
+                        for (int iter = 0; iter < loopCount && !shouldStop; iter++) {
+                            updateEnvironmentVariables();
+                            parseCommands(loopBlock.toString());
+                            if (hasReturned) break;
                         }
                         continue;
                     }
@@ -330,7 +365,6 @@ private final VariableStore variableStore = new VariableStore();
                             String condition = forParts[1].trim();
                             String increment = forParts[2].trim();
                             
-                            // Execute initialization
                             if (!init.isEmpty()) {
                                 parseCommands(init);
                             }
@@ -348,32 +382,56 @@ private final VariableStore variableStore = new VariableStore();
                                 i++;
                             }
                             
-                            while (evaluateCondition(condition)) {
+                            int maxIterations = 10000;
+                            int iterations = 0;
+                            while (iterations < maxIterations && evaluateCondition(condition)) {
                                 parseCommands(forBlock.toString());
+                                if (hasReturned) break;
                                 if (!increment.isEmpty()) {
                                     parseCommands(increment);
                                 }
+                                iterations++;
                             }
                         }
                         continue;
                     }
 
-                    // Process regular commands
-                    line = processVariables(line);
-                    List<String> parts = parseArguments(line);
+                    // IMPORTANT: Check for commands BEFORE function calls!
+                    // This prevents commands like print("hello") from being treated as functions
+                    String processedLine = processVariables(line);
+                    List<String> parts = parseArguments(processedLine);
                     if (parts.isEmpty()) {
                         i++;
                         continue;
                     }
 
                     String commandName = parts.get(0).toLowerCase();
-                    String[] args = parts.subList(1, parts.size()).toArray(new String[0]);
-
+                    
+                    // First check if it's a registered command
                     Command command = CommandRegistry.getCommand(commandName);
                     if (command != null) {
-                        System.out.println("Found command: " + commandName + " with args: " + String.join(", ", args));
+                        String[] args = parts.subList(1, parts.size()).toArray(new String[0]);
+                        LOGGER.debug("Executing command: {} with args: {}", commandName, String.join(", ", args));
                         commands.add(command);
                         queueCommand(command, args);
+                        i++;
+                        continue;
+                    }
+                    
+                    // Then check for function call (only if not a command)
+                    Matcher funcCallMatcher = FUNCTION_CALL_PATTERN.matcher(line);
+                    if (funcCallMatcher.find()) {
+                        String funcName = funcCallMatcher.group(1);
+                        String argsStr = funcCallMatcher.group(2);
+                        
+                        Function func = functions.get(funcName);
+                        if (func != null) {
+                            executeFunction(func, argsStr);
+                            i++;
+                            continue;
+                        } else {
+                            LOGGER.warn("Unknown function or command at line {}: {}", i + 1, funcName);
+                        }
                     } else {
                         LOGGER.warn("Unknown command at line {}: {}", i + 1, commandName);
                     }
@@ -383,7 +441,190 @@ private final VariableStore variableStore = new VariableStore();
             }
             i++;
         }
-    return commands;
+        return commands;
+    }
+    
+    /**
+     * Execute a function with proper scope isolation and return value support.
+     */
+    private String executeFunction(Function func, String argsStr) {
+        // Parse and evaluate arguments
+        List<String> arguments = new ArrayList<>();
+        if (argsStr != null && !argsStr.trim().isEmpty()) {
+            // Split by comma but respect parentheses
+            arguments = splitFunctionArguments(argsStr);
+            // Evaluate each argument
+            for (int j = 0; j < arguments.size(); j++) {
+                arguments.set(j, evaluateExpression(arguments.get(j).trim()));
+            }
+        }
+        
+        // Save current state for scope isolation
+        Map<String, String> savedVariables = new HashMap<>(variables);
+        String savedReturnValue = returnValue;
+        boolean savedHasReturned = hasReturned;
+        
+        // Reset return state for this function call
+        returnValue = null;
+        hasReturned = false;
+        
+        // Set function parameters with evaluated values
+        List<String> params = func.getParameters();
+        for (int j = 0; j < params.size() && j < arguments.size(); j++) {
+            String paramName = params.get(j).trim();
+            variables.put(paramName, arguments.get(j));
+            variableStore.set(paramName, arguments.get(j));
+        }
+        
+        // Execute function body
+        parseCommands(func.getBody());
+        
+        // Capture return value
+        String result = returnValue != null ? returnValue : "";
+        
+        // Restore scope
+        variables.clear();
+        variables.putAll(savedVariables);
+        returnValue = savedReturnValue;
+        hasReturned = savedHasReturned;
+        
+        return result;
+    }
+    
+    /**
+     * Split function arguments respecting nested parentheses.
+     */
+    private List<String> splitFunctionArguments(String argsStr) {
+        List<String> args = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int parenDepth = 0;
+        boolean inString = false;
+        
+        for (char c : argsStr.toCharArray()) {
+            if (c == '"' && (current.length() == 0 || current.charAt(current.length() - 1) != '\\')) {
+                inString = !inString;
+            }
+            
+            if (!inString) {
+                if (c == '(') parenDepth++;
+                else if (c == ')') parenDepth--;
+                else if (c == ',' && parenDepth == 0) {
+                    args.add(current.toString().trim());
+                    current.setLength(0);
+                    continue;
+                }
+            }
+            current.append(c);
+        }
+        
+        if (current.length() > 0) {
+            args.add(current.toString().trim());
+        }
+        
+        return args;
+    }
+    
+    /**
+     * Process if/else/else-if blocks properly.
+     */
+    private int processIfElseBlock(String[] lines, int startIndex, Matcher ifMatcher, List<Command> commands) {
+        String condition = ifMatcher.group(1) != null ? ifMatcher.group(1) : ifMatcher.group(2);
+        
+        // Collect if block
+        StringBuilder ifBlock = new StringBuilder();
+        int blockLevel = 1;
+        int i = startIndex + 1;
+        
+        while (i < lines.length && blockLevel > 0) {
+            String blockLine = lines[i].trim();
+            
+            // Check for else at the end of block
+            if (blockLevel == 1 && (ELSE_PATTERN.matcher(blockLine).find() || ELSE_IF_PATTERN.matcher(blockLine).find())) {
+                break;
+            }
+            
+            if (blockLine.contains("{")) blockLevel++;
+            if (blockLine.contains("}")) blockLevel--;
+            
+            if (blockLevel > 0) {
+                ifBlock.append(blockLine).append("\n");
+            }
+            i++;
+        }
+        
+        boolean conditionResult = evaluateCondition(condition);
+        boolean executed = false;
+        
+        if (conditionResult) {
+            parseCommands(ifBlock.toString());
+            executed = true;
+        }
+        
+        // Check for else or else-if
+        while (i < lines.length) {
+            String currentLine = lines[i].trim();
+            
+            // Check for else-if
+            Matcher elseIfMatcher = ELSE_IF_PATTERN.matcher(currentLine);
+            if (elseIfMatcher.find()) {
+                String elseIfCondition = elseIfMatcher.group(1) != null ? elseIfMatcher.group(1) : elseIfMatcher.group(2);
+                
+                StringBuilder elseIfBlock = new StringBuilder();
+                blockLevel = 1;
+                i++;
+                
+                while (i < lines.length && blockLevel > 0) {
+                    String blockLine = lines[i].trim();
+                    
+                    if (blockLevel == 1 && (ELSE_PATTERN.matcher(blockLine).find() || ELSE_IF_PATTERN.matcher(blockLine).find())) {
+                        break;
+                    }
+                    
+                    if (blockLine.contains("{")) blockLevel++;
+                    if (blockLine.contains("}")) blockLevel--;
+                    
+                    if (blockLevel > 0) {
+                        elseIfBlock.append(blockLine).append("\n");
+                    }
+                    i++;
+                }
+                
+                if (!executed && evaluateCondition(elseIfCondition)) {
+                    parseCommands(elseIfBlock.toString());
+                    executed = true;
+                }
+                continue;
+            }
+            
+            // Check for else
+            Matcher elseMatcher = ELSE_PATTERN.matcher(currentLine);
+            if (elseMatcher.find()) {
+                StringBuilder elseBlock = new StringBuilder();
+                blockLevel = 1;
+                i++;
+                
+                while (i < lines.length && blockLevel > 0) {
+                    String blockLine = lines[i].trim();
+                    if (blockLine.contains("{")) blockLevel++;
+                    if (blockLine.contains("}")) blockLevel--;
+                    
+                    if (blockLevel > 0) {
+                        elseBlock.append(blockLine).append("\n");
+                    }
+                    i++;
+                }
+                
+                if (!executed) {
+                    parseCommands(elseBlock.toString());
+                }
+                break;
+            }
+            
+            // No more else/else-if, exit
+            break;
+        }
+        
+        return i;
     }
 
     /**
@@ -504,7 +745,12 @@ String varName = parts[0].trim();
     public void stopProcessing() {
         shouldStop = true;
         commandQueue.clear();
-        LOGGER.info("Command processing stopped.");
+        // Clear functions to prevent memory leaks
+        functions.clear();
+        // Reset return state
+        returnValue = null;
+        hasReturned = false;
+        LOGGER.info("Command processing stopped, functions cleared.");
     }
 
     /**
@@ -543,8 +789,21 @@ String varName = parts[0].trim();
      */
     public void clearVariables() {
         variables.clear();
+        variableStore.clear();
         // Clear user variables in CodeCompletionManager
         CodeCompletionManager.clearUserVariables();
+    }
+    
+    /**
+     * Reset interpreter state for new script execution
+     */
+    public void resetState() {
+        clearVariables();
+        clearFunctions();
+        returnValue = null;
+        hasReturned = false;
+        shouldStop = false;
+        commandQueue.clear();
     }
 
     /**

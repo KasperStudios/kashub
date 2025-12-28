@@ -9,6 +9,7 @@ build
 .gradlew
 .gradlew.bat
 .gradlew.bat
+*\node_modules
 
 .cursorrules
 kashub_tree.txt
@@ -26,4 +27,11 @@ logs/
 *.class
 out/
 
-ROADMAP_v0.7.0.md
+# VSCode Extension
+kashub-vscode/node_modules/
+kashub-vscode/out/
+kashub-vscode/*.vsix
+kashub-vscode/.vscode-test/
+
+# Keep roadmap for now
+# ROADMAP_FUTURE.md

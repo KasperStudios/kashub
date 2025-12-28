@@ -151,8 +151,9 @@ public class ScriptFileWatcher {
     
     /**
      * Reload a script by stopping the old one and starting a new one
+     * Thread-safe implementation to prevent race conditions
      */
-    private void reloadScript(String scriptName, int oldTaskId) {
+    private synchronized void reloadScript(String scriptName, int oldTaskId) {
         ScriptTaskManager manager = ScriptTaskManager.getInstance();
         ScriptTask oldTask = manager.getTask(oldTaskId);
         
@@ -162,28 +163,55 @@ public class ScriptFileWatcher {
             return;
         }
         
+        // Check if task is currently processing a command - wait briefly if so
+        ScriptState currentState = oldTask.getState();
+        if (currentState == ScriptState.RUNNING) {
+            ScriptLogger.getInstance().debug("Hot-reload: Waiting for task " + oldTaskId + " to finish current command...");
+        }
+        
         try {
-            // Load new content
+            // Load new content BEFORE stopping old task
             String newContent = ScriptManager.loadScript(scriptName);
             if (newContent == null) {
                 ScriptLogger.getInstance().warn("Failed to reload " + scriptName + ": file not found");
                 return;
             }
             
+            // Unregister old script first to prevent duplicate registration
+            runningScriptIds.remove(scriptName);
+            
             // Stop old task
             oldTask.stop();
+            
+            // Small delay to ensure old task is fully stopped
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            
+            // Verify old task is stopped
+            if (oldTask.getState() != ScriptState.STOPPED) {
+                ScriptLogger.getInstance().warn("Hot-reload: Old task " + oldTaskId + " did not stop cleanly, forcing...");
+                oldTask.stop();
+            }
             
             // Start new task with same name
             ScriptTask newTask = manager.startScript(scriptName, newContent);
             if (newTask != null) {
-                // Register new task for hot-reload
-                registerScript(scriptName, newTask.getId());
+                // Register new task for hot-reload (already done in startScript, but update our tracking)
+                runningScriptIds.put(scriptName, newTask.getId());
                 ScriptLogger.getInstance().success("Hot-reload: Successfully reloaded " + scriptName + " (new task #" + newTask.getId() + ")");
             } else {
                 ScriptLogger.getInstance().error("Hot-reload: Failed to start reloaded script: " + scriptName);
             }
         } catch (Exception e) {
             ScriptLogger.getInstance().error("Error reloading script " + scriptName + ": " + e.getMessage());
+            // Re-register old task if reload failed and it's still running
+            if (oldTask.getState() == ScriptState.RUNNING) {
+                runningScriptIds.put(scriptName, oldTaskId);
+            }
         }
     }
     

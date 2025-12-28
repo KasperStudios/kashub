@@ -4,6 +4,7 @@ import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.algorithm.CommandRegistry;
 import kasperstudios.kashub.algorithm.commands.PathfindCommand;
 import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.api.server.KashubAPIServer;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.editor.ModernEditorScreen;
 import kasperstudios.kashub.network.AnimationManager;
@@ -40,6 +41,11 @@ public class KashubClient implements ClientModInitializer {
         
         // Start file watcher for hot-reload
         ScriptFileWatcher.getInstance().start();
+        
+        // Start API server for VSCode integration
+        if (config.apiEnabled) {
+            KashubAPIServer.getInstance().start();
+        }
         
         // Run autorun scripts after world is loaded (only once)
         ClientTickEvents.START_CLIENT_TICK.register(client -> {

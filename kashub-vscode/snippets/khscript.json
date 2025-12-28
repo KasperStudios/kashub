@@ -1,0 +1,161 @@
+{
+  "For Loop": {
+    "prefix": ["for", "forloop"],
+    "body": [
+      "for (${1:i} = ${2:0}; ${1:i} < ${3:10}; ${1:i}++) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "For loop"
+  },
+  "While Loop": {
+    "prefix": ["while", "whileloop"],
+    "body": [
+      "while ${1:condition} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "Loop N Times": {
+    "prefix": ["loop", "repeat"],
+    "body": [
+      "loop ${1:10} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Loop N times"
+  },
+  "If Statement": {
+    "prefix": ["if"],
+    "body": [
+      "if ${1:condition} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If-Else": {
+    "prefix": ["ifelse", "ife"],
+    "body": [
+      "if ${1:condition} {",
+      "\t$2",
+      "} else {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "Function Definition": {
+    "prefix": ["fn", "function", "func"],
+    "body": [
+      "fn ${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Function definition"
+  },
+  "Variable Declaration": {
+    "prefix": ["let", "var"],
+    "body": [
+      "let ${1:name} = ${2:value}"
+    ],
+    "description": "Variable declaration"
+  },
+  "Constant Declaration": {
+    "prefix": ["const"],
+    "body": [
+      "const ${1:NAME} = ${2:value}"
+    ],
+    "description": "Constant declaration"
+  },
+  "Event Handler": {
+    "prefix": ["event", "onevent"],
+    "body": [
+      "onEvent ${1|onTick,onDamage,onHeal,onHunger,onChat,onDeath|} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Event handler"
+  },
+  "Auto Mining": {
+    "prefix": ["automine", "mining"],
+    "body": [
+      "// Auto-mining script",
+      "loop ${1:100} {",
+      "\tlookAt 0 -90 0",
+      "\tbreakBlock",
+      "\twait 100",
+      "\tmoveTo $PLAYER_X $PLAYER_Y ${2:forward} 1",
+      "\twait 50",
+      "}"
+    ],
+    "description": "Auto-mining template"
+  },
+  "Auto Farm": {
+    "prefix": ["autofarm", "farm"],
+    "body": [
+      "// Auto-farming script",
+      "let startX = $PLAYER_X",
+      "let startZ = $PLAYER_Z",
+      "",
+      "for (x = 0; x < ${1:10}; x++) {",
+      "\tfor (z = 0; z < ${2:10}; z++) {",
+      "\t\tmoveTo startX + x $PLAYER_Y startZ + z",
+      "\t\twait 200",
+      "\t\tinteract block",
+      "\t\twait 100",
+      "\t}",
+      "}"
+    ],
+    "description": "Auto-farming template"
+  },
+  "Health Monitor": {
+    "prefix": ["healthmonitor", "monitor"],
+    "body": [
+      "// Health monitoring script",
+      "onEvent onDamage {",
+      "\tif $PLAYER_HEALTH < ${1:10} {",
+      "\t\tprint Warning: Low health!",
+      "\t\teat",
+      "\t}",
+      "}"
+    ],
+    "description": "Health monitoring template"
+  },
+  "Print": {
+    "prefix": ["print", "log"],
+    "body": [
+      "print ${1:message}"
+    ],
+    "description": "Print message to chat"
+  },
+  "Wait": {
+    "prefix": ["wait", "sleep", "delay"],
+    "body": [
+      "wait ${1:1000}"
+    ],
+    "description": "Wait for milliseconds"
+  },
+  "Move To": {
+    "prefix": ["moveto", "goto"],
+    "body": [
+      "moveTo ${1:x} ${2:y} ${3:z}"
+    ],
+    "description": "Move to coordinates"
+  },
+  "Attack": {
+    "prefix": ["attack"],
+    "body": [
+      "attack ${1|hostile,passive,player,all|} ${2:5}"
+    ],
+    "description": "Attack nearby entities"
+  },
+  "Scanner": {
+    "prefix": ["scanner", "scan"],
+    "body": [
+      "scanner ${1|blocks,entities,players|} ${2:10}"
+    ],
+    "description": "Scan for blocks or entities"
+  }
+}
