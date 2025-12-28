@@ -29,18 +29,6 @@
 - **🔒 Enhanced Security** - Removed HTTP script commands for safer scripting
 - **🛒 Marketplace Skeleton** - Preparation for future Script Marketplace
 
-### v0.6.0 Features
-- **🔥 Hot-Reload** - Edit scripts in external editors (VSCode, IntelliJ, etc.) and watch them reload automatically!
-- **🚀 Autorun System** - Scripts that start automatically when you join a world
-- **Script Task Manager** - Run multiple scripts simultaneously, pause/resume/stop individual tasks
-  - **Tabbed Interface** - Processes and Autorun tabs (like Windows Task Manager)
-  - **Autorun Management** - Visual interface to configure scripts that auto-start on launch
-- **Vision API** - Raycast, entity detection, cone scanning, mob finding
-- **Input API** - High-level player input control (movement, actions, camera)
-- **Animation System** - Custom player animations with network sync
-- **Permission System** - System vs User scripts, configurable access levels
-- **Safe Sandbox** - Command restrictions, cheat protection
-
 ## 📦 Installation
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.1
