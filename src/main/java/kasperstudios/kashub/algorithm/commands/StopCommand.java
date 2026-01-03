@@ -5,10 +5,6 @@ import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import kasperstudios.kashub.algorithm.events.EventManager;
 import net.minecraft.client.MinecraftClient;
 
-/**
- * Команда для остановки всех скриптов и действий
- * Синтаксис: stop [all/scripts/events/movement]
- */
 public class StopCommand implements Command {
 
     @Override
@@ -25,12 +21,12 @@ public class StopCommand implements Command {
     public String getParameters() {
         return "[all|scripts|events|movement]";
     }
-    
+
     @Override
     public String getCategory() {
         return "Other";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Emergency stop for scripts and player actions.\n\n" +
@@ -38,19 +34,19 @@ public class StopCommand implements Command {
                "  stop                    - Stop everything (default)\n" +
                "  stop all                - Stop everything\n" +
                "  stop scripts            - Stop script execution only\n" +
-               "  stop events             - Clear event handlers only\n" +
+               "  stop events             - Clear global event handlers\n" +
                "  stop movement           - Stop player movement only\n\n" +
                "What each mode stops:\n\n" +
                "  'all' (default):\n" +
-               "    - Script interpreter\n" +
-               "    - Event handlers\n" +
+               "    - Script interpreter (scripts clean up their own events)\n" +
                "    - All movement keys\n" +
                "    - Attack/use actions\n" +
                "    - moveTo/runTo commands\n\n" +
                "  'scripts':\n" +
-               "    - Script interpreter only\n\n" +
+               "    - Script interpreter only (scripts clean up their own events)\n\n" +
                "  'events':\n" +
-               "    - Clears all onEvent handlers\n\n" +
+               "    - Clears global event handlers (not script-registered ones)\n" +
+               "    - Script events are managed per-script automatically\n\n" +
                "  'movement':\n" +
                "    - Releases all movement keys\n" +
                "    - Stops moveTo/runTo\n" +
@@ -58,8 +54,9 @@ public class StopCommand implements Command {
                "Examples:\n" +
                "  stop                    // Emergency stop all\n" +
                "  stop movement           // Just stop moving\n" +
-               "  stop events             // Clear event handlers\n\n" +
-               "Tip: Bind to hotkey (Z by default) for quick stop.";
+               "  stop events             // Clear global event handlers\n\n" +
+               "Tip: Bind to hotkey (Z by default) for quick stop.\n" +
+               "Note: Script events are automatically cleaned up when scripts stop.";
     }
 
     @Override
@@ -72,12 +69,14 @@ public class StopCommand implements Command {
                 ScriptInterpreter.getInstance().stopProcessing();
                 System.out.println("Scripts stopped");
                 break;
-                
+
             case "events":
+                // Note: Events are now managed per-script in ScriptTask.stop()
+                // This command only clears global event handlers (not script-registered ones)
                 EventManager.getInstance().clear();
                 System.out.println("Event handlers cleared");
                 break;
-                
+
             case "movement":
                 client.execute(() -> {
                     if (client.player != null) {
@@ -95,11 +94,12 @@ public class StopCommand implements Command {
                 RunToCommand.stopRunning();
                 System.out.println("Movement stopped");
                 break;
-                
+
             case "all":
             default:
+                // Stop scripts (which will clean up their own events via ScriptTask.stop())
                 ScriptInterpreter.getInstance().stopProcessing();
-                EventManager.getInstance().clear();
+                // Do NOT call EventManager.clear() here - scripts handle their own event cleanup
                 client.execute(() -> {
                     if (client.player != null) {
                         client.player.setVelocity(0, 0, 0);

@@ -1,24 +1,13 @@
 package kasperstudios.kashub.algorithm.commands;
 
 import kasperstudios.kashub.algorithm.Command;
-import kasperstudios.kashub.runtime.ScriptState;
-import kasperstudios.kashub.runtime.ScriptTask;
-import kasperstudios.kashub.runtime.ScriptTaskManager;
+import kasperstudios.kashub.services.runtime.ScriptState;
+import kasperstudios.kashub.services.runtime.ScriptTask;
+import kasperstudios.kashub.services.runtime.ScriptTaskManager;
 
 import java.util.Collection;
 import java.util.Map;
 
-/**
- * Команды для управления запущенными скриптами через DSL
- * Синтаксис:
- *   scripts.list - список задач
- *   scripts.stop <id> - остановить задачу
- *   scripts.pause <id> - приостановить
- *   scripts.resume <id> - возобновить
- *   scripts.stopAll - остановить все
- *   scripts.stopByTag <tag> - остановить по тегу
- *   scripts.info <id> - информация о задаче
- */
 public class ScriptsCommand implements Command {
 
     @Override
@@ -44,38 +33,38 @@ public class ScriptsCommand implements Command {
     @Override
     public String getDetailedHelp() {
         return "Manage running scripts and tasks.\n\n" +
-               "Actions:\n" +
-               "  scripts list              - Show all tasks\n" +
-               "  scripts stop <id>         - Stop specific task\n" +
-               "  scripts pause <id>        - Pause task\n" +
-               "  scripts resume <id>       - Resume paused task\n" +
-               "  scripts restart <id>      - Restart task\n" +
-               "  scripts stopAll           - Stop all tasks\n" +
-               "  scripts pauseAll          - Pause all tasks\n" +
-               "  scripts resumeAll         - Resume all tasks\n" +
-               "  scripts stopByTag <tag>   - Stop by tag\n" +
-               "  scripts info <id>         - Task details\n" +
-               "  scripts stats             - Manager statistics\n" +
-               "  scripts enable            - Enable execution\n" +
-               "  scripts disable           - Disable execution\n" +
-               "  scripts clear             - Remove all tasks\n\n" +
-               "Task Info Fields:\n" +
-               "  - ID, Name, State\n" +
-               "  - Type, Uptime, Current Line\n" +
-               "  - Commands executed/queued\n" +
-               "  - Tags, Last Error\n\n" +
-               "Examples:\n" +
-               "  scripts list\n" +
-               "  scripts stop 1\n" +
-               "  scripts pause 2\n" +
-               "  scripts info 1\n" +
-               "  scripts stopByTag mining\n" +
-               "  scripts stats\n\n" +
-               "Notes:\n" +
-               "  - Task IDs are shown in 'list' output\n" +
-               "  - Paused tasks can be resumed\n" +
-               "  - Stopped tasks cannot be resumed\n" +
-               "  - Use tags to group related scripts";
+                "Actions:\n" +
+                "  scripts list              - Show all tasks\n" +
+                "  scripts stop <id>         - Stop specific task\n" +
+                "  scripts pause <id>        - Pause task\n" +
+                "  scripts resume <id>       - Resume paused task\n" +
+                "  scripts restart <id>      - Restart task\n" +
+                "  scripts stopAll           - Stop all tasks\n" +
+                "  scripts pauseAll          - Pause all tasks\n" +
+                "  scripts resumeAll         - Resume all tasks\n" +
+                "  scripts stopByTag <tag>   - Stop by tag\n" +
+                "  scripts info <id>         - Task details\n" +
+                "  scripts stats             - Manager statistics\n" +
+                "  scripts enable            - Enable execution\n" +
+                "  scripts disable           - Disable execution\n" +
+                "  scripts clear             - Remove all tasks\n\n" +
+                "Task Info Fields:\n" +
+                "  - ID, Name, State\n" +
+                "  - Type, Uptime, Current Line\n" +
+                "  - Commands executed/queued\n" +
+                "  - Tags, Last Error\n\n" +
+                "Examples:\n" +
+                "  scripts list\n" +
+                "  scripts stop 1\n" +
+                "  scripts pause 2\n" +
+                "  scripts info 1\n" +
+                "  scripts stopByTag mining\n" +
+                "  scripts stats\n\n" +
+                "Notes:\n" +
+                "  - Task IDs are shown in 'list' output\n" +
+                "  - Paused tasks can be resumed\n" +
+                "  - Stopped tasks cannot be resumed\n" +
+                "  - Use tags to group related scripts";
     }
 
     @Override
@@ -96,11 +85,11 @@ public class ScriptsCommand implements Command {
                 } else {
                     System.out.println("Running scripts (" + tasks.size() + "):");
                     for (ScriptTask task : tasks) {
-                        System.out.println(String.format("  [%d] %s - %s (%s)", 
-                            task.getId(), 
-                            task.getName(), 
-                            task.getState().getDisplayName(),
-                            task.getUptimeFormatted()));
+                        System.out.println(String.format("  [%d] %s - %s (%s)",
+                                task.getId(),
+                                task.getName(),
+                                task.getState().getDisplayName(),
+                                task.getUptimeFormatted()));
                     }
                 }
                 break;
@@ -194,8 +183,8 @@ public class ScriptsCommand implements Command {
                     System.out.println("  Type: " + task.getScriptType().getDisplayName());
                     System.out.println("  Uptime: " + task.getUptimeFormatted());
                     System.out.println("  Line: " + task.getCurrentLine());
-                    System.out.println("  Commands: " + task.getExecutedCommands() + " executed, " + 
-                                       task.getQueuedCommands() + " queued");
+                    System.out.println("  Commands: " + task.getExecutedCommands() + " executed, " +
+                            task.getQueuedCommands() + " queued");
                     System.out.println("  Tags: " + String.join(", ", task.getTags()));
                     if (task.getLastError() != null) {
                         System.out.println("  Last Error: " + task.getLastError());

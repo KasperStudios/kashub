@@ -5,7 +5,11 @@
 	"mixins": [
 	],
 	"client": [
-		"KeyBindingMixin"
+		"KeyBindingMixin",
+		"ChatMessageMixin",
+		"BlockBreakMixin",
+		"BlockPlaceMixin",
+		"AttackMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

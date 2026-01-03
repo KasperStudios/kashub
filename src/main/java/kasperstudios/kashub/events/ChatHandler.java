@@ -24,18 +24,18 @@ public class ChatHandler {
         if (content == null) return;
 
         String message = content.getString();
-        
+
         Map<String, Object> context = new HashMap<>();
         context.put("message", message);
         context.put("raw", content);
-        
+
         EventManager.getInstance().fireEvent("chat", context);
     }
 
     public void handleChatMessage(String message) {
         Map<String, Object> context = new HashMap<>();
         context.put("message", message);
-        
+
         EventManager.getInstance().fireEvent("chat", context);
     }
 }

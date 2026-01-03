@@ -5,10 +5,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * Command for teleporting player
- * Syntax: tp x y z or tp ~dx ~dy ~dz
- */
 public class TeleportCommand implements Command {
 
     @Override
@@ -25,12 +21,12 @@ public class TeleportCommand implements Command {
     public String getParameters() {
         return "<x> <y> <z> - coordinates";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Instantly teleports player to coordinates.\n\n" +

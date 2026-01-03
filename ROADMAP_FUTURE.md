@@ -4,7 +4,7 @@
 
 ---
 
-## 📋 v0.8.0 - "Advanced Debugging & Profiling"
+## 📋 v0.8.0-beta - "Advanced Debugging & Profiling"
 
 **Цель:** Профессиональные инструменты отладки для разработчиков скриптов
 
@@ -36,45 +36,101 @@
 - [ ] Complexity metrics
 - [ ] Suggestions for optimization
 
+### 🔌 VSCode Extension Integration
+- [x] Basic debug commands (resume, pause, step over, step into)
+- [ ] Full breakpoint sync с DebugManager
+- [ ] Variables panel в VSCode
+- [ ] Call stack visualization
+- [ ] Debug console integration
+- [ ] Conditional breakpoints UI
+- [ ] Watch expressions
+- [ ] Inline variable values (CodeLens)
+- [ ] Step Out implementation
+- [ ] Профiler интеграция (показ времени выполнения)
+
 ---
 
-## 📋 v0.9.0 - "Multiplayer & Networking"
+## 📋 v0.9.0 - "Modpacks & Server Integration"
 
-**Цель:** Поддержка многопользовательских сценариев
+**Цель:** Полная поддержка создателей сборок и серверов, гибкая настройка и серверные скрипты
 
-### 🌐 Server-Side Scripts
-- [ ] Скрипты на стороне сервера
-- [ ] Permissions system (кто может запускать)
-- [ ] Script sandboxing для безопасности
-- [ ] Rate limiting
-- [ ] Admin commands
+### 🏗️ Architecture Refactoring (PRIORITY)
+**See:** [REFACTORING_PLAN.md](./REFACTORING_PLAN.md)
 
-### 👥 Player Interaction
+- [ ] **Phase 1: Create New Classes** (v0.9.0)
+  - [ ] Create `ScriptExecutionContext` class
+  - [ ] Create `EnvironmentVariableProvider` class
+  - [ ] Update `ScriptTask` to use new context
+  - [ ] Keep backward compatibility
+
+- [ ] **Phase 2: Migrate Core Features** (v0.9.1)
+  - [ ] Migrate variable system to per-script context
+  - [ ] Migrate function system to per-script context
+  - [ ] Migrate command execution to context-based
+  - [ ] Remove global state dependencies
+
+- [ ] **Phase 3: Update Event System** (v0.9.2)
+  - [ ] Events create temporary execution contexts
+  - [ ] Track event ownership per script
+  - [ ] Fix event isolation issues
+
+**Benefits:**
+- ✅ Better script isolation (no variable leaks)
+- ✅ Thread safety (no race conditions)
+- ✅ Easier testing and debugging
+- ✅ Cleaner code architecture
+- ✅ Foundation for multi-threaded execution
+
+### 🌐 Server & Modpack Scripts
+- [ ] **Server-Side Execution**: Скрипты выполняются на сервере (или в контексте сборки)
+- [ ] **Modpack Scripts**: Скрипты сборки считаются серверными и обязательны для всех
+- [ ] **Custom Crafting API**: Создание кастомных крафтов через скрипты
+- [ ] **Event Hooks**: Глобальные события сервера/сборки
+- [ ] **Persistency**: Сохранение данных между перезапусками сервера
+
+### ⚙️ Flexible Configuration (For Admin/Modpack Creators)
+- [ ] **Feature Toggles**: Возможность отключить/включить редактор, дебаггер или конкретные команды
+- [ ] **Restricted Mode**: Ограничение использования мода игроками (только серверные скрипты)
+- [ ] **Custom Functionality**: Настройка уникальных механик сервера через конфиг
+- [ ] **Client Enforcement**: Синхронизация настроек с клиентом при входе
+
+### 🔌 Universal Integration System
+- [ ] **Mod Bridge API**: Интеграция с любыми модами через рефлексию/API
+- [ ] **Dynamic Compatibility**: Скрипты могут проверять наличие модов и адаптироваться
+- [ ] **Item/Block Tags**: Работа с тегами из других модов
+- [ ] **UI Integration**: Добавление своих кнопок/меню в интерфейсы других модов
+
+### 👥 Player & Network Interaction
+- [ ] Permissions system (кто может запускать скрипты)
 - [ ] `onPlayerJoin` / `onPlayerLeave` events
-- [ ] `onPlayerChat` с фильтрацией
-- [ ] `onPlayerDeath` / `onPlayerRespawn`
-- [ ] `getPlayers()` - список игроков
 - [ ] `sendMessage(player, msg)` - личные сообщения
+- [ ] Network packets handling (отправка/получение пакетов)
 
-### 🔗 Script Sharing
-- [ ] Export script as package
-- [ ] Import scripts from other players
-- [ ] Script signing (проверка автора)
-- [ ] Version compatibility check
-- [ ] Dependency management
-
-### 📡 Network Commands
-- [ ] `broadcast(msg)` - сообщение всем
-- [ ] `teleportPlayer(player, x, y, z)`
-- [ ] `giveItem(player, item, count)`
-- [ ] `setGameMode(player, mode)`
-- [ ] `kick(player, reason)`
+### 📦 Package System
+- [ ] [Package system concept](https://github.com/KasperStudios/kashub/blob/v0.8.0-beta/PACKAGE_SYSTEM_CONCEPT.md)
 
 ---
 
 ## 📋 v1.0.0 - "Stable Release"
 
 **Цель:** Первый стабильный релиз с полной документацией
+
+### 🏗️ Complete Architecture Refactoring
+- [ ] **Phase 4: Update Commands** (v0.9.3)
+  - [ ] Add context parameter to Command interface
+  - [ ] Update all ~50 command implementations
+  - [ ] Test each command with new architecture
+
+- [ ] **Phase 5: Update Debug/API** (v0.9.4)
+  - [ ] Update Debug Adapter Protocol for per-script variables
+  - [ ] Update REST API endpoints
+  - [ ] Update WebSocket server
+
+- [ ] **Phase 6: Remove ScriptInterpreter** (v1.0.0)
+  - [ ] Delete `ScriptInterpreter.java`
+  - [ ] Remove all singleton dependencies
+  - [ ] Clean up legacy code
+  - [ ] Update all documentation
 
 ### 📚 Documentation
 - [ ] Полная документация на русском и английском
@@ -378,8 +434,8 @@
 ## 🎯 PRIORITY MATRIX
 
 ### High Priority (Next 3 months)
-1. v0.8.0 - Debugging tools
-2. VSCode extension polish
+1. v0.8.0-beta - Debugging tools
+2. VSCode extension debug integration
 3. Documentation
 
 ### Medium Priority (6 months)

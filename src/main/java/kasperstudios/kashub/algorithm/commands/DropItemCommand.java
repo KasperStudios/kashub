@@ -6,10 +6,6 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 
-/**
- * Команда для выбрасывания предметов
- * Синтаксис: drop [itemName] [count] или drop all
- */
 public class DropItemCommand implements Command {
 
     @Override
@@ -26,12 +22,12 @@ public class DropItemCommand implements Command {
     public String getParameters() {
         return "[item] [count] | all | stack";
     }
-    
+
     @Override
     public String getCategory() {
         return "Inventory";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Drops items from player's inventory.\n\n" +
@@ -66,7 +62,7 @@ public class DropItemCommand implements Command {
         if (player == null) return;
 
         if (args.length == 0) {
-            // Выбросить предмет в руке
+
             client.execute(() -> {
                 player.dropSelectedItem(false);
             });
@@ -74,7 +70,7 @@ public class DropItemCommand implements Command {
         }
 
         if (args[0].equalsIgnoreCase("all")) {
-            // Выбросить все предметы
+
             client.execute(() -> {
                 for (int i = 0; i < player.getInventory().size(); i++) {
                     ItemStack stack = player.getInventory().getStack(i);
@@ -88,7 +84,7 @@ public class DropItemCommand implements Command {
         }
 
         if (args[0].equalsIgnoreCase("stack")) {
-            // Выбросить весь стак в руке
+
             client.execute(() -> {
                 player.dropSelectedItem(true);
             });

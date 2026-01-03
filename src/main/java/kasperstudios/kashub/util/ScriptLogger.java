@@ -12,28 +12,25 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Система логирования для скриптов
- */
 public class ScriptLogger {
     private static ScriptLogger instance;
     private static final Path LOG_PATH = Paths.get("logs", "kashub");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-    
+
     private final List<LogEntry> logBuffer = new ArrayList<>();
     private static final int MAX_BUFFER_SIZE = 1000;
-    
+
     public enum LogLevel {
         DEBUG(0, Formatting.GRAY),
         INFO(1, Formatting.WHITE),
         WARN(2, Formatting.YELLOW),
         ERROR(3, Formatting.RED),
         SUCCESS(1, Formatting.GREEN);
-        
+
         public final int priority;
         public final Formatting color;
-        
+
         LogLevel(int priority, Formatting color) {
             this.priority = priority;
             this.color = color;
@@ -43,7 +40,7 @@ public class ScriptLogger {
     private ScriptLogger() {
         try {
             Files.createDirectories(LOG_PATH);
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Failed to create log directory: " + e.getMessage());
         }
     }
@@ -61,35 +58,38 @@ public class ScriptLogger {
 
     public void log(LogLevel level, String message, String scriptName) {
         KashubConfig config = KashubConfig.getInstance();
-        
-        if (!config.enableLogging) return;
-        
-        // Проверяем уровень логирования
-        LogLevel configLevel = LogLevel.valueOf(config.logLevel.toUpperCase());
-        if (level.priority < configLevel.priority) return;
-        
+
+        if (!config.enableLogging)
+            return;
+
+        LogLevel configLevel;
+        try {
+            configLevel = LogLevel.valueOf(config.logLevel.toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            configLevel = LogLevel.INFO;
+        }
+
+        if (level.priority < configLevel.priority)
+            return;
+
         LocalDateTime now = LocalDateTime.now();
         LogEntry entry = new LogEntry(now, level, message, scriptName);
-        
-        // Добавляем в буфер
+
         synchronized (logBuffer) {
             logBuffer.add(entry);
             if (logBuffer.size() > MAX_BUFFER_SIZE) {
                 logBuffer.remove(0);
             }
         }
-        
-        // Логируем в файл
+
         if (config.logToFile) {
             writeToFile(entry);
         }
-        
-        // Логируем в чат
+
         if (config.logToChat) {
             sendToChat(entry);
         }
-        
-        // Всегда выводим в консоль
+
         System.out.println(formatLogEntry(entry));
     }
 
@@ -97,16 +97,37 @@ public class ScriptLogger {
         log(LogLevel.DEBUG, message);
     }
 
+    public void debug(String message, Object... args) {
+        log(LogLevel.DEBUG, formatMessage(message, args));
+    }
+
     public void info(String message) {
         log(LogLevel.INFO, message);
+    }
+
+    public void info(String message, Object... args) {
+        log(LogLevel.INFO, formatMessage(message, args));
     }
 
     public void warn(String message) {
         log(LogLevel.WARN, message);
     }
 
+    public void warn(String message, Object... args) {
+        log(LogLevel.WARN, formatMessage(message, args));
+    }
+
     public void error(String message) {
         log(LogLevel.ERROR, message);
+    }
+
+    public void error(String message, Object... args) {
+        log(LogLevel.ERROR, formatMessage(message, args));
+    }
+
+    public void error(String message, Throwable t) {
+        log(LogLevel.ERROR, message + ": " + t.getMessage());
+        t.printStackTrace();
     }
 
     public void success(String message) {
@@ -120,8 +141,8 @@ public class ScriptLogger {
     private void writeToFile(LogEntry entry) {
         String fileName = "kashub_" + entry.timestamp.format(DATE_FORMAT) + ".log";
         Path logFile = LOG_PATH.resolve(fileName);
-        
-        try (BufferedWriter writer = Files.newBufferedWriter(logFile, 
+
+        try (BufferedWriter writer = Files.newBufferedWriter(logFile,
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             writer.write(formatLogEntry(entry));
             writer.newLine();
@@ -135,7 +156,7 @@ public class ScriptLogger {
         if (client.player != null) {
             String prefix = "[KH] ";
             String text = prefix + entry.message;
-            
+
             Text chatMessage = Text.literal(text).formatted(entry.level.color);
             client.player.sendMessage(chatMessage, false);
         }
@@ -145,11 +166,11 @@ public class ScriptLogger {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(entry.timestamp.format(TIME_FORMAT)).append("] ");
         sb.append("[").append(entry.level.name()).append("] ");
-        
+
         if (entry.scriptName != null && !entry.scriptName.isEmpty()) {
             sb.append("[").append(entry.scriptName).append("] ");
         }
-        
+
         sb.append(entry.message);
         return sb.toString();
     }
@@ -179,9 +200,30 @@ public class ScriptLogger {
         }
     }
 
-    /**
-     * Запись лога
-     */
+    private String formatMessage(String message, Object... args) {
+        if (message == null) return "null";
+        if (args == null || args.length == 0) return message;
+
+        StringBuilder result = new StringBuilder();
+        int argIndex = 0;
+        int i = 0;
+
+        while (i < message.length()) {
+            if (i < message.length() - 1 && message.charAt(i) == '{' && message.charAt(i + 1) == '}') {
+                if (argIndex < args.length) {
+                    result.append(args[argIndex] != null ? args[argIndex].toString() : "null");
+                    argIndex++;
+                }
+                i += 2;
+            } else {
+                result.append(message.charAt(i));
+                i++;
+            }
+        }
+
+        return result.toString();
+    }
+
     public static class LogEntry {
         public final LocalDateTime timestamp;
         public final LogLevel level;

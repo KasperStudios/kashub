@@ -1,6 +1,7 @@
 package kasperstudios.kashub.algorithm.commands;
 
 import kasperstudios.kashub.algorithm.Command;
+import kasperstudios.kashub.util.ScriptLogger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
@@ -20,10 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-/**
- * Command for attacking nearest mobs
- * Syntax: attack [range] [type] [count]
- */
 public class AttackCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final AtomicBoolean attacking = new AtomicBoolean(false);
@@ -48,7 +45,7 @@ public class AttackCommand implements Command {
     public String getCategory() {
         return "Combat";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Attacks nearest mobs within specified radius.\n\n" +
@@ -121,7 +118,7 @@ public class AttackCommand implements Command {
         if (target != null) {
             attackEntity(player, target);
         } else {
-            System.out.println("Цель не найдена в радиусе " + range);
+            ScriptLogger.getInstance().warn("Target not found in range " + range);
         }
     }
 
@@ -204,7 +201,7 @@ public class AttackCommand implements Command {
                     if (target != null) {
                         attackEntity(p, target);
                         remaining[0]--;
-                        
+
                         if (remaining[0] > 0 && attacking.get()) {
                             scheduler.schedule(this, 500, TimeUnit.MILLISECONDS);
                         } else {
@@ -225,14 +222,14 @@ public class AttackCommand implements Command {
 
     private LivingEntity findNearestTarget(ClientPlayerEntity player, double range, String targetType) {
         Box searchBox = player.getBoundingBox().expand(range);
-        
+
         List<LivingEntity> entities = player.getWorld().getEntitiesByClass(
             LivingEntity.class,
             searchBox,
             entity -> {
                 if (entity == player) return false;
                 if (!entity.isAlive()) return false;
-                
+
                 switch (targetType.toLowerCase()) {
                     case "hostile":
                         return entity instanceof HostileEntity;
@@ -256,20 +253,18 @@ public class AttackCommand implements Command {
 
     private void attackEntity(ClientPlayerEntity player, LivingEntity target) {
         MinecraftClient client = MinecraftClient.getInstance();
-        
-        // Поворачиваемся к цели
+
         double dx = target.getX() - player.getX();
         double dy = target.getEyeY() - player.getEyeY();
         double dz = target.getZ() - player.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);
-        
+
         float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, dist));
-        
+
         player.setYaw(yaw);
         player.setPitch(pitch);
-        
-        // Атакуем
+
         client.interactionManager.attackEntity(player, target);
         player.swingHand(Hand.MAIN_HAND);
     }

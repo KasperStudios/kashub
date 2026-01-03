@@ -11,10 +11,6 @@ import net.minecraft.util.math.Vec3d;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Command for rotating player to look at coordinates or entity
- * Syntax: lookAt x y z or lookAt entity [type]
- */
 public class LookAtCommand implements Command {
 
     @Override
@@ -31,12 +27,12 @@ public class LookAtCommand implements Command {
     public String getParameters() {
         return "<x> <y> <z> | entity [type] [range]";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Rotates player to look at coordinates or entity.\n\n" +
@@ -66,7 +62,7 @@ public class LookAtCommand implements Command {
             if (args[0].equalsIgnoreCase("entity")) {
                 String entityType = args.length > 1 ? args[1].toLowerCase() : "all";
                 double range = args.length > 2 ? Double.parseDouble(args[2]) : 10.0;
-                
+
                 LivingEntity target = findNearestEntity(player, range, entityType);
                 if (target != null) {
                     lookAt(player, target.getX(), target.getEyeY(), target.getZ());
@@ -79,7 +75,7 @@ public class LookAtCommand implements Command {
                     double x = parseCoordinate(args[0], currentPos.x);
                     double y = args.length > 1 ? parseCoordinate(args[1], currentPos.y) : currentPos.y;
                     double z = args.length > 2 ? parseCoordinate(args[2], currentPos.z) : currentPos.z;
-                    
+
                     lookAt(player, x, y, z);
                 } catch (NumberFormatException e) {
                     System.out.println("Неверный формат координат");
@@ -93,10 +89,10 @@ public class LookAtCommand implements Command {
         double dy = y - player.getEyeY();
         double dz = z - player.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);
-        
+
         float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, dist));
-        
+
         player.setYaw(yaw);
         player.setPitch(pitch);
     }
@@ -111,16 +107,16 @@ public class LookAtCommand implements Command {
 
     private LivingEntity findNearestEntity(ClientPlayerEntity player, double range, String type) {
         Box searchBox = player.getBoundingBox().expand(range);
-        
+
         List<LivingEntity> entities = player.getWorld().getEntitiesByClass(
             LivingEntity.class,
             searchBox,
             entity -> {
                 if (entity == player) return false;
                 if (!entity.isAlive()) return false;
-                
+
                 if (type.equals("all")) return true;
-                
+
                 String entityName = entity.getType().getTranslationKey().toLowerCase();
                 return entityName.contains(type);
             }

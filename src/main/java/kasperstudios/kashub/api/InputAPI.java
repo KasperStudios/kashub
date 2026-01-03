@@ -199,7 +199,6 @@ public class InputAPI {
         });
     }
 
-    // Alias methods for compatibility
     public void sneak(boolean enabled) { setSneak(enabled); }
     public void sprint(boolean enabled) { setSprint(enabled); }
     public void toggleSprint() {

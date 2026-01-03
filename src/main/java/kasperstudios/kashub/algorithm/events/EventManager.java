@@ -6,22 +6,36 @@ import net.minecraft.client.network.ClientPlayerEntity;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
-/**
- * Менеджер событий для скриптов
- * Позволяет регистрировать обработчики на различные игровые события
- */
 public class EventManager {
     private static EventManager instance;
-    
+
     private final Map<String, List<EventHandler>> handlers = new ConcurrentHashMap<>();
     private final Map<String, String> eventScripts = new ConcurrentHashMap<>();
-    
-    // Состояние для отслеживания изменений
+
+    private static final Set<String> IMPLEMENTED_EVENTS = Set.of(
+        "onTick",
+        "onDamage",
+        "onHeal",
+        "onHunger",
+        "onDeath",
+        "onChat",
+        "onBlockBreak",
+        "onBlockPlace",
+        "onAttack"
+    );
+
+    private static final Set<String> WIP_EVENTS = Set.of(
+        "onRespawn",
+        "onJump",
+        "onSneak",
+        "onSprint",
+        "onItemUse",
+        "onInventoryChange"
+    );
+
     private float lastHealth = 20.0f;
     private int lastFood = 20;
-    private long lastTickTime = 0;
     private int tickCounter = 0;
 
     private EventManager() {
@@ -36,7 +50,7 @@ public class EventManager {
     }
 
     private void initializeDefaultEvents() {
-        // Регистрируем стандартные типы событий
+
         handlers.put("onTick", new ArrayList<>());
         handlers.put("onDamage", new ArrayList<>());
         handlers.put("onHeal", new ArrayList<>());
@@ -54,30 +68,35 @@ public class EventManager {
         handlers.put("onInventoryChange", new ArrayList<>());
     }
 
-    /**
-     * Регистрирует скрипт для выполнения при событии
-     */
     public void registerEventScript(String eventName, String scriptCode) {
+        // Check if event is known
+        if (!IMPLEMENTED_EVENTS.contains(eventName) && !WIP_EVENTS.contains(eventName)) {
+            kasperstudios.kashub.util.ScriptLogger.getInstance().warn(
+                "Unknown event '" + eventName + "'. Available events: " +
+                String.join(", ", getAvailableEvents()));
+            return;
+        }
+
+        if (WIP_EVENTS.contains(eventName)) {
+            kasperstudios.kashub.util.ScriptLogger.getInstance().warn(
+                "Event '" + eventName + "' is declared but not yet implemented (WIP).");
+            kasperstudios.kashub.util.ScriptLogger.getInstance().warn(
+                "The script will be registered but may not trigger until the event is implemented.");
+        }
+
         eventScripts.put(eventName, scriptCode);
+        kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
+            "EventManager: Registered script for " + eventName + ", total events: " + eventScripts.size());
     }
 
-    /**
-     * Удаляет скрипт события
-     */
     public void unregisterEventScript(String eventName) {
         eventScripts.remove(eventName);
     }
 
-    /**
-     * Регистрирует обработчик события
-     */
     public void registerHandler(String eventName, EventHandler handler) {
         handlers.computeIfAbsent(eventName, k -> new ArrayList<>()).add(handler);
     }
 
-    /**
-     * Удаляет обработчик события
-     */
     public void unregisterHandler(String eventName, EventHandler handler) {
         List<EventHandler> eventHandlers = handlers.get(eventName);
         if (eventHandlers != null) {
@@ -85,59 +104,61 @@ public class EventManager {
         }
     }
 
-    /**
-     * Вызывает событие
-     */
     public void fireEvent(String eventName, Map<String, Object> data) {
-        // Выполняем зарегистрированные обработчики
+        // Fire to registered handlers
         List<EventHandler> eventHandlers = handlers.get(eventName);
         if (eventHandlers != null) {
             for (EventHandler handler : eventHandlers) {
                 try {
                     handler.handle(data);
                 } catch (Exception e) {
-                    System.err.println("Error in event handler for " + eventName + ": " + e.getMessage());
+                    kasperstudios.kashub.util.ScriptLogger.getInstance().error(
+                        "Error in event handler for " + eventName + ": " + e.getMessage());
                 }
             }
         }
 
-        // Выполняем скрипт события
         String script = eventScripts.get(eventName);
         if (script != null && !script.isEmpty()) {
+            kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
+                "Firing event " + eventName + " with script: " + script.substring(0, Math.min(50, script.length())) + "...");
             try {
                 ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-                // Устанавливаем переменные события
+
                 for (Map.Entry<String, Object> entry : data.entrySet()) {
                     interpreter.setVariable("event_" + entry.getKey(), String.valueOf(entry.getValue()));
                 }
                 interpreter.parseCommands(script);
                 interpreter.executeQueuedCommands();
             } catch (Exception e) {
-                System.err.println("Error executing event script for " + eventName + ": " + e.getMessage());
+                kasperstudios.kashub.util.ScriptLogger.getInstance().error(
+                    "Error executing event script for " + eventName + ": " + e.getMessage());
+            }
+        } else {
+            if (eventName.equals("onTick")) {
+                kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
+                    "EventManager: onTick fired but no script registered (total scripts: " + eventScripts.size() + ")");
             }
         }
     }
 
-    /**
-     * Вызывается каждый тик для проверки событий
-     */
     public void tick() {
         MinecraftClient client = MinecraftClient.getInstance();
         ClientPlayerEntity player = client.player;
-        
+
         if (player == null) return;
 
         tickCounter++;
-        
-        // onTick - каждые 20 тиков (1 секунда)
+
         if (tickCounter % 20 == 0) {
             Map<String, Object> tickData = new HashMap<>();
             tickData.put("tick", tickCounter);
             tickData.put("time", System.currentTimeMillis());
+            kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
+                "EventManager.tick(): Firing onTick event, registered scripts: " + eventScripts.size());
             fireEvent("onTick", tickData);
         }
 
-        // Проверяем изменение здоровья
         float currentHealth = player.getHealth();
         if (currentHealth < lastHealth) {
             Map<String, Object> damageData = new HashMap<>();
@@ -154,7 +175,6 @@ public class EventManager {
         }
         lastHealth = currentHealth;
 
-        // Проверяем изменение голода
         int currentFood = player.getHungerManager().getFoodLevel();
         if (currentFood != lastFood) {
             Map<String, Object> hungerData = new HashMap<>();
@@ -165,7 +185,6 @@ public class EventManager {
         }
         lastFood = currentFood;
 
-        // Проверяем смерть
         if (player.isDead()) {
             Map<String, Object> deathData = new HashMap<>();
             deathData.put("position_x", player.getX());
@@ -175,36 +194,30 @@ public class EventManager {
         }
     }
 
-    /**
-     * Вызывается при получении сообщения в чат
-     */
-    public void onChatMessage(String message, String sender) {
-        Map<String, Object> chatData = new HashMap<>();
-        chatData.put("message", message);
-        chatData.put("sender", sender);
-        fireEvent("onChat", chatData);
-    }
-
-    /**
-     * Очищает все обработчики и скрипты
-     */
     public void clear() {
+        kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
+            "EventManager: Clearing all events (had " + eventScripts.size() + " scripts)");
         for (List<EventHandler> handlerList : handlers.values()) {
             handlerList.clear();
         }
         eventScripts.clear();
     }
 
-    /**
-     * Получает список всех доступных событий
-     */
     public Set<String> getAvailableEvents() {
-        return handlers.keySet();
+        Set<String> allEvents = new java.util.HashSet<>();
+        allEvents.addAll(IMPLEMENTED_EVENTS);
+        allEvents.addAll(WIP_EVENTS);
+        return allEvents;
     }
 
-    /**
-     * Интерфейс обработчика события
-     */
+    public Set<String> getImplementedEvents() {
+        return new java.util.HashSet<>(IMPLEMENTED_EVENTS);
+    }
+
+    public boolean isEventImplemented(String eventName) {
+        return IMPLEMENTED_EVENTS.contains(eventName);
+    }
+
     @FunctionalInterface
     public interface EventHandler {
         void handle(Map<String, Object> data);

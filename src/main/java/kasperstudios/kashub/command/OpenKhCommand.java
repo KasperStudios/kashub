@@ -18,7 +18,7 @@ public class OpenKhCommand {
                 return 1;
             }));
     }
-    
+
     public static void openScreen() {
         MinecraftClient.getInstance().execute(() -> {
             MinecraftClient.getInstance().setScreen(new ModernEditorScreen());

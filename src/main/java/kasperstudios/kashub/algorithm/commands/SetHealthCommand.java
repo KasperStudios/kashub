@@ -6,12 +6,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
 
-/**
- * Command for setting health (creative/cheats only)
- * Syntax: setHealth <value>
- */
 public class SetHealthCommand implements Command {
-    
+
     private static final float MIN_HEALTH = 0.0f;
     private static final float MAX_HEALTH = 20.0f;
     private static final float DEFAULT_HEALTH = 20.0f;
@@ -30,12 +26,12 @@ public class SetHealthCommand implements Command {
     public String getParameters() {
         return "<value> - health value (0.0-20.0)";
     }
-    
+
     @Override
     public String getCategory() {
         return "Player";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Sets player health.\n\n" +
@@ -57,20 +53,19 @@ public class SetHealthCommand implements Command {
         if (player == null) {
             throw new IllegalStateException("Player is null");
         }
-        
+
         if (args.length == 0) {
             throw new IllegalArgumentException("Usage: setHealth <value>");
         }
 
         try {
             float health = Float.parseFloat(args[0]);
-            
-            // Validate and clamp health value
+
             if (health < MIN_HEALTH || health > MAX_HEALTH) {
                 ScriptLogger.getInstance().warn("Health value " + health + " out of range, clamping to " + MIN_HEALTH + "-" + MAX_HEALTH);
                 health = Math.max(MIN_HEALTH, Math.min(MAX_HEALTH, health));
             }
-            
+
             final float finalHealth = health;
             client.execute(() -> {
                 try {

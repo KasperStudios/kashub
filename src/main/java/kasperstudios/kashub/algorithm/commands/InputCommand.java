@@ -8,21 +8,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Команды для работы с Input API
- * Синтаксис:
- *   input.jump - прыжок
- *   input.sneak <true/false/toggle> - присед
- *   input.sprint <true/false/toggle> - бег
- *   input.attack - атака
- *   input.use - использовать предмет
- *   input.drop [stack] - выбросить предмет
- *   input.hotbar <slot> - выбрать слот
- *   input.look <yaw> <pitch> - повернуть камеру
- *   input.lookAt <x> <y> <z> - посмотреть на координаты
- *   input.move <direction> <true/false> - движение
- *   input.stop - остановить всё
- */
 public class InputCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
@@ -194,7 +179,7 @@ public class InputCommand implements Command {
                 if (args.length >= 2) {
                     String direction = args[1].toLowerCase();
                     boolean enabled = args.length < 3 || Boolean.parseBoolean(args[2]);
-                    
+
                     switch (direction) {
                         case "forward": input.moveForward(enabled); break;
                         case "back": case "backward": input.moveBack(enabled); break;
@@ -212,7 +197,7 @@ public class InputCommand implements Command {
                 if (args.length >= 2) {
                     String holdAction = args[1].toLowerCase();
                     boolean hold = args.length < 3 || Boolean.parseBoolean(args[2]);
-                    
+
                     switch (holdAction) {
                         case "attack": input.holdAttack(hold); break;
                         case "use": input.holdUse(hold); break;
@@ -228,11 +213,10 @@ public class InputCommand implements Command {
     @Override
     public CompletableFuture<Void> executeAsync(String[] args) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        
+
         try {
             execute(args);
-            
-            // Для некоторых действий добавляем небольшую задержку
+
             if (args.length > 0) {
                 String action = args[0].toLowerCase();
                 if (action.equals("attack") || action.equals("use")) {
@@ -244,12 +228,12 @@ public class InputCommand implements Command {
                     return future;
                 }
             }
-            
+
             future.complete(null);
         } catch (Exception e) {
             future.completeExceptionally(e);
         }
-        
+
         return future;
     }
 

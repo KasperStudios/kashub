@@ -8,10 +8,6 @@ import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 
-/**
- * Команда для экипировки брони
- * Синтаксис: equipArmor [type] - diamond, iron, gold, netherite, leather, chainmail
- */
 public class EquipArmorCommand implements Command {
 
     @Override
@@ -28,12 +24,12 @@ public class EquipArmorCommand implements Command {
     public String getParameters() {
         return "[type] - armor material or 'best'";
     }
-    
+
     @Override
     public String getCategory() {
         return "Inventory";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Automatically equips armor from inventory.\n\n" +
@@ -80,17 +76,17 @@ public class EquipArmorCommand implements Command {
 
     private void equipArmorPiece(ClientPlayerEntity player, EquipmentSlot slot, String armorType) {
         MinecraftClient client = MinecraftClient.getInstance();
-        
+
         int bestSlot = -1;
         int bestProtection = 0;
-        
+
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (!stack.isEmpty() && stack.getItem() instanceof ArmorItem) {
                 ArmorItem armor = (ArmorItem) stack.getItem();
                 if (armor.getSlotType() == slot) {
                     String itemName = Registries.ITEM.getId(stack.getItem()).getPath().toLowerCase();
-                    
+
                     if (armorType.equals("best")) {
                         int protection = armor.getProtection();
                         if (protection > bestProtection) {
@@ -104,11 +100,11 @@ public class EquipArmorCommand implements Command {
                 }
             }
         }
-        
+
         if (bestSlot != -1) {
             int armorSlotIndex = getArmorSlotIndex(slot);
             if (client.interactionManager != null) {
-                // Shift-click для быстрой экипировки
+
                 client.interactionManager.clickSlot(
                     player.currentScreenHandler.syncId,
                     bestSlot < 9 ? bestSlot + 36 : bestSlot,

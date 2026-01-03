@@ -1,8 +1,5 @@
-package kasperstudios.kashub.runtime;
+package kasperstudios.kashub.services.runtime;
 
-/**
- * Состояния выполнения скрипта
- */
 public enum ScriptState {
     RUNNING("Running", 0xFF50FA7B),
     PAUSED("Paused", 0xFFFFB86C),

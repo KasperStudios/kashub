@@ -24,6 +24,7 @@ A comprehensive guide for scripting with the Kashub (KHScript) automation system
 
 ### Editor Overview
 - Left sidebar: script list, search, create new
+- **Right sidebar (Debug)**: Variables viewer (Global, Local, Context)
 - Toolbar buttons:
   - `▶ Run`, `⏹ Stop`, `💾 Save`, `⌨ Key` to bind scripts, `📚 Docs`, `📊 Tasks`, `⚙ Set`, `🎨 Theme`, `❌ Close`
 - Editor supports syntax highlighting, vertical + horizontal scrolling, line numbers

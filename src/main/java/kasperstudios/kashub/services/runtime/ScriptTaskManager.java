@@ -1,4 +1,4 @@
-package kasperstudios.kashub.runtime;
+package kasperstudios.kashub.services.runtime;
 
 import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import kasperstudios.kashub.config.KashubConfig;
@@ -11,18 +11,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-/**
- * Менеджер запущенных скриптов (Runtime Manager)
- * Управляет жизненным циклом ScriptTask
- */
 public class ScriptTaskManager {
     private static ScriptTaskManager instance;
-    
+
     private final Map<Integer, ScriptTask> tasks = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger(1);
     private boolean enabled = true;
 
-    private ScriptTaskManager() {}
+    private ScriptTaskManager() {
+    }
 
     public static ScriptTaskManager getInstance() {
         if (instance == null) {
@@ -31,23 +28,14 @@ public class ScriptTaskManager {
         return instance;
     }
 
-    /**
-     * Запускает новый скрипт
-     */
     public ScriptTask startScript(String name, String code) {
         return startScript(name, code, null, ScriptType.USER);
     }
 
-    /**
-     * Запускает новый скрипт с тегами
-     */
     public ScriptTask startScript(String name, String code, Set<String> tags) {
         return startScript(name, code, tags, ScriptType.USER);
     }
 
-    /**
-     * Запускает новый скрипт с полными параметрами
-     */
     public ScriptTask startScript(String name, String code, Set<String> tags, ScriptType scriptType) {
         if (!enabled) {
             ScriptLogger.getInstance().warn("Script execution is disabled");
@@ -57,28 +45,23 @@ public class ScriptTaskManager {
         int id = nextId.getAndIncrement();
         ScriptTask task = new ScriptTask(id, name, code, tags, scriptType);
         tasks.put(id, task);
-        
+
         ScriptLogger.getInstance().info("Started task " + id + ": " + name);
-        
-        // Register for hot-reload if enabled and it's a user script
+
         if (KashubConfig.getInstance().hotReload && scriptType == ScriptType.USER) {
             ScriptFileWatcher.getInstance().registerScript(name, id);
         }
-        
-        // Parse and queue commands to the TASK's own queue (not global interpreter)
+
         try {
             task.parseAndQueue();
         } catch (Exception e) {
             task.stop();
             ScriptLogger.getInstance().error("Failed to start script " + name + ": " + e.getMessage());
         }
-        
+
         return task;
     }
 
-    /**
-     * Запускает скрипт из файла
-     */
     public ScriptTask startScriptFromFile(String name) {
         try {
             String code = ScriptManager.loadScript(name);
@@ -89,28 +72,24 @@ public class ScriptTaskManager {
         }
     }
 
-    /**
-     * Запускает системный скрипт (read-only)
-     */
     public ScriptTask startSystemScript(String name, String code) {
         Set<String> tags = new HashSet<>();
         tags.add("system");
         return startScript(name, code, tags, ScriptType.SYSTEM);
     }
 
-    /**
-     * Вызывается каждый тик клиента
-     */
     public void tick() {
-        if (!enabled) return;
+        if (!enabled)
+            return;
 
         KashubConfig config = KashubConfig.getInstance();
         int processed = 0;
         int runningCount = 0;
 
         for (ScriptTask task : tasks.values()) {
-            if (processed >= config.maxScriptsPerTick) break;
-            
+            if (processed >= config.maxScriptsPerTick)
+                break;
+
             if (task.getState() == ScriptState.RUNNING) {
                 runningCount++;
                 try {
@@ -120,39 +99,39 @@ public class ScriptTaskManager {
                     ScriptLogger.getInstance().error("Task " + task.getId() + " tick error: " + e.getMessage());
                 }
             }
-            
-            // Удаляем завершённые задачи старше 5 минут
-            if (task.getState() == ScriptState.STOPPED && 
-                System.currentTimeMillis() - task.getLastTickTime() > 300000) {
-                // Unregister from file watcher
+
+            if (task.getState() == ScriptState.STOPPED &&
+                    System.currentTimeMillis() - task.getLastTickTime() > 300000) {
+
                 if (KashubConfig.getInstance().hotReload && task.getScriptType() == ScriptType.USER) {
                     ScriptFileWatcher.getInstance().unregisterScript(task.getName());
                 }
                 tasks.remove(task.getId());
             }
         }
-        
-        // Log periodically to track script execution
-        if (runningCount > 0 && System.currentTimeMillis() % 1000 < 50) { // Log roughly once per second
-            ScriptLogger.getInstance().debug("ScriptTaskManager: " + runningCount + " running tasks, processed " + processed + " this tick");
+
+        if (runningCount > 0 && System.currentTimeMillis() % 1000 < 50) {
+            ScriptLogger.getInstance().debug(
+                    "ScriptTaskManager: " + runningCount + " running tasks, processed " + processed + " this tick");
         }
     }
 
-    // Управление отдельными задачами
     public void pause(int id) {
         ScriptTask task = tasks.get(id);
-        if (task != null) task.pause();
+        if (task != null)
+            task.pause();
     }
 
     public void resume(int id) {
         ScriptTask task = tasks.get(id);
-        if (task != null) task.resume();
+        if (task != null)
+            task.resume();
     }
 
     public void stop(int id) {
         ScriptTask task = tasks.get(id);
         if (task != null) {
-            // Unregister from file watcher
+
             if (KashubConfig.getInstance().hotReload && task.getScriptType() == ScriptType.USER) {
                 ScriptFileWatcher.getInstance().unregisterScript(task.getName());
             }
@@ -162,10 +141,10 @@ public class ScriptTaskManager {
 
     public void restart(int id) {
         ScriptTask task = tasks.get(id);
-        if (task != null) task.restart();
+        if (task != null)
+            task.restart();
     }
 
-    // Массовые операции
     public void stopAll() {
         for (ScriptTask task : tasks.values()) {
             task.stop();
@@ -209,7 +188,6 @@ public class ScriptTaskManager {
         }
     }
 
-    // Получение информации
     public ScriptTask getTask(int id) {
         return tasks.get(id);
     }
@@ -220,20 +198,20 @@ public class ScriptTaskManager {
 
     public List<ScriptTask> getRunningTasks() {
         return tasks.values().stream()
-            .filter(t -> t.getState() == ScriptState.RUNNING)
-            .collect(Collectors.toList());
+                .filter(t -> t.getState() == ScriptState.RUNNING)
+                .collect(Collectors.toList());
     }
 
     public List<ScriptTask> getTasksByTag(String tag) {
         return tasks.values().stream()
-            .filter(t -> t.hasTag(tag))
-            .collect(Collectors.toList());
+                .filter(t -> t.hasTag(tag))
+                .collect(Collectors.toList());
     }
 
     public List<ScriptTask> getTasksByState(ScriptState state) {
         return tasks.values().stream()
-            .filter(t -> t.getState() == state)
-            .collect(Collectors.toList());
+                .filter(t -> t.getState() == state)
+                .collect(Collectors.toList());
     }
 
     public Collection<ScriptTask> getAllTasks() {
@@ -242,15 +220,14 @@ public class ScriptTaskManager {
 
     public int getActiveCount() {
         return (int) tasks.values().stream()
-            .filter(t -> t.getState() == ScriptState.RUNNING || t.getState() == ScriptState.PAUSED)
-            .count();
+                .filter(t -> t.getState() == ScriptState.RUNNING || t.getState() == ScriptState.PAUSED)
+                .count();
     }
 
     public int getTotalCount() {
         return tasks.size();
     }
 
-    // Управление менеджером
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
         if (!enabled) {
@@ -268,9 +245,6 @@ public class ScriptTaskManager {
         nextId.set(1);
     }
 
-    /**
-     * Получает статистику по задачам
-     */
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("total", tasks.size());

@@ -25,12 +25,12 @@ public class PlaceBlockCommand implements Command {
     public String getParameters() {
         return "[x y z] - optional coordinates";
     }
-    
+
     @Override
     public String getCategory() {
         return "Interaction";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Places a block from hotbar at target position.\n\n" +
@@ -70,7 +70,7 @@ public class PlaceBlockCommand implements Command {
                 BlockPos pos = new BlockPos(x, y, z);
                 placeBlockAt(client, player, pos);
             } catch (NumberFormatException e) {
-                // Invalid coordinates
+
             }
         } else {
             HitResult hit = client.crosshairTarget;

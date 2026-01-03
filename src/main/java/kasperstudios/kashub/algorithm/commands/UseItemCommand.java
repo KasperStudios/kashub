@@ -24,12 +24,12 @@ public class UseItemCommand implements Command {
     public String getParameters() {
         return "[hold <ticks>|release|offhand]";
     }
-    
+
     @Override
     public String getCategory() {
         return "Interaction";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Uses item in hand (simulates right-click).\n\n" +

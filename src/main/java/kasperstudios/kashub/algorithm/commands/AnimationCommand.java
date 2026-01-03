@@ -2,6 +2,7 @@ package kasperstudios.kashub.algorithm.commands;
 
 import kasperstudios.kashub.algorithm.Command;
 import kasperstudios.kashub.network.AnimationManager;
+import kasperstudios.kashub.util.ScriptLogger;
 
 public class AnimationCommand implements Command {
     @Override
@@ -73,7 +74,13 @@ public class AnimationCommand implements Command {
                 }
                 break;
             case "list":
-                // Return list of active animations
+                AnimationManager mgr = AnimationManager.getInstance();
+                if (mgr == null) {
+                    ScriptLogger.getInstance().error("AnimationManager not available");
+                    return;
+                }
+
+                ScriptLogger.getInstance().info("Active animations: (not yet implemented)");
                 break;
         }
     }

@@ -24,12 +24,12 @@ public class BreakBlockCommand implements Command {
     public String getParameters() {
         return "[x y z] - optional coordinates";
     }
-    
+
     @Override
     public String getCategory() {
         return "Interaction";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Breaks a block at specified position or crosshair target.\n\n" +
@@ -66,7 +66,7 @@ public class BreakBlockCommand implements Command {
                 BlockPos pos = new BlockPos(x, y, z);
                 breakBlockAt(client, pos);
             } catch (NumberFormatException e) {
-                // Invalid coordinates
+
             }
         } else {
             HitResult hit = client.crosshairTarget;

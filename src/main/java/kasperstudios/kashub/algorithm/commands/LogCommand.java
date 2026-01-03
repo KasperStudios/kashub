@@ -5,10 +5,6 @@ import kasperstudios.kashub.api.server.KashubAPIServer;
 import kasperstudios.kashub.api.server.events.ScriptOutputEvent;
 import kasperstudios.kashub.util.ScriptLogger;
 
-/**
- * Команда для логирования сообщений
- * Синтаксис: log [level] <message>
- */
 public class LogCommand implements Command {
 
     @Override
@@ -65,11 +61,10 @@ public class LogCommand implements Command {
         ScriptLogger.LogLevel level = ScriptLogger.LogLevel.INFO;
         String message;
 
-        // Проверяем, указан ли уровень логирования
         if (args.length > 1) {
             try {
                 level = ScriptLogger.LogLevel.valueOf(args[0].toUpperCase());
-                // Собираем сообщение из оставшихся аргументов
+
                 StringBuilder sb = new StringBuilder();
                 for (int i = 1; i < args.length; i++) {
                     sb.append(args[i]);
@@ -77,7 +72,7 @@ public class LogCommand implements Command {
                 }
                 message = sb.toString();
             } catch (IllegalArgumentException e) {
-                // Первый аргумент не уровень, используем всё как сообщение
+
                 message = String.join(" ", args);
             }
         } else {
@@ -85,11 +80,10 @@ public class LogCommand implements Command {
         }
 
         logger.log(level, message);
-        
-        // Broadcast to VSCode via WebSocket
+
         String wsLevel = level.name().toLowerCase();
         KashubAPIServer.broadcast(new ScriptOutputEvent(
-            0, // TODO: get current task ID
+            0,
             message,
             wsLevel,
             System.currentTimeMillis()

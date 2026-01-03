@@ -5,58 +5,43 @@ import com.google.gson.GsonBuilder;
 
 import java.nio.file.*;
 
-/**
- * Configuration for the Script Marketplace.
- * 
- * Settings include:
- * - Enable/disable marketplace features
- * - Repository URL configuration
- * - Cache settings
- * - Auto-update preferences
- */
 public class MarketplaceConfig {
     private static MarketplaceConfig instance;
     private static final Path CONFIG_PATH = Paths.get("config", "kashub", "marketplace.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    
-    // Default GitHub repository for verified scripts
+
     private static final String DEFAULT_REPOSITORY = "https://github.com/kasperstudios/kashub-scripts";
-    
-    // Marketplace settings
+
     private boolean enabled = true;
     private String repositoryUrl = DEFAULT_REPOSITORY;
     private String repositoryBranch = "main";
-    
-    // Cache settings
+
     private boolean cacheEnabled = true;
-    private int cacheExpirationMinutes = 60; // 1 hour
+    private int cacheExpirationMinutes = 60;
     private int maxCachedScripts = 100;
-    
-    // Auto-update settings
+
     private boolean autoCheckUpdates = true;
     private int updateCheckIntervalHours = 24;
     private boolean notifyOnUpdates = true;
-    
-    // Download settings
+
     private boolean verifySignatures = true;
     private boolean allowUnsignedScripts = false;
     private String scriptsInstallPath = "scripts/marketplace";
-    
-    // UI settings
+
     private boolean showRatings = true;
     private boolean showDownloadCount = true;
     private String defaultCategory = "all";
-    private String defaultSortBy = "downloads"; // downloads, rating, updated, name
-    
+    private String defaultSortBy = "downloads";
+
     private MarketplaceConfig() {}
-    
+
     public static synchronized MarketplaceConfig getInstance() {
         if (instance == null) {
             instance = load();
         }
         return instance;
     }
-    
+
     public static MarketplaceConfig load() {
         try {
             if (Files.exists(CONFIG_PATH)) {
@@ -69,12 +54,12 @@ public class MarketplaceConfig {
         } catch (Exception e) {
             System.err.println("Failed to load marketplace config: " + e.getMessage());
         }
-        
+
         MarketplaceConfig config = new MarketplaceConfig();
         config.save();
         return config;
     }
-    
+
     public void save() {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
@@ -84,8 +69,7 @@ public class MarketplaceConfig {
             System.err.println("Failed to save marketplace config: " + e.getMessage());
         }
     }
-    
-    // Getters
+
     public boolean isEnabled() { return enabled; }
     public String getRepositoryUrl() { return repositoryUrl; }
     public String getRepositoryBranch() { return repositoryBranch; }
@@ -102,74 +86,60 @@ public class MarketplaceConfig {
     public boolean isShowDownloadCount() { return showDownloadCount; }
     public String getDefaultCategory() { return defaultCategory; }
     public String getDefaultSortBy() { return defaultSortBy; }
-    
-    // Setters with auto-save
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
         save();
     }
-    
+
     public void setRepositoryUrl(String repositoryUrl) {
         this.repositoryUrl = repositoryUrl;
         save();
     }
-    
+
     public void setRepositoryBranch(String repositoryBranch) {
         this.repositoryBranch = repositoryBranch;
         save();
     }
-    
+
     public void setCacheEnabled(boolean cacheEnabled) {
         this.cacheEnabled = cacheEnabled;
         save();
     }
-    
+
     public void setCacheExpirationMinutes(int cacheExpirationMinutes) {
         this.cacheExpirationMinutes = cacheExpirationMinutes;
         save();
     }
-    
+
     public void setAutoCheckUpdates(boolean autoCheckUpdates) {
         this.autoCheckUpdates = autoCheckUpdates;
         save();
     }
-    
+
     public void setVerifySignatures(boolean verifySignatures) {
         this.verifySignatures = verifySignatures;
         save();
     }
-    
+
     public void setAllowUnsignedScripts(boolean allowUnsignedScripts) {
         this.allowUnsignedScripts = allowUnsignedScripts;
         save();
     }
-    
+
     public void setDefaultSortBy(String defaultSortBy) {
         this.defaultSortBy = defaultSortBy;
         save();
     }
-    
-    /**
-     * Get the full URL for the scripts catalog JSON.
-     * 
-     * @return Catalog URL
-     */
+
     public String getCatalogUrl() {
         return repositoryUrl + "/raw/" + repositoryBranch + "/catalog.json";
     }
-    
-    /**
-     * Get the base URL for downloading scripts.
-     * 
-     * @return Scripts base URL
-     */
+
     public String getScriptsBaseUrl() {
         return repositoryUrl + "/raw/" + repositoryBranch + "/scripts/";
     }
-    
-    /**
-     * Reset to default settings.
-     */
+
     public void resetToDefaults() {
         this.enabled = true;
         this.repositoryUrl = DEFAULT_REPOSITORY;

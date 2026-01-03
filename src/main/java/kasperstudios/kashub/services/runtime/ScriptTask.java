@@ -1,20 +1,18 @@
-package kasperstudios.kashub.runtime;
+package kasperstudios.kashub.services.runtime;
 
 import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import kasperstudios.kashub.algorithm.Command;
 import kasperstudios.kashub.algorithm.CommandRegistry;
 import kasperstudios.kashub.algorithm.EnvironmentVariable;
 import kasperstudios.kashub.util.ScriptLogger;
+import kasperstudios.kashub.debug.DebugManager;
 
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
-/**
- * Represents a running script as a task
- */
 public class ScriptTask {
     private final int id;
     private final String name;
@@ -22,49 +20,61 @@ public class ScriptTask {
     private final Set<String> tags;
     private final long startTime;
     private final ScriptType scriptType;
-    
+
     private ScriptState state;
     private long lastTickTime;
     private String lastError;
     private int priority;
     private int currentLine;
     private int executedCommands;
-    
-    // Command queue for this task
-    private final Queue<CommandEntry> commandQueue;
+
+    private final Deque<CommandEntry> commandQueue;
     private volatile boolean isProcessingCommand;
     private CompletableFuture<Void> currentCommandFuture;
-    private final Object processLock = new Object(); // Lock for processNextCommand synchronization
-    
-    // Loop control - prevent duplicate loop iterations
+    private final Object processLock = new Object();
+
     private LoopMarkerCommand pendingLoopMarker = null;
-    private static final int MAX_QUEUE_SIZE = 1000; // Prevent queue overflow
-    private static final int LOOP_REQUEUE_THRESHOLD = 5; // Re-add loop marker when queue has <= this many commands
-    
-    // Script variables
-    private final Map<String, String> variables = new HashMap<>();
-    
-    // Parsing patterns - Legacy and Rust-style syntax support
-    // Legacy: x = 5, Rust-style: let x = 5 / const x = 5
-    private static final Pattern VARIABLE_PATTERN = Pattern.compile("^\\s*(?:let\\s+|const\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*=\\s*(.+)$");
-    // Legacy: if (cond) {, Rust-style: if cond {
-    private static final Pattern IF_PATTERN = Pattern.compile("^\\s*if\\s+(.+?)\\s*\\{\\s*$|^\\s*if\\s*\\((.*)\\)\\s*\\{?\\s*$");
-    // Legacy: } else if (cond) {, Rust-style: } else if cond {
-    private static final Pattern ELSE_IF_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s+if\\s+(.+?)\\s*\\{\\s*$|^\\s*\\}?\\s*else\\s+if\\s*\\((.*)\\)\\s*\\{?\\s*$");
-    private static final Pattern ELSE_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s*\\{?\\s*$");
-    private static final Pattern FOR_PATTERN = Pattern.compile("^\\s*for\\s*\\((.*)\\)\\s*\\{?\\s*$");
-    // Legacy: while (cond) {, Rust-style: while cond {
-    private static final Pattern WHILE_PATTERN = Pattern.compile("^\\s*while\\s+(.+?)\\s*\\{\\s*$|^\\s*while\\s*\\((.*)\\)\\s*\\{?\\s*$");
-    private static final Pattern LOOP_PATTERN = Pattern.compile("^\\s*loop(?:\\s+(\\d+))?\\s*\\{?\\s*$");
-    private static final Pattern FUNCTION_PATTERN = Pattern.compile("^\\s*function\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*\\{?\\s*$");
-    private static final Pattern FUNCTION_CALL_PATTERN = Pattern.compile("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*$");
-    private static final Pattern ENV_VAR_PATTERN = Pattern.compile("\\$([A-Z_][A-Z0-9_]*)");
-    private static final Pattern USER_VAR_PATTERN = Pattern.compile("\\$([a-z_][a-z0-9_]*)");
-    
-    // Functions defined in this script
-    private final Map<String, FunctionDef> localFunctions = new HashMap<>();
-    
-    // Control flow flags
+    private static final int MAX_QUEUE_SIZE = 1000;
+    private static final int LOOP_REQUEUE_THRESHOLD = 5;
+
+    private final Map<String, String> variables = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> registeredEvents = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static final Pattern VARIABLE_PATTERN;
+    private static final Pattern IF_PATTERN;
+    private static final Pattern ELSE_IF_PATTERN;
+    private static final Pattern ELSE_PATTERN;
+    private static final Pattern FOR_PATTERN;
+    private static final Pattern WHILE_PATTERN;
+    private static final Pattern LOOP_PATTERN;
+    private static final Pattern FUNCTION_PATTERN;
+    private static final Pattern FUNCTION_CALL_PATTERN;
+    private static final Pattern ENV_VAR_PATTERN;
+    private static final Pattern USER_VAR_PATTERN;
+
+    static {
+        try {
+            VARIABLE_PATTERN = Pattern.compile("^\\s*(?:let\\s+|const\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*=\\s*(.+)$");
+            IF_PATTERN = Pattern.compile("^\\s*if\\s+(.+?)\\s*\\{\\s*$|^\\s*if\\s*\\((.*)\\)\\s*\\{?\\s*$");
+            ELSE_IF_PATTERN = Pattern.compile(
+                    "^\\s*\\}?\\s*else\\s+if\\s+(.+?)\\s*\\{\\s*$|^\\s*\\}?\\s*else\\s+if\\s*\\((.*)\\)\\s*\\{?\\s*$");
+            ELSE_PATTERN = Pattern.compile("^\\s*\\}?\\s*else\\s*\\{?\\s*$");
+            FOR_PATTERN = Pattern.compile("^\\s*for\\s*\\((.*)\\)\\s*\\{?\\s*$");
+            WHILE_PATTERN = Pattern.compile("^\\s*while\\s+(.+?)\\s*\\{\\s*$|^\\s*while\\s*\\((.*)\\)\\s*\\{?\\s*$");
+            LOOP_PATTERN = Pattern.compile("^\\s*loop(?:\\s+(\\d+))?\\s*\\{?\\s*$");
+            FUNCTION_PATTERN = Pattern.compile("^\\s*function\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*\\{?\\s*$");
+            FUNCTION_CALL_PATTERN = Pattern.compile("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\((.*?)\\)\\s*$");
+            ENV_VAR_PATTERN = Pattern.compile("\\$([A-Z_][A-Z0-9_]*)");
+            USER_VAR_PATTERN = Pattern.compile("\\$([a-z_][a-z0-9_]*)");
+        } catch (Throwable t) {
+            System.err.println("CRITICAL: Error initializing ScriptTask regex patterns: " + t.getMessage());
+            t.printStackTrace();
+            throw t;
+        }
+    }
+
+    private final Map<String, FunctionDef> localFunctions = new java.util.concurrent.ConcurrentHashMap<>();
+
     private boolean shouldBreak = false;
     private boolean shouldContinue = false;
 
@@ -80,109 +90,184 @@ public class ScriptTask {
         this.priority = 0;
         this.currentLine = 0;
         this.executedCommands = 0;
-        this.commandQueue = new ConcurrentLinkedQueue<>();
+        this.commandQueue = new ConcurrentLinkedDeque<>();
         this.isProcessingCommand = false;
-        // Initialize loop control flags
+
         this.shouldBreak = false;
         this.shouldContinue = false;
         this.pendingLoopMarker = null;
-        ScriptLogger.getInstance().debug("Task " + id + " (" + name + ") created, loop flags initialized");
+
+        this.variables.put("SCRIPT_NAME", name);
+        this.variables.put("SCRIPT_PATH", name + ".kashub");
+
+        try {
+            ScriptInterpreter.getInstance().setVariable("SCRIPT_NAME", name);
+        } catch (Exception e) {
+
+        }
+
+        try {
+            ScriptLogger.getInstance().debug("Task " + id + " (" + name + ") created, loop flags initialized");
+        } catch (Exception e) {
+
+        }
     }
 
-    /**
-     * Execute one tick of the script
-     */
+    public void setVariable(String name, String value) {
+        variables.put(name, value);
+
+        try {
+            ScriptInterpreter.getInstance().setVariable(name, value);
+        } catch (Exception e) {
+
+        }
+    }
+
     public void tick() {
-        if (state != ScriptState.RUNNING) {
-            ScriptLogger.getInstance().debug("Task " + id + ": tick() skipped, state=" + state);
-            return;
-        }
-        
-        lastTickTime = System.currentTimeMillis();
-        
-        // Check if we should re-queue loop marker (only when queue is completely empty and no command is processing)
-        if (pendingLoopMarker != null && !isProcessingCommand && commandQueue.isEmpty() && !shouldBreak) {
-            ScriptLogger.getInstance().debug("Task " + id + ": Re-queuing loop marker, queue empty (pendingLoopMarker=" + (pendingLoopMarker != null) + ", isProcessingCommand=" + isProcessingCommand + ", queueSize=" + commandQueue.size() + ", shouldBreak=" + shouldBreak + ")");
-            commandQueue.add(new CommandEntry(pendingLoopMarker, new String[0]));
-            pendingLoopMarker = null; // Clear pending marker
-            // Process the newly queued marker immediately
-            processNextCommand();
-            return;
-        }
-        
-        // If no active command, take next from queue
-        if (!isProcessingCommand && !commandQueue.isEmpty()) {
-            ScriptLogger.getInstance().debug("Task " + id + ": tick() processing next command, queueSize=" + commandQueue.size());
-            processNextCommand();
-        } else if (pendingLoopMarker != null) {
-            ScriptLogger.getInstance().debug("Task " + id + ": tick() waiting for queue to empty (pendingLoopMarker=" + (pendingLoopMarker != null) + ", isProcessingCommand=" + isProcessingCommand + ", queueSize=" + commandQueue.size() + ", shouldBreak=" + shouldBreak + ")");
+        try {
+            if (state == null) {
+                System.err.println("DEBUG: Task " + id + " state is NULL!");
+                return;
+            }
+            if (state != ScriptState.RUNNING) {
+                return;
+            }
+
+            lastTickTime = System.currentTimeMillis();
+
+            if (!isProcessingCommand && !commandQueue.isEmpty()) {
+                CommandEntry next = commandQueue.peek();
+                if (next != null && next.getLineNumber() > 0) {
+                    this.currentLine = next.getLineNumber();
+                    try {
+                        if (DebugManager.getInstance().shouldPause(this.id, this.name, this.currentLine)) {
+                            return;
+                        }
+                    } catch (Throwable t) {
+                        System.err.println("CRITICAL: Error in DebugManager.shouldPause: " + t.getMessage());
+                    }
+                }
+            }
+
+            if (pendingLoopMarker != null && !isProcessingCommand && commandQueue.isEmpty() && !shouldBreak) {
+                try {
+                    ScriptLogger.getInstance()
+                            .debug("Task " + id + ": Re-queuing loop marker, queue empty (pendingLoopMarker="
+                                    + (pendingLoopMarker != null) + ", isProcessingCommand=" + isProcessingCommand
+                                    + ", queueSize=" + commandQueue.size() + ", shouldBreak=" + shouldBreak + ")");
+                } catch (Throwable t) {
+                }
+                commandQueue.add(new CommandEntry(pendingLoopMarker, new String[0], pendingLoopMarker.startLine));
+                pendingLoopMarker = null;
+
+                processNextCommand();
+                return;
+            }
+
+            if (!isProcessingCommand && !commandQueue.isEmpty()) {
+                try {
+                    ScriptLogger.getInstance()
+                            .debug("Task " + id + ": tick() processing next command, queueSize=" + commandQueue.size());
+                } catch (Throwable t) {
+                }
+                processNextCommand();
+            } else if (pendingLoopMarker != null) {
+                try {
+                    ScriptLogger.getInstance()
+                            .debug("Task " + id + ": tick() waiting for queue to empty (pendingLoopMarker="
+                                    + (pendingLoopMarker != null) + ", isProcessingCommand=" + isProcessingCommand
+                                    + ", queueSize=" + commandQueue.size() + ", shouldBreak=" + shouldBreak + ")");
+                } catch (Throwable t) {
+                }
+            }
+        } catch (Throwable t) {
+            System.err.println("CRITICAL: Exception in tick(): " + t.getMessage());
+            t.printStackTrace();
+            throw t;
         }
     }
 
-    /**
-     * Parse and queue commands for this task
-     */
     public void parseAndQueue() {
         try {
-            String[] lines = code.split("\\r?\\n");
+            // Set script name in interpreter for export/import
+            ScriptInterpreter.getInstance().setCurrentScriptName(name);
             
-            // Reset loop control flags before parsing
+            String[] lines = code.split("\\r?\\n");
+
             shouldBreak = false;
             shouldContinue = false;
             pendingLoopMarker = null;
             commandQueue.clear();
-            
-            ScriptLogger.getInstance().debug("Parsing script " + name + " with " + lines.length + " lines, loop flags reset");
-            
+
+            try {
+                ScriptLogger.getInstance()
+                        .debug("Parsing script " + name + " with " + lines.length + " lines, loop flags reset");
+            } catch (Exception e) {
+
+            }
+
             parseLines(lines, 0, lines.length);
-            
-            ScriptLogger.getInstance().info("Task " + id + " queued " + commandQueue.size() + " commands");
-            
+
+            try {
+                ScriptLogger.getInstance().info("Task " + id + " queued " + commandQueue.size() + " commands");
+            } catch (Exception e) {
+
+            }
+
         } catch (Exception e) {
             lastError = e.getMessage();
             state = ScriptState.ERROR;
-            ScriptLogger.getInstance().error("Script " + name + " parse error: " + e.getMessage());
+            try {
+                ScriptLogger.getInstance().error("Script " + name + " parse error: " + e.getMessage());
+            } catch (Exception logEx) {
+
+            }
         }
     }
-    
-    /**
-     * Recursively parse code lines with block support
-     */
-    private void parseLines(String[] lines, int start, int end) {
+
+    public void parseLines(String[] lines, int start, int end) {
+        parseLinesToCollection(lines, start, end, commandQueue);
+    }
+
+    public void parseLinesToHead(String[] lines, int start, int end) {
+        java.util.List<CommandEntry> temp = new java.util.ArrayList<>();
+        parseLinesToCollection(lines, start, end, temp);
+
+        for (int i = temp.size() - 1; i >= 0; i--) {
+            commandQueue.addFirst(temp.get(i));
+        }
+    }
+
+    private void parseLinesToCollection(String[] lines, int start, int end, java.util.Collection<CommandEntry> target) {
         int i = start;
         while (i < end && state != ScriptState.STOPPED && !shouldBreak) {
-            // Check for continue flag
+
             if (shouldContinue) {
                 shouldContinue = false;
-                return; // Exit current block iteration
+                return;
             }
-            
+
             String line = lines[i].trim();
-            
-            // Skip empty lines and comments
+
             if (line.isEmpty() || line.startsWith("//")) {
                 i++;
                 continue;
             }
-            
-            // Skip closing braces and end
+
             if (line.equals("}") || line.equals("end")) {
                 i++;
                 continue;
             }
-            
-            // Skip else and else if (handled in if)
+
             if (ELSE_PATTERN.matcher(line).matches() || ELSE_IF_PATTERN.matcher(line).matches()) {
                 i++;
                 continue;
             }
-            
+
             currentLine = i + 1;
-            
-            // Note: break and continue are now handled as commands in the queue
-            // This allows them to work correctly in loops that execute from queue
-            
-            // Check for function definition
+
+            currentLine = i + 1;
+
             Matcher funcMatcher = FUNCTION_PATTERN.matcher(line);
             if (funcMatcher.find()) {
                 String funcName = funcMatcher.group(1);
@@ -193,489 +278,463 @@ public class ScriptTask {
                         parameters.add(param.trim());
                     }
                 }
-                
+
                 int blockEnd = findBlockEnd(lines, i + 1, end);
                 localFunctions.put(funcName, new FunctionDef(funcName, parameters, lines, i + 1, blockEnd));
-                // Also register in ScriptInterpreter for global access
+
                 StringBuilder funcBody = new StringBuilder();
                 for (int j = i + 1; j < blockEnd; j++) {
                     funcBody.append(lines[j]).append("\n");
                 }
-                ScriptInterpreter.getInstance().setVariable("__func_" + funcName, "defined");
-                
+                try {
+                    ScriptInterpreter.getInstance().setVariable("__func_" + funcName, "defined");
+                } catch (Exception e) {
+
+                }
+
                 i = blockEnd + 1;
                 continue;
             }
-            
-            // Check for function call
+
             Matcher funcCallMatcher = FUNCTION_CALL_PATTERN.matcher(line);
             if (funcCallMatcher.find()) {
                 String funcName = funcCallMatcher.group(1);
                 String argsStr = funcCallMatcher.group(2);
-                
+
                 FunctionDef func = localFunctions.get(funcName);
                 if (func != null) {
-                    // Parse arguments
+
                     List<String> arguments = new ArrayList<>();
                     if (!argsStr.trim().isEmpty()) {
                         for (String arg : argsStr.split(",")) {
                             arguments.add(processVariables(arg.trim()));
                         }
                     }
-                    
-                    // Save current variables
+
                     Map<String, String> savedVars = new HashMap<>(variables);
-                    
-                    // Set function parameters
+
                     for (int j = 0; j < func.parameters.size() && j < arguments.size(); j++) {
                         String paramValue = arguments.get(j);
-                        // Remove quotes if present
+
                         if (paramValue.startsWith("\"") && paramValue.endsWith("\"")) {
                             paramValue = paramValue.substring(1, paramValue.length() - 1);
                         }
                         variables.put(func.parameters.get(j), paramValue);
-                        ScriptInterpreter.getInstance().setVariable(func.parameters.get(j), paramValue);
+                        try {
+                            ScriptInterpreter.getInstance().setVariable(func.parameters.get(j), paramValue);
+                        } catch (Exception e) {
+
+                        }
                     }
-                    
-                    // Execute function body
-                    parseLines(func.lines, func.startLine, func.endLine);
-                    
-                    // Restore variables
+
+                    parseLinesToCollection(func.lines, func.startLine, func.endLine, target);
+
                     variables.clear();
                     variables.putAll(savedVars);
-                    
+
                     i++;
                     continue;
                 }
-                // If function not found, fall through to command processing
+
             }
-            
-            // Check for variable assignment
+
+            // Handle onEvent blocks
+            if (line.toLowerCase().startsWith("onevent ") || line.toLowerCase().startsWith("onevent{")) {
+                String eventLine = line.substring(7).trim(); // Remove "onEvent "
+                int braceIndex = eventLine.indexOf('{');
+                String eventName;
+                if (braceIndex != -1) {
+                    eventName = eventLine.substring(0, braceIndex).trim();
+                } else {
+                    eventName = eventLine.trim();
+                }
+
+                int blockEnd = findBlockEnd(lines, i + 1, end);
+                StringBuilder eventScript = new StringBuilder();
+                for (int j = i + 1; j < blockEnd; j++) {
+                    eventScript.append(lines[j]).append("\n");
+                }
+
+                kasperstudios.kashub.algorithm.events.EventManager.getInstance()
+                    .registerEventScript(eventName, eventScript.toString().trim());
+                
+                // Track this event for cleanup on stop
+                registeredEvents.add(eventName);
+                
+                try {
+                    ScriptLogger.getInstance().info("Registered event handler for: " + eventName);
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                i = blockEnd + 1;
+                continue;
+            }
+
             Matcher varMatcher = VARIABLE_PATTERN.matcher(line);
             if (varMatcher.find()) {
                 String varName = varMatcher.group(1);
-                String varValue = processVariables(varMatcher.group(2).trim());
-                // Remove quotes if present
-                if (varValue.startsWith("\"") && varValue.endsWith("\"")) {
-                    varValue = varValue.substring(1, varValue.length() - 1);
-                } else {
-                    // Try to evaluate as arithmetic expression
-                    try {
-                        double result = evaluateExpressionAsDouble(varValue);
-                        if (!Double.isNaN(result)) {
-                            // Format as integer if it's a whole number
-                            if (result == Math.floor(result) && !Double.isInfinite(result)) {
-                                varValue = String.valueOf((int) result);
-                            } else {
-                                varValue = String.valueOf(result);
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Keep original value if evaluation fails
-                    }
-                }
-                variables.put(varName, varValue);
-                // Also set in ScriptInterpreter for global access
-                ScriptInterpreter.getInstance().setVariable(varName, varValue);
+                String varExpression = varMatcher.group(2).trim();
+                target.add(new CommandEntry(new VariableCommand(varName, varExpression), new String[0], i + 1));
                 i++;
                 continue;
             }
-            
-            // Check for if with else if and else support
+
             Matcher ifMatcher = IF_PATTERN.matcher(line);
             if (ifMatcher.find()) {
-                // Support both Rust-style (group 1) and Legacy (group 2)
+
                 String condition = ifMatcher.group(1) != null ? ifMatcher.group(1) : ifMatcher.group(2);
-                // Find the chain - search until we find the complete if-else chain
-                // We need to search beyond the initial if block to find else if and else blocks
-                // Extend the search range to include a few more lines to catch else blocks
-                // that might be on the next line after the closing brace
+
                 int searchEnd = Math.min(end, lines.length);
                 if (searchEnd < lines.length) {
-                    // Extend by a few lines to catch else blocks
+
                     searchEnd = Math.min(searchEnd + 5, lines.length);
                 }
                 List<int[]> chain = findIfElseChain(lines, i + 1, searchEnd);
                 int blockEnd = chain.get(0)[0];
-                
-                // Always defer condition evaluation - check at execution time, not parse time
-                // This ensures conditions are evaluated after previous commands in the loop have executed
-                    int ifBlockEnd = blockEnd;
-                    if (chain.size() > 1) {
-                        ifBlockEnd = chain.get(1)[0];
-                    }
-                
-                // Build else if / else chain
+
+                int ifBlockEnd = blockEnd;
+                if (chain.size() > 1) {
+                    ifBlockEnd = chain.get(1)[0];
+                }
+
                 List<ConditionalBlock> conditionalBlocks = new ArrayList<>();
                 conditionalBlocks.add(new ConditionalBlock(condition, i + 1, ifBlockEnd));
-                
-                    for (int ci = 1; ci < chain.size(); ci++) {
-                        int[] entry = chain.get(ci);
-                        int pos = entry[0];
-                        int type = entry[1];
-                        
-                        if (type == 0) { // else if
-                            Matcher elseIfMatcher = ELSE_IF_PATTERN.matcher(lines[pos].trim());
-                            if (elseIfMatcher.find()) {
-                            String elseIfCondition = elseIfMatcher.group(1) != null ? elseIfMatcher.group(1) : elseIfMatcher.group(2);
-                                    int elseIfEnd = blockEnd;
-                                    if (ci + 1 < chain.size()) {
-                                        elseIfEnd = chain.get(ci + 1)[0];
-                                    }
-                            conditionalBlocks.add(new ConditionalBlock(elseIfCondition, pos + 1, elseIfEnd));
+
+                for (int ci = 1; ci < chain.size(); ci++) {
+                    int[] entry = chain.get(ci);
+                    int pos = entry[0];
+                    int type = entry[1];
+
+                    if (type == 0) {
+                        Matcher elseIfMatcher = ELSE_IF_PATTERN.matcher(lines[pos].trim());
+                        if (elseIfMatcher.find()) {
+                            String elseIfCondition = elseIfMatcher.group(1) != null ? elseIfMatcher.group(1)
+                                    : elseIfMatcher.group(2);
+                            int elseIfEnd = blockEnd;
+                            if (ci + 1 < chain.size()) {
+                                elseIfEnd = chain.get(ci + 1)[0];
                             }
-                        } else if (type == 1) { // else
-                        conditionalBlocks.add(new ConditionalBlock(null, pos + 1, blockEnd)); // null condition = else
+                            conditionalBlocks.add(new ConditionalBlock(elseIfCondition, pos + 1, elseIfEnd));
+                        }
+                    } else if (type == 1) {
+                        conditionalBlocks.add(new ConditionalBlock(null, pos + 1, blockEnd));
                     }
                 }
-                
-                commandQueue.add(new CommandEntry(new ConditionalCommand(this, lines, conditionalBlocks), new String[0]));
+
+                target.add(
+                        new CommandEntry(new ConditionalCommand(this, lines, conditionalBlocks), new String[0], i + 1));
                 i = blockEnd + 1;
                 continue;
             }
-            
-            // Check for for loop
+
             Matcher forMatcher = FOR_PATTERN.matcher(line);
             if (forMatcher.find()) {
                 String forContent = forMatcher.group(1);
                 String[] forParts = forContent.split(";");
-                
+
                 if (forParts.length == 3) {
                     String init = forParts[0].trim();
                     String condition = forParts[1].trim();
                     String increment = forParts[2].trim();
-                    
+
                     int blockEnd = findBlockEnd(lines, i + 1, end);
-                    
-                    // Initialization
+
                     if (!init.isEmpty()) {
                         Matcher initMatcher = VARIABLE_PATTERN.matcher(init);
                         if (initMatcher.find()) {
                             String initValue = processVariables(initMatcher.group(2).trim());
                             variables.put(initMatcher.group(1), initValue);
-                            ScriptInterpreter.getInstance().setVariable(initMatcher.group(1), initValue);
+                            try {
+                                ScriptInterpreter.getInstance().setVariable(initMatcher.group(1), initValue);
+                            } catch (Exception e) {
+
+                            }
                         }
                     }
-                    
-                    // Loop
-                    int maxIterations = 10000; // Protection against infinite loops
+
+                    int maxIterations = 10000;
                     int iterations = 0;
                     shouldBreak = false;
                     while (evaluateCondition(condition) && iterations < maxIterations && !shouldBreak) {
-                        parseLines(lines, i + 1, blockEnd);
-                        
-                        if (shouldBreak) break;
-                        
-                        // Increment
+                        parseLinesToCollection(lines, i + 1, blockEnd, target);
+
+                        if (shouldBreak)
+                            break;
+
                         if (!increment.isEmpty()) {
                             executeIncrement(increment);
                         }
                         iterations++;
                     }
                     shouldBreak = false;
-                    
+
                     i = blockEnd + 1;
                     continue;
                 }
                 i++;
                 continue;
             }
-            
-            // Check for while loop
+
             Matcher whileMatcher = WHILE_PATTERN.matcher(line);
             if (whileMatcher.find()) {
-                // Support both Rust-style (group 1) and Legacy (group 2)
+
                 String condition = whileMatcher.group(1) != null ? whileMatcher.group(1) : whileMatcher.group(2);
                 int blockEnd = findBlockEnd(lines, i + 1, end);
-                
-                // Check if condition is always true (infinite loop)
+
                 String trimmedCondition = condition.trim().toLowerCase();
-                // Remove parentheses if present
+
                 while (trimmedCondition.startsWith("(") && trimmedCondition.endsWith(")")) {
                     trimmedCondition = trimmedCondition.substring(1, trimmedCondition.length() - 1).trim();
                 }
                 if (trimmedCondition.equals("true")) {
-                    // Infinite while loop - use LoopMarkerCommand like loop {}
-                    ScriptLogger.getInstance().debug("Task " + id + ": Detected infinite while loop (while true), using LoopMarkerCommand");
+
+                    ScriptLogger.getInstance().debug(
+                            "Task " + id + ": Detected infinite while loop (while true), using LoopMarkerCommand");
                     final int loopStart = i + 1;
                     final int loopEnd = blockEnd;
-                    commandQueue.add(new CommandEntry(new LoopMarkerCommand(lines, loopStart, loopEnd), new String[0]));
+                    target.add(
+                            new CommandEntry(new LoopMarkerCommand(lines, loopStart, loopEnd, null), new String[0],
+                                    i + 1));
                 } else {
-                    // Conditional while loop - evaluate condition at runtime
-                    // For now, use the old behavior but with runtime condition checking
-                    // TODO: Implement proper runtime condition checking for while loops
-                    ScriptLogger.getInstance().debug("Task " + id + ": Detected conditional while loop, condition: " + condition);
-                int maxIterations = 10000;
-                int iterations = 0;
-                shouldBreak = false;
-                while (evaluateCondition(condition) && iterations < maxIterations && !shouldBreak) {
-                    parseLines(lines, i + 1, blockEnd);
-                    if (shouldBreak) break;
-                    iterations++;
+
+                    ScriptLogger.getInstance()
+                            .debug("Task " + id + ": Detected conditional while loop, condition: " + condition);
+                    final int loopStart = i + 1;
+                    final int loopEnd = blockEnd;
+                    target.add(
+                            new CommandEntry(new LoopMarkerCommand(lines, loopStart, loopEnd, condition), new String[0],
+                                    i + 1));
                 }
-                shouldBreak = false;
-                }
-                
+
                 i = blockEnd + 1;
                 continue;
             }
-            
-            // Check for loop (with optional iteration count)
+
             Matcher loopMatcher = LOOP_PATTERN.matcher(line);
             if (loopMatcher.find()) {
                 String countStr = loopMatcher.group(1);
                 int blockEnd = findBlockEnd(lines, i + 1, end);
-                
+
                 if (countStr != null && !countStr.isEmpty()) {
-                    // loop N - execute N times
+
                     int count = Integer.parseInt(countStr);
                     shouldBreak = false;
                     for (int iter = 0; iter < count && !shouldBreak && state == ScriptState.RUNNING; iter++) {
-                        parseLines(lines, i + 1, blockEnd);
-                        if (shouldBreak) break;
+                        parseLinesToCollection(lines, i + 1, blockEnd, target);
+                        if (shouldBreak)
+                            break;
                     }
                     shouldBreak = false;
                 } else {
-                    // loop without number - infinite loop via marker
+
                     final int loopStart = i + 1;
                     final int loopEnd = blockEnd;
-                    commandQueue.add(new CommandEntry(new LoopMarkerCommand(lines, loopStart, loopEnd), new String[0]));
+                    target.add(
+                            new CommandEntry(new LoopMarkerCommand(lines, loopStart, loopEnd, null), new String[0],
+                                    i + 1));
                 }
-                
+
                 i = blockEnd + 1;
                 continue;
             }
-            
-            // Regular command - process variables
+
             String processedLine = processVariables(line);
             List<String> parts = parseArguments(processedLine);
             if (parts.isEmpty()) {
                 i++;
                 continue;
             }
-            
+
             String commandName = parts.get(0).toLowerCase();
             String[] args = parts.subList(1, parts.size()).toArray(new String[0]);
-            
-            // Handle break and continue as special commands
+
             if (commandName.equals("break")) {
                 ScriptLogger.getInstance().debug("Task " + id + ": Parsing break command at line " + currentLine);
-                commandQueue.add(new CommandEntry(new BreakCommand(), new String[0]));
+                target.add(new CommandEntry(new BreakCommand(), new String[0], i + 1));
                 i++;
                 continue;
             }
             if (commandName.equals("continue")) {
                 ScriptLogger.getInstance().debug("Task " + id + ": Parsing continue command at line " + currentLine);
-                commandQueue.add(new CommandEntry(new ContinueCommand(), new String[0]));
+                target.add(new CommandEntry(new ContinueCommand(), new String[0], i + 1));
                 i++;
                 continue;
             }
-            
+
             Command command = CommandRegistry.getCommand(commandName);
             if (command != null) {
-                commandQueue.add(new CommandEntry(command, args));
+                target.add(new CommandEntry(command, args, i + 1));
                 ScriptLogger.getInstance().debug("Queued command: " + commandName + " with " + args.length + " args");
             } else {
                 ScriptLogger.getInstance().warn("Unknown command at line " + currentLine + ": " + commandName);
             }
-            
+
             i++;
         }
     }
-    
-    /**
-     * Find end of block (closing brace or end)
-     */
+
     private int findBlockEnd(String[] lines, int start, int end) {
         int level = 1;
         for (int i = start; i < end; i++) {
             String line = lines[i].trim();
-            
-            // Check for block closers FIRST (before openers) to handle "} else {" correctly
-            // Special handling for "} else {" - it closes one block but opens another
+
             if (line.startsWith("} else {") || (line.contains("} else") && line.contains("{"))) {
-                // "} else {" - closes previous block (decrease level) but opens new one (increase level)
-                // Net effect: level stays the same, but we need to process both
-                level--; // Close previous block
-                // Opening brace will be handled below
+
+                level--;
+
             } else if (line.equals("}") || line.equals("end")) {
                 level--;
             } else if (line.contains("}") && !line.contains("{")) {
                 level--;
             }
-            
-            // Check for block openers AFTER closers
-            if (line.contains("{") || 
-                line.startsWith("if ") || line.startsWith("if(") ||
-                line.startsWith("for ") || line.startsWith("for(") ||
-                line.startsWith("while ") || line.startsWith("while(") ||
-                line.startsWith("loop ") || line.equals("loop") || line.equals("loop{") ||
-                line.startsWith("function ")) {
-                // Only increment if it's a new block opener without closing on same line
+
+            if (line.contains("{") ||
+                    line.startsWith("if ") || line.startsWith("if(") ||
+                    line.startsWith("for ") || line.startsWith("for(") ||
+                    line.startsWith("while ") || line.startsWith("while(") ||
+                    line.startsWith("loop ") || line.equals("loop") || line.equals("loop{") ||
+                    line.startsWith("function ")) {
+
                 if (line.contains("{") && !line.contains("}")) {
                     level++;
                 } else if (line.contains("{") && line.contains("}")) {
-                    // Both open and close on same line (like "} else {")
-                    level++; // Opening brace increases level
+
+                    level++;
                 } else if (!line.contains("{") && !line.contains("}")) {
-                    // Block opener without braces (uses end)
+
                     level++;
                 }
             }
-            
-            if (level == 0) return i;
+
+            if (level == 0)
+                return i;
         }
         return end - 1;
     }
-    
-    /**
-     * Find end of if block and return list of else if and else positions
-     * Returns: [blockEnd, elseIfPos1, elseIfPos2, ..., elsePos] (-1 if not present)
-     */
+
     private List<int[]> findIfElseChain(String[] lines, int start, int end) {
-        List<int[]> chain = new ArrayList<>(); // Each entry: [position, type] where type: 0=else if, 1=else
+        List<int[]> chain = new ArrayList<>();
         int level = 1;
-        
+
         for (int i = start; i < end; i++) {
             String line = lines[i].trim();
-            
-            // Special handling for "} else {" or "} else if" - check BEFORE decreasing level
-            // This is critical because the closing brace would decrease level to 0 before we check for else
+
             boolean isElseIf = false;
             boolean isElse = false;
             boolean isElseOnSameLine = false;
-            
-            // Check if line contains "} else" - this means we need to handle it specially
+
             if (line.contains("} else")) {
                 isElseOnSameLine = true;
-                // Check for else if first
+
                 if (ELSE_IF_PATTERN.matcher(line).matches()) {
                     isElseIf = true;
                 } else if (line.contains("} else") && !line.contains("if")) {
-                    // It's "} else {" or "} else {"
+
                     isElse = true;
                 }
             } else if (level == 1 || level == 0) {
-                // Normal case - check for else if or else at level 1 or 0 (after closing previous block)
-                // Also check at level 0 because we might have just closed a block
+
                 if (ELSE_IF_PATTERN.matcher(line).matches()) {
                     isElseIf = true;
                 } else if (!ELSE_IF_PATTERN.matcher(line).matches()) {
-                    boolean matchesElse = line.equals("else") || line.equals("else {") || 
-                                         ELSE_PATTERN.matcher(line).matches();
+                    boolean matchesElse = line.equals("else") || line.equals("else {") ||
+                            ELSE_PATTERN.matcher(line).matches();
                     if (matchesElse) {
                         isElse = true;
                     }
                 }
             }
-            
-            // Check for block openers (nested blocks)
-            if (line.contains("{") || 
-                (line.startsWith("if ") || line.startsWith("if(")) && !line.contains("else") ||
-                line.startsWith("for ") || line.startsWith("for(") ||
-                line.startsWith("while ") || line.startsWith("while(") ||
-                line.startsWith("loop ") || line.equals("loop") || line.equals("loop{") ||
-                line.startsWith("function ")) {
+
+            if (line.contains("{") ||
+                    (line.startsWith("if ") || line.startsWith("if(")) && !line.contains("else") ||
+                    line.startsWith("for ") || line.startsWith("for(") ||
+                    line.startsWith("while ") || line.startsWith("while(") ||
+                    line.startsWith("loop ") || line.equals("loop") || line.equals("loop{") ||
+                    line.startsWith("function ")) {
                 if (line.contains("{") && !line.contains("}")) {
                     level++;
                 } else if (!line.contains("{") && !line.contains("}")) {
                     level++;
                 }
             }
-            
-            // Add else if or else to chain
+
             if (isElseIf) {
-                chain.add(new int[]{i, 0}); // 0 = else if
+                chain.add(new int[] { i, 0 });
             } else if (isElse) {
-                chain.add(new int[]{i, 1}); // 1 = else
+                chain.add(new int[] { i, 1 });
             }
-            
-            // Check for block closers
-            // For "} else {" we need to decrease level for the closing brace, but not for the opening brace
+
             if (isElseOnSameLine) {
-                // For "} else {" - decrease level for the closing brace, but the opening brace will increase it back
+
                 if (line.contains("}") && !line.contains("{")) {
-                    level--; // Only closing brace
+                    level--;
                 } else if (line.startsWith("}") && line.contains("{")) {
-                    // "} else {" - decrease for closing brace, increase for opening brace
-                    level--; // Closing brace
+
+                    level--;
                     if (line.contains("{") && !line.endsWith("}")) {
-                        level++; // Opening brace (if not balanced on same line)
+                        level++;
                     }
                 }
             } else {
-                // Normal case
-            if (line.equals("}") || line.equals("end")) {
-                level--;
+
+                if (line.equals("}") || line.equals("end")) {
+                    level--;
                 } else if (line.contains("}") && !line.contains("{")) {
-                level--;
+                    level--;
                 }
             }
-            
-            // If level reaches 0, we've closed the current block
-            // But we need to check if there's an else or else if after this
-            // So we continue searching for a few more lines to find else/else if
+
             if (level == 0) {
-                // Check if there's an else or else if on the next line(s)
-                // Look ahead up to 3 lines to find else/else if
+
                 boolean foundElse = false;
                 for (int j = i + 1; j < Math.min(i + 4, end); j++) {
                     String nextLine = lines[j].trim();
-                    if (ELSE_IF_PATTERN.matcher(nextLine).matches() || 
-                        (nextLine.contains("} else") && !nextLine.contains("if")) ||
-                        (nextLine.equals("else") || nextLine.equals("else {"))) {
+                    if (ELSE_IF_PATTERN.matcher(nextLine).matches() ||
+                            (nextLine.contains("} else") && !nextLine.contains("if")) ||
+                            (nextLine.equals("else") || nextLine.equals("else {"))) {
                         foundElse = true;
                         break;
                     }
-                    // If we hit a non-empty line that's not else/else if, stop looking
-                    if (!nextLine.isEmpty() && !nextLine.startsWith("//") && 
-                        !nextLine.contains("else")) {
+
+                    if (!nextLine.isEmpty() && !nextLine.startsWith("//") &&
+                            !nextLine.contains("else")) {
                         break;
                     }
                 }
-                
-                // If we found an else/else if, continue searching
-                // Otherwise, this is the end of the if-else chain
+
                 if (!foundElse) {
-                chain.add(0, new int[]{i, -1}); // Insert block end at beginning
-                return chain;
+                    chain.add(0, new int[] { i, -1 });
+                    return chain;
                 }
-                // If we found else/else if, continue - level will be managed by the else block
+
             }
         }
-        chain.add(0, new int[]{end - 1, -1});
+        chain.add(0, new int[] { end - 1, -1 });
         return chain;
     }
-    
-    /**
-     * Legacy method for simple if-else (backwards compatibility)
-     */
+
     private int[] findIfBlockEndWithElse(String[] lines, int start, int end) {
         List<int[]> chain = findIfElseChain(lines, start, end);
         int blockEnd = chain.get(0)[0];
         int elsePos = -1;
-        
-        // Find first else (not else if)
+
         for (int i = 1; i < chain.size(); i++) {
-            if (chain.get(i)[1] == 1) { // else
+            if (chain.get(i)[1] == 1) {
                 elsePos = chain.get(i)[0];
                 break;
-            } else if (chain.get(i)[1] == 0) { // else if - treat as else for legacy
+            } else if (chain.get(i)[1] == 0) {
                 elsePos = chain.get(i)[0];
                 break;
             }
         }
-        
-        return new int[]{blockEnd, elsePos};
+
+        return new int[] { blockEnd, elsePos };
     }
-    
-    /**
-     * Execute increment for for loop
-     */
+
     private void executeIncrement(String increment) {
         increment = increment.trim();
-        
-        // i++ or i--
+
         if (increment.endsWith("++")) {
             String varName = increment.substring(0, increment.length() - 2).trim();
             String value = variables.get(varName);
@@ -686,7 +745,7 @@ public class ScriptTask {
                     variables.put(varName, newValue);
                     ScriptInterpreter.getInstance().setVariable(varName, newValue);
                 } catch (NumberFormatException e) {
-                    // Ignore
+
                 }
             }
         } else if (increment.endsWith("--")) {
@@ -699,16 +758,16 @@ public class ScriptTask {
                     variables.put(varName, newValue);
                     ScriptInterpreter.getInstance().setVariable(varName, newValue);
                 } catch (NumberFormatException e) {
-                    // Ignore
+
                 }
             }
         } else {
-            // i = i + 1 or similar
+
             Matcher varMatcher = VARIABLE_PATTERN.matcher(increment);
             if (varMatcher.find()) {
                 String varName = varMatcher.group(1);
                 String expression = processVariables(varMatcher.group(2).trim());
-                // Simple calculation
+
                 try {
                     int result = evaluateSimpleExpression(expression);
                     String newValue = String.valueOf(result);
@@ -721,21 +780,16 @@ public class ScriptTask {
             }
         }
     }
-    
-    /**
-     * Evaluate simple arithmetic expression
-     */
+
     private int evaluateSimpleExpression(String expr) {
         expr = expr.trim();
-        
-        // Try simple number
+
         try {
             return Integer.parseInt(expr);
         } catch (NumberFormatException e) {
-            // Continue
+
         }
-        
-        // Try modulo
+
         if (expr.contains("%")) {
             String[] parts = expr.split("%");
             if (parts.length == 2) {
@@ -744,8 +798,7 @@ public class ScriptTask {
                 return left % right;
             }
         }
-        
-        // Try addition
+
         if (expr.contains("+")) {
             String[] parts = expr.split("\\+");
             int sum = 0;
@@ -754,8 +807,7 @@ public class ScriptTask {
             }
             return sum;
         }
-        
-        // Try subtraction
+
         if (expr.contains("-") && !expr.startsWith("-")) {
             String[] parts = expr.split("-");
             int result = Integer.parseInt(parts[0].trim());
@@ -764,8 +816,7 @@ public class ScriptTask {
             }
             return result;
         }
-        
-        // Try multiplication
+
         if (expr.contains("*")) {
             String[] parts = expr.split("\\*");
             int result = 1;
@@ -774,8 +825,7 @@ public class ScriptTask {
             }
             return result;
         }
-        
-        // Try division
+
         if (expr.contains("/")) {
             String[] parts = expr.split("/");
             if (parts.length == 2) {
@@ -784,18 +834,14 @@ public class ScriptTask {
                 return left / right;
             }
         }
-        
+
         throw new NumberFormatException("Cannot evaluate: " + expr);
     }
-    
-    /**
-     * Process variables in string
-     */
+
     private String processVariables(String line) {
         String result = line;
         ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-        
-        // Process environment variables ($PLAYER_X etc.)
+
         Matcher envMatcher = ENV_VAR_PATTERN.matcher(result);
         StringBuffer sb = new StringBuffer();
         while (envMatcher.find()) {
@@ -807,8 +853,7 @@ public class ScriptTask {
         }
         envMatcher.appendTail(sb);
         result = sb.toString();
-        
-        // Process user variables from ScriptInterpreter ($varname from commands like vision, scan)
+
         Map<String, String> interpreterContext = interpreter.getContext();
         for (Map.Entry<String, String> entry : interpreterContext.entrySet()) {
             String value = entry.getValue();
@@ -817,8 +862,7 @@ public class ScriptTask {
                 result = result.replaceAll(pattern, Matcher.quoteReplacement(value));
             }
         }
-        
-        // Process local script variables ($varname)
+
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             String value = entry.getValue();
             if (value != null) {
@@ -826,42 +870,44 @@ public class ScriptTask {
                 result = result.replaceAll(pattern, Matcher.quoteReplacement(value));
             }
         }
-        
+
         return result;
     }
-    
-    /**
-     * Evaluate condition
-     */
+
     private boolean evaluateCondition(String condition) {
         try {
             String processed = processVariables(condition);
-            
-            // Also replace variables WITHOUT $ prefix (for Rust-style syntax: if x > 3)
+
             for (Map.Entry<String, String> entry : variables.entrySet()) {
                 String varName = entry.getKey();
                 String value = entry.getValue();
                 if (value != null) {
-                    // Replace standalone variable names (word boundaries)
-                    processed = processed.replaceAll("\\b" + Pattern.quote(varName) + "\\b", Matcher.quoteReplacement(value));
+
+                    processed = processed.replaceAll("\\b" + Pattern.quote(varName) + "\\b",
+                            Matcher.quoteReplacement(value));
                 }
             }
-            // Also check ScriptInterpreter variables
+
             Map<String, String> interpreterVars = ScriptInterpreter.getInstance().getVariables();
             for (Map.Entry<String, String> entry : interpreterVars.entrySet()) {
                 String varName = entry.getKey();
                 String value = entry.getValue();
                 if (value != null) {
-                    processed = processed.replaceAll("\\b" + Pattern.quote(varName) + "\\b", Matcher.quoteReplacement(value));
+                    processed = processed.replaceAll("\\b" + Pattern.quote(varName) + "\\b",
+                            Matcher.quoteReplacement(value));
                 }
             }
-            
-            // Boolean literals
+
             String trimmed = processed.trim().toLowerCase();
-            if (trimmed.equals("true")) return true;
-            if (trimmed.equals("false")) return false;
-            
-            // Handle logical AND (&&)
+            if (trimmed.equals("true"))
+                return true;
+            if (trimmed.equals("false"))
+                return false;
+
+            if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+                return evaluateCondition(trimmed.substring(1, trimmed.length() - 1));
+            }
+
             if (processed.contains("&&")) {
                 String[] parts = processed.split("&&");
                 for (String part : parts) {
@@ -871,8 +917,7 @@ public class ScriptTask {
                 }
                 return true;
             }
-            
-            // Handle logical OR (||)
+
             if (processed.contains("||")) {
                 String[] parts = processed.split("\\|\\|");
                 for (String part : parts) {
@@ -882,18 +927,15 @@ public class ScriptTask {
                 }
                 return false;
             }
-            
-            // Comparison operators
-            String[] operators = {">=", "<=", "!=", "==", ">", "<"};
+
+            String[] operators = { ">=", "<=", "!=", "==", ">", "<" };
             for (String op : operators) {
                 if (processed.contains(op)) {
                     String[] parts = processed.split(Pattern.quote(op), 2);
                     if (parts.length == 2) {
                         String left = parts[0].trim();
                         String right = parts[1].trim();
-                        
-                        // Remove surrounding parentheses if present
-                        // Remove leading ( and trailing ) independently
+
                         while (left.startsWith("(")) {
                             left = left.substring(1).trim();
                         }
@@ -906,11 +948,10 @@ public class ScriptTask {
                         while (right.endsWith(")")) {
                             right = right.substring(0, right.length() - 1).trim();
                         }
-                        
-                        // Evaluate expressions on both sides (for things like i % 8 == 0)
+
                         double leftNum = evaluateExpressionAsDouble(left);
                         double rightNum = evaluateExpressionAsDouble(right);
-                        
+
                         if (!Double.isNaN(leftNum) && !Double.isNaN(rightNum)) {
                             boolean result = switch (op) {
                                 case ">=" -> leftNum >= rightNum;
@@ -932,30 +973,24 @@ public class ScriptTask {
                     }
                 }
             }
-            
-            // Truthy check
+
             return !trimmed.isEmpty() && !trimmed.equals("0") && !trimmed.equals("null");
-            
+
         } catch (Exception e) {
             ScriptLogger.getInstance().error("Error evaluating condition: " + condition + " - " + e.getMessage());
             return false;
         }
     }
-    
-    /**
-     * Evaluates an expression and returns a double, or NaN if not a number
-     */
+
     private double evaluateExpressionAsDouble(String expr) {
         expr = expr.trim();
-        
-        // Try simple number first
+
         try {
             return Double.parseDouble(expr.replace(',', '.'));
         } catch (NumberFormatException e) {
-            // Continue
+
         }
-        
-        // Try modulo
+
         if (expr.contains("%")) {
             String[] parts = expr.split("%");
             if (parts.length == 2) {
@@ -968,8 +1003,7 @@ public class ScriptTask {
                 }
             }
         }
-        
-        // Try addition
+
         if (expr.contains("+") && !expr.startsWith("+")) {
             try {
                 String[] parts = expr.split("\\+");
@@ -982,8 +1016,7 @@ public class ScriptTask {
                 return Double.NaN;
             }
         }
-        
-        // Try subtraction
+
         if (expr.contains("-") && !expr.startsWith("-")) {
             try {
                 String[] parts = expr.split("-");
@@ -996,8 +1029,7 @@ public class ScriptTask {
                 return Double.NaN;
             }
         }
-        
-        // Try multiplication
+
         if (expr.contains("*")) {
             try {
                 String[] parts = expr.split("\\*");
@@ -1010,8 +1042,7 @@ public class ScriptTask {
                 return Double.NaN;
             }
         }
-        
-        // Try division
+
         if (expr.contains("/")) {
             String[] parts = expr.split("/");
             if (parts.length == 2) {
@@ -1024,13 +1055,10 @@ public class ScriptTask {
                 }
             }
         }
-        
+
         return Double.NaN;
     }
-    
-    /**
-     * Parses a line into command and arguments, respecting quotes
-     */
+
     private List<String> parseArguments(String line) {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
@@ -1056,49 +1084,59 @@ public class ScriptTask {
         return args;
     }
 
-    /**
-     * Add command to task queue
-     */
     public void queueCommand(Command command, String[] args) {
-        commandQueue.add(new CommandEntry(command, args));
+        commandQueue.add(new CommandEntry(command, args, -1));
     }
 
     private void processNextCommand() {
-        // Synchronize to prevent concurrent execution
+
         synchronized (processLock) {
-            // Prevent concurrent execution - if already processing, return
+
             if (isProcessingCommand) {
                 return;
             }
-            
+
             if (state != ScriptState.RUNNING) {
                 return;
             }
-            
-            // Don't stop if queue is empty but we have a pending loop marker
+
             if (commandQueue.isEmpty()) {
                 if (pendingLoopMarker == null) {
-                    ScriptLogger.getInstance().debug("Task " + id + " (" + name + "): Queue empty, no pending loop marker, stopping. State was: " + state);
-                state = ScriptState.STOPPED;
+                    ScriptLogger.getInstance().debug("Task " + id + " (" + name
+                            + "): Queue empty, no pending loop marker, stopping. State was: " + state);
+                    state = ScriptState.STOPPED;
                 } else {
-                    ScriptLogger.getInstance().debug("Task " + id + " (" + name + "): Queue empty but pending loop marker exists (startLine=" + pendingLoopMarker.startLine + ", endLine=" + pendingLoopMarker.endLine + "), will re-queue on next tick");
-                    // Queue is empty but we have pending loop marker - tick() will re-queue it
+                    ScriptLogger.getInstance().debug("Task " + id + " (" + name
+                            + "): Queue empty but pending loop marker exists (startLine=" + pendingLoopMarker.startLine
+                            + ", endLine=" + pendingLoopMarker.endLine + "), will re-queue on next tick");
+
+                }
+                return;
             }
-            return;
-        }
 
-        // Update environment variables before each command
-        ScriptInterpreter.getInstance().updateEnvironmentVariables();
+            try {
+                ScriptInterpreter.getInstance().updateEnvironmentVariables();
+            } catch (Exception e) {
 
-        isProcessingCommand = true;
-        CommandEntry entry = commandQueue.poll();
-        executedCommands++;
+            }
 
-        // Handle loop marker specially
-        if (entry.command instanceof LoopMarkerCommand) {
-            LoopMarkerCommand loopCmd = (LoopMarkerCommand) entry.command;
-                
-                // Check queue size to prevent overflow
+            isProcessingCommand = true;
+            CommandEntry entry = commandQueue.poll();
+            executedCommands++;
+
+            if (entry.command instanceof LoopMarkerCommand) {
+                LoopMarkerCommand loopCmd = (LoopMarkerCommand) entry.command;
+
+                if (loopCmd.condition != null) {
+                    ScriptInterpreter.getInstance().updateEnvironmentVariables();
+                    if (!evaluateCondition(loopCmd.condition)) {
+                        ScriptLogger.getInstance().debug("Task " + id + ": Loop condition false, loop ending");
+                        pendingLoopMarker = null;
+                        isProcessingCommand = false;
+                        return;
+                    }
+                }
+
                 if (commandQueue.size() > MAX_QUEUE_SIZE) {
                     ScriptLogger.getInstance().warn("Task " + id + ": Command queue overflow, stopping loop");
                     state = ScriptState.ERROR;
@@ -1106,118 +1144,139 @@ public class ScriptTask {
                     isProcessingCommand = false;
                     return;
                 }
-                
-                // Reset break/continue flags before re-parsing loop
+
                 boolean hadBreak = shouldBreak;
                 boolean hadContinue = shouldContinue;
                 shouldBreak = false;
                 shouldContinue = false;
-                
+
                 if (hadBreak || hadContinue) {
-                    ScriptLogger.getInstance().debug("Task " + id + ": Resetting loop flags (hadBreak=" + hadBreak + ", hadContinue=" + hadContinue + ")");
+                    ScriptLogger.getInstance().debug("Task " + id + ": Resetting loop flags (hadBreak=" + hadBreak
+                            + ", hadContinue=" + hadContinue + ")");
                 }
-                
-                // Store loop marker for later re-queuing (don't add immediately)
+
                 pendingLoopMarker = loopCmd;
-                ScriptLogger.getInstance().debug("Task " + id + ": Stored pending loop marker (startLine=" + loopCmd.startLine + ", endLine=" + loopCmd.endLine + ")");
-            
-            // Re-parse the loop body and add commands to queue
-            int queueSizeBefore = commandQueue.size();
-            parseLines(loopCmd.lines, loopCmd.startLine, loopCmd.endLine);
-            int queueSizeAfter = commandQueue.size();
-            ScriptLogger.getInstance().debug("Task " + id + ": Loop iteration parsed, queued " + (queueSizeAfter - queueSizeBefore) + " commands, shouldBreak=" + shouldBreak + ", shouldContinue=" + shouldContinue + ", pendingLoopMarker=" + (pendingLoopMarker != null));
-            
-                // If break was triggered, clear pending loop marker
+                ScriptLogger.getInstance().debug("Task " + id + ": Stored pending loop marker (startLine="
+                        + loopCmd.startLine + ", endLine=" + loopCmd.endLine + ")");
+
+                int queueSizeBefore = commandQueue.size();
+                parseLinesToHead(loopCmd.lines, loopCmd.startLine, loopCmd.endLine);
+                int queueSizeAfter = commandQueue.size();
+                ScriptLogger.getInstance()
+                        .debug("Task " + id + ": Loop iteration parsed, queued " + (queueSizeAfter - queueSizeBefore)
+                                + " commands, shouldBreak=" + shouldBreak + ", shouldContinue=" + shouldContinue
+                                + ", pendingLoopMarker=" + (pendingLoopMarker != null));
+
                 if (shouldBreak) {
-                    ScriptLogger.getInstance().debug("Task " + id + ": Break triggered in loop, clearing pending loop marker");
+                    ScriptLogger.getInstance()
+                            .debug("Task " + id + ": Break triggered in loop, clearing pending loop marker");
                     pendingLoopMarker = null;
                     shouldBreak = false;
                 }
-            
-                // Don't re-add marker immediately - it will be added when queue is nearly empty
-            isProcessingCommand = false;
-            processNextCommand();
-            return;
-        }
-        
-        // Handle break command
-        if (entry.command instanceof BreakCommand) {
-            ScriptLogger.getInstance().debug("Task " + id + ": Break command executed");
-            shouldBreak = true;
-            pendingLoopMarker = null; // Clear pending loop marker
-            isProcessingCommand = false;
-            // Continue processing next command (which will skip loop)
-            processNextCommand();
-            return;
-        }
-        
-        // Handle continue command
-        if (entry.command instanceof ContinueCommand) {
-            ScriptLogger.getInstance().debug("Task " + id + ": Continue command executed, clearing queue (pendingLoopMarker=" + (pendingLoopMarker != null) + ")");
-            shouldContinue = true;
-            // Clear queue until next loop iteration
-            commandQueue.clear();
-            // Note: pendingLoopMarker is NOT cleared here - it will be re-added by tick() if loop is still active
-            isProcessingCommand = false;
-            // Don't process next command immediately - let tick() handle loop re-queuing
-            return;
-        }
-        
-        // Handle conditional command synchronously
-        if (entry.command instanceof ConditionalCommand) {
-            // Update environment variables BEFORE evaluating conditions
-            // This ensures conditions use current values (e.g., current health)
-            ScriptInterpreter.getInstance().updateEnvironmentVariables();
-            
-            ConditionalCommand condCmd = (ConditionalCommand) entry.command;
-            // Execute synchronously to ensure commands are added to queue before continuing
-            condCmd.execute(new String[0]);
-            isProcessingCommand = false;
-            // Continue processing next command (which should be from the conditional block)
-            processNextCommand();
-            return;
-        }
 
-        // Process variables at execution time (not parse time)
-        String[] processedArgs = new String[entry.args.length];
-        for (int i = 0; i < entry.args.length; i++) {
-            processedArgs[i] = processVariables(entry.args[i]);
-        }
-            
-            // Release lock before async execution
+                isProcessingCommand = false;
+
+                return;
+            }
+
+            if (entry.command instanceof BreakCommand) {
+                ScriptLogger.getInstance().debug("Task " + id + ": Break command executed");
+                shouldBreak = true;
+                pendingLoopMarker = null;
+                isProcessingCommand = false;
+
+                processNextCommand();
+                return;
+            }
+
+            if (entry.command instanceof ContinueCommand) {
+                ScriptLogger.getInstance()
+                        .debug("Task " + id + ": Continue command executed, clearing queue (pendingLoopMarker="
+                                + (pendingLoopMarker != null) + ")");
+                shouldContinue = true;
+
+                commandQueue.clear();
+
+                isProcessingCommand = false;
+
+                return;
+            }
+
+            if (entry.command instanceof ConditionalCommand) {
+
+                ScriptInterpreter.getInstance().updateEnvironmentVariables();
+
+                ConditionalCommand condCmd = (ConditionalCommand) entry.command;
+
+                condCmd.execute(new String[0]);
+                isProcessingCommand = false;
+
+                return;
+            }
+
+            String[] processedArgs = new String[entry.args.length];
+            for (int i = 0; i < entry.args.length; i++) {
+                processedArgs[i] = processVariables(entry.args[i]);
+            }
+
             final CommandEntry finalEntry = entry;
             final String[] finalArgs = processedArgs;
 
-        try {
+            final long startTime = System.nanoTime();
+
+            try {
                 currentCommandFuture = finalEntry.command.executeAsync(finalArgs);
-            currentCommandFuture
-                .exceptionally(throwable -> {
-                    lastError = throwable.getMessage();
-                    ScriptLogger.getInstance().error("Task " + id + " command error: " + throwable.getMessage());
-                        // Don't stop script on command error, just log it
-                    return null;
-                })
-                .thenRun(() -> {
-                        synchronized (processLock) {
-                    isProcessingCommand = false;
-                        }
-                        
-                    if (state == ScriptState.RUNNING) {
-                        processNextCommand();
-                        } else if (state == ScriptState.STOPPED || state == ScriptState.ERROR) {
+                currentCommandFuture
+                        .exceptionally(throwable -> {
+                            lastError = throwable.getMessage();
+                            ScriptLogger.getInstance()
+                                    .error("Task " + id + " command error: " + throwable.getMessage());
+                            return null;
+                        })
+                        .thenRun(() -> {
+
+                            long duration = System.nanoTime() - startTime;
+                            kasperstudios.kashub.debug.ProfilerManager.getInstance()
+                                    .recordCommand(finalEntry.command.getName(), duration);
+
                             synchronized (processLock) {
-                                // Script stopped, clear queue and pending loop marker
-                                commandQueue.clear();
-                                pendingLoopMarker = null;
+                                isProcessingCommand = false;
                             }
-                    }
-                });
-        } catch (Exception e) {
+
+                            if (state == ScriptState.RUNNING) {
+
+                                boolean shouldPause = false;
+                                try {
+                                    if (!commandQueue.isEmpty()) {
+                                        CommandEntry next = commandQueue.peek();
+                                        if (next != null && next.getLineNumber() > 0) {
+                                            if (DebugManager.getInstance().shouldPause(id, name,
+                                                    next.getLineNumber())) {
+                                                shouldPause = true;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+
+                                }
+
+                                if (shouldPause) {
+
+                                    return;
+                                }
+                                processNextCommand();
+                            } else if (state == ScriptState.STOPPED || state == ScriptState.ERROR) {
+                                synchronized (processLock) {
+                                    commandQueue.clear();
+                                    pendingLoopMarker = null;
+                                }
+                            }
+                        });
+            } catch (Exception e) {
                 synchronized (processLock) {
-            lastError = e.getMessage();
-            isProcessingCommand = false;
-            ScriptLogger.getInstance().error("Task " + id + " execution error: " + e.getMessage());
-                    // Don't stop script on exception, just log it and continue
+                    lastError = e.getMessage();
+                    isProcessingCommand = false;
+                    ScriptLogger.getInstance().error("Task " + id + " execution error: " + e.getMessage());
                     if (state == ScriptState.RUNNING) {
                         processNextCommand();
                     }
@@ -1225,123 +1284,134 @@ public class ScriptTask {
             }
         }
     }
-    
-    /**
-     * Internal marker command for loop blocks
-     */
+
     private static class LoopMarkerCommand implements Command {
         final String[] lines;
         final int startLine;
         final int endLine;
-        
-        LoopMarkerCommand(String[] lines, int startLine, int endLine) {
+        final String condition;
+
+        LoopMarkerCommand(String[] lines, int startLine, int endLine, String condition) {
             this.lines = lines;
             this.startLine = startLine;
             this.endLine = endLine;
+            this.condition = condition;
         }
-        
+
         @Override
-        public String getName() { return "__loop_marker__"; }
-        
+        public String getName() {
+            return "__loop_marker__";
+        }
+
         @Override
-        public String getDescription() { return "Internal loop marker"; }
-        
+        public String getDescription() {
+            return "Internal loop marker";
+        }
+
         @Override
-        public String getParameters() { return ""; }
-        
+        public String getParameters() {
+            return "";
+        }
+
         @Override
-        public void execute(String[] args) { }
+        public void execute(String[] args) {
+        }
     }
 
-    /**
-     * Internal command for break statement
-     */
     private class BreakCommand implements Command {
         @Override
-        public String getName() { return "__break__"; }
-        
+        public String getName() {
+            return "__break__";
+        }
+
         @Override
-        public String getDescription() { return "Internal break command"; }
-        
+        public String getDescription() {
+            return "Internal break command";
+        }
+
         @Override
-        public String getParameters() { return ""; }
-        
+        public String getParameters() {
+            return "";
+        }
+
         @Override
         public void execute(String[] args) {
             shouldBreak = true;
         }
     }
-    
-    /**
-     * Internal command for continue statement
-     */
+
     private class ContinueCommand implements Command {
         @Override
-        public String getName() { return "__continue__"; }
-        
+        public String getName() {
+            return "__continue__";
+        }
+
         @Override
-        public String getDescription() { return "Internal continue command"; }
-        
+        public String getDescription() {
+            return "Internal continue command";
+        }
+
         @Override
-        public String getParameters() { return ""; }
-        
+        public String getParameters() {
+            return "";
+        }
+
         @Override
         public void execute(String[] args) {
             shouldContinue = true;
         }
     }
 
-    /**
-     * Internal command for conditional blocks (if/else if/else)
-     * Evaluates conditions at execution time, not parse time
-     */
     private static class ConditionalCommand implements Command {
         final ScriptTask task;
         final String[] lines;
         final List<ConditionalBlock> blocks;
-        
+
         ConditionalCommand(ScriptTask task, String[] lines, List<ConditionalBlock> blocks) {
             this.task = task;
             this.lines = lines;
             this.blocks = blocks;
         }
-        
+
         @Override
-        public String getName() { return "__conditional__"; }
-        
+        public String getName() {
+            return "__conditional__";
+        }
+
         @Override
-        public String getDescription() { return "Internal conditional command"; }
-        
+        public String getDescription() {
+            return "Internal conditional command";
+        }
+
         @Override
-        public String getParameters() { return ""; }
-        
+        public String getParameters() {
+            return "";
+        }
+
         @Override
         public void execute(String[] args) {
             for (ConditionalBlock block : blocks) {
                 if (block.condition == null) {
-                    // else block - always execute
-                    task.parseLines(lines, block.startLine, block.endLine);
+
+                    task.parseLinesToHead(lines, block.startLine, block.endLine);
                     break;
                 } else {
-                    // if or else if - evaluate condition
+
                     boolean conditionResult = task.evaluateCondition(block.condition);
                     if (conditionResult) {
-                        task.parseLines(lines, block.startLine, block.endLine);
+                        task.parseLinesToHead(lines, block.startLine, block.endLine);
                         break;
                     }
                 }
             }
         }
     }
-    
-    /**
-     * Represents a conditional block (if, else if, or else)
-     */
+
     private static class ConditionalBlock {
-        final String condition; // null for else blocks
+        final String condition;
         final int startLine;
         final int endLine;
-        
+
         ConditionalBlock(String condition, int startLine, int endLine) {
             this.condition = condition;
             this.startLine = startLine;
@@ -1349,7 +1419,57 @@ public class ScriptTask {
         }
     }
 
-    // State management
+    private class VariableCommand implements Command {
+        private final String name;
+        private final String expression;
+
+        VariableCommand(String name, String expression) {
+            this.name = name;
+            this.expression = expression;
+        }
+
+        @Override
+        public String getName() {
+            return "var";
+        }
+
+        @Override
+        public String getDescription() {
+            return "Set variable " + name + " = " + expression;
+        }
+
+        @Override
+        public String getParameters() {
+            return name + " = " + expression;
+        }
+
+        @Override
+        public void execute(String[] args) {
+            String varValue = processVariables(expression.trim());
+
+            if (varValue.startsWith("\"") && varValue.endsWith("\"")) {
+                varValue = varValue.substring(1, varValue.length() - 1);
+            } else {
+
+                try {
+                    double result = evaluateExpressionAsDouble(varValue);
+                    if (!Double.isNaN(result)) {
+
+                        if (result == Math.floor(result) && !Double.isInfinite(result)) {
+                            varValue = String.valueOf((int) result);
+                        } else {
+                            varValue = String.valueOf(result);
+                        }
+                    }
+                } catch (Exception e) {
+
+                }
+            }
+            setVariable(name, varValue);
+        }
+
+    }
+
     public void pause() {
         if (state == ScriptState.RUNNING) {
             state = ScriptState.PAUSED;
@@ -1367,11 +1487,30 @@ public class ScriptTask {
     public void stop() {
         state = ScriptState.STOPPED;
         commandQueue.clear();
-        pendingLoopMarker = null; // Clear pending loop marker
-        shouldBreak = false; // Reset break flag
-        shouldContinue = false; // Reset continue flag
-        localFunctions.clear(); // Clear local functions to prevent memory leaks
-        variables.clear(); // Clear local variables
+        pendingLoopMarker = null;
+        shouldBreak = false;
+        shouldContinue = false;
+        localFunctions.clear();
+        variables.clear();
+        
+        // Unregister all events registered by this script
+        for (String eventName : registeredEvents) {
+            kasperstudios.kashub.algorithm.events.EventManager.getInstance().unregisterEventScript(eventName);
+            try {
+                ScriptLogger.getInstance().debug("Unregistered event handler for: " + eventName);
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+        registeredEvents.clear();
+        
+        // Clear exports from this script
+        try {
+            kasperstudios.kashub.algorithm.ExportManager.getInstance().clearScriptExports(name);
+        } catch (Exception e) {
+            // Ignore
+        }
+        
         if (currentCommandFuture != null && !currentCommandFuture.isDone()) {
             currentCommandFuture.cancel(true);
         }
@@ -1380,35 +1519,78 @@ public class ScriptTask {
 
     public void restart() {
         stop();
-        commandQueue.clear();
-        currentLine = 0;
-        executedCommands = 0;
-        lastError = null;
+
         state = ScriptState.RUNNING;
-        // Reset all loop control flags
+        lastError = null;
+        executedCommands = 0;
+        currentLine = 0;
+
         shouldBreak = false;
         shouldContinue = false;
         pendingLoopMarker = null;
         isProcessingCommand = false;
+        
+        // registeredEvents already cleared by stop(), will be repopulated by parseAndQueue()
         parseAndQueue();
         ScriptLogger.getInstance().info("Task " + id + " (" + name + ") restarted, loop state reset");
     }
 
-    // Getters
-    public int getId() { return id; }
-    public String getName() { return name; }
-    public String getCode() { return code; }
-    public Set<String> getTags() { return Collections.unmodifiableSet(tags); }
-    public ScriptState getState() { return state; }
-    public long getStartTime() { return startTime; }
-    public long getLastTickTime() { return lastTickTime; }
-    public String getLastError() { return lastError; }
-    public int getPriority() { return priority; }
-    public int getCurrentLine() { return currentLine; }
-    public int getExecutedCommands() { return executedCommands; }
-    public int getQueuedCommands() { return commandQueue.size(); }
-    public ScriptType getScriptType() { return scriptType; }
-    
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public Set<String> getTags() {
+        return Collections.unmodifiableSet(tags);
+    }
+
+    public ScriptState getState() {
+        return state;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public long getLastTickTime() {
+        return lastTickTime;
+    }
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public int getCurrentLine() {
+        return currentLine;
+    }
+
+    public int getExecutedCommands() {
+        return executedCommands;
+    }
+
+    public int getQueuedCommands() {
+        return commandQueue.size();
+    }
+
+    public boolean isProcessingCommand() {
+        return isProcessingCommand;
+    }
+
+    public ScriptType getScriptType() {
+        return scriptType;
+    }
+
     public long getUptime() {
         return System.currentTimeMillis() - startTime;
     }
@@ -1418,41 +1600,60 @@ public class ScriptTask {
         long seconds = (uptime / 1000) % 60;
         long minutes = (uptime / (1000 * 60)) % 60;
         long hours = uptime / (1000 * 60 * 60);
-        
+
         if (hours > 0) {
             return String.format("%d:%02d:%02d", hours, minutes, seconds);
         }
         return String.format("%d:%02d", minutes, seconds);
     }
 
-    public void setPriority(int priority) { this.priority = priority; }
-    public void addTag(String tag) { tags.add(tag); }
-    public void removeTag(String tag) { tags.remove(tag); }
-    public boolean hasTag(String tag) { return tags.contains(tag); }
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
 
-    /**
-     * Internal class for storing command and arguments
-     */
+    public void addTag(String tag) {
+        tags.add(tag);
+    }
+
+    public void removeTag(String tag) {
+        tags.remove(tag);
+    }
+
+    public boolean hasTag(String tag) {
+        return tags.contains(tag);
+    }
+
+    public Map<String, String> getVariables() {
+        return Collections.unmodifiableMap(variables);
+    }
+
     private static class CommandEntry {
         final Command command;
         final String[] args;
+        final int lineNumber;
 
         CommandEntry(Command command, String[] args) {
+            this(command, args, -1);
+        }
+
+        CommandEntry(Command command, String[] args, int lineNumber) {
             this.command = command;
             this.args = args;
+            this.lineNumber = lineNumber;
+        }
+
+        public int getLineNumber() {
+            return lineNumber;
         }
     }
-    
-    /**
-     * Internal class for storing function definition
-     */
+
     private static class FunctionDef {
         final String name;
         final List<String> parameters;
         final String[] lines;
         final int startLine;
         final int endLine;
-        
+
         FunctionDef(String name, List<String> parameters, String[] lines, int startLine, int endLine) {
             this.name = name;
             this.parameters = parameters;

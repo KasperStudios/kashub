@@ -365,4 +365,158 @@ while (counter < 5) {
 
 ---
 
+## 🔴 КРИТИЧНЫЕ БАГИ (НОВЫЕ)
+
+### 10. Events - Не работают после stop/restart ✅ ИСПРАВЛЕНО
+
+#### Проблема 10.1: EventManager.clear() вызывается глобально
+```java
+// StopCommand.java
+case "all":
+default:
+    ScriptInterpreter.getInstance().stopProcessing();
+    EventManager.getInstance().clear();  // ❌ Удаляет ВСЕ события!
+```
+
+**Баг:** При нажатии Z (stop hotkey) вызывается `EventManager.clear()` который удаляет ВСЕ события глобально, включая события которые только что были зарегистрированы при restart!
+
+**Последовательность:**
+1. Пользователь нажимает Z (stop)
+2. `ScriptTask.restart()` вызывается
+3. `restart()` → `stop()` → очищает `registeredEvents`
+4. `restart()` → `parseAndQueue()` → регистрирует события заново
+5. **НО** `StopCommand` всё ещё выполняется и вызывает `EventManager.clear()`
+6. Все только что зарегистрированные события удаляются!
+
+**Пример:**
+```javascript
+// test_events_restart.kh
+onEvent onTick {
+    print "Tick!"
+}
+
+// Первый запуск: ✅ Работает
+// Stop (Z) + Restart: ❌ События не срабатывают
+```
+
+**Решение:** ✅ ИСПРАВЛЕНО
+- Убрали `EventManager.clear()` из `StopCommand` для режима "all"
+- Каждый `ScriptTask` теперь сам управляет своими событиями через `registeredEvents` Set
+- При `stop()` скрипт вызывает `EventManager.unregisterEventScript()` для каждого своего события
+- Режим `stop events` теперь только для глобальных обработчиков (не script-registered)
+
+**Изменённые файлы:**
+- `src/main/java/kasperstudios/kashub/algorithm/commands/StopCommand.java`
+- `src/main/java/kasperstudios/kashub/services/runtime/ScriptTask.java` (уже был правильный cleanup)
+
+**Тест:**
+```javascript
+// src/main/resources/assets/kashub/scripts/test_events_restart.kh
+print "Event test script started"
+
+onEvent onTick {
+    print "Tick event fired!"
+}
+
+onEvent onHunger {
+    print "Hunger changed: $event_food"
+}
+
+print "Events registered - press Z to stop, then restart to test"
+```
+
+---
+
 **Начинаем исправления!** 🔧
+
+---
+
+## 🔴 КРИТИЧНЫЕ БАГИ (НОВЫЕ) - Продолжение
+
+### 11. ScriptInterpreter - shouldStop блокирует события после stopAll() ✅ ИСПРАВЛЕНО
+
+#### Проблема 11.1: shouldStop не сбрасывается для новых скриптов
+```java
+// ScriptInterpreter.java
+public void stopProcessing() {
+    shouldStop = true;  // ❌ Остаётся true навсегда!
+    commandQueue.clear();
+}
+
+public void queueCommand(Command command, String[] args) {
+    commandQueue.add(new CommandEntry(command, processedArgs));
+    if (!isProcessing && !shouldStop) {  // ❌ Блокируется!
+        processNextCommand();
+    }
+}
+```
+
+**Баг:** Когда пользователь нажимает Z (stop hotkey), вызывается `ScriptInterpreter.stopProcessing()` который устанавливает `shouldStop = true`. Этот флаг НЕ сбрасывается автоматически, и блокирует выполнение ВСЕХ последующих команд, включая события!
+
+**Последовательность:**
+1. Пользователь нажимает Z (stop)
+2. `ScriptTaskManager.stopAll()` → `ScriptInterpreter.stopProcessing()`
+3. `shouldStop = true` устанавливается
+4. Скрипт перезапускается, события регистрируются
+5. `EventManager.fireEvent()` → `interpreter.parseCommands()` → `queueCommand()`
+6. **НО** `queueCommand()` проверяет `!shouldStop` и не выполняет команды!
+7. События зарегистрированы, но не срабатывают
+
+**Пример из логов:**
+```
+[20:25:28] Task 2 (test_events) stopped, all state cleared
+[20:25:31] Started task 3: test_events
+[20:25:31] Registered event handler for: onTick
+// События зарегистрированы, но не срабатывают!
+```
+
+**Решение:** ✅ ИСПРАВЛЕНО
+- Добавлена проверка в `queueCommand()`: если `shouldStop = true` И очередь пуста И не обрабатывается, сбросить флаг
+- Добавлена аналогичная проверка в `executeQueuedCommands()`
+- Теперь флаг автоматически сбрасывается когда начинается новая работа
+
+**Изменённые файлы:**
+- `src/main/java/kasperstudios/kashub/algorithm/ScriptInterpreter.java`
+
+**Код исправления:**
+```java
+public void queueCommand(Command command, String[] args) {
+    // Reset shouldStop flag if we're starting fresh (queue empty, not processing)
+    if (shouldStop && !isProcessing && commandQueue.isEmpty()) {
+        shouldStop = false;
+    }
+    
+    // ... rest of method
+}
+
+public void executeQueuedCommands() {
+    // Reset shouldStop flag to allow event scripts to execute after stopAll()
+    if (shouldStop && !isProcessing && commandQueue.isEmpty()) {
+        shouldStop = false;
+    }
+    
+    // ... rest of method
+}
+```
+
+**Тест:**
+```javascript
+// test_events_after_stop.kh
+print "Starting event test"
+
+onEvent onTick {
+    print "[Tick] Current tick"
+}
+
+onEvent onHunger {
+    print "[Hunger] Food level: $event_food"
+}
+
+print "Events registered"
+print "Press Z to stop all scripts"
+print "Then restart this script - events should still work!"
+```
+
+---
+
+**Все критичные баги исправлены!** ✅

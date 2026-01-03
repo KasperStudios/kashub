@@ -314,7 +314,10 @@ Kashub includes a sandbox mode that restricts potentially dangerous commands:
 2. Click on line numbers to set breakpoints (red dots)
 3. Press "Debug" to start debug mode
 4. Use `F10` to step through code
-5. Watch variables in the Debug panel
+5. Watch variables in the Debug panel (right side)
+    - **Global**: Environment variables like `$PLAYER_HEALTH`
+    - **Local**: Your script variables
+    - **Context**: Special variables like `$SCRIPT_NAME`
 
 ## 📋 Chat Commands
 

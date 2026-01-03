@@ -3,15 +3,6 @@ package kasperstudios.kashub.marketplace;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Represents a verified script from the Kashub Script Marketplace.
- * 
- * Verified scripts are:
- * - Reviewed for safety and quality
- * - Signed with a verification signature
- * - Hosted on the official GitHub repository
- * - Versioned and updatable
- */
 public class VerifiedScript {
     private final String id;
     private final String name;
@@ -27,10 +18,7 @@ public class VerifiedScript {
     private final int downloads;
     private final double rating;
     private final int ratingCount;
-    
-    /**
-     * Create a new VerifiedScript instance.
-     */
+
     public VerifiedScript(
             String id,
             String name,
@@ -62,13 +50,11 @@ public class VerifiedScript {
         this.rating = rating;
         this.ratingCount = ratingCount;
     }
-    
-    // Builder pattern for easier construction
+
     public static Builder builder() {
         return new Builder();
     }
-    
-    // Getters
+
     public String getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -83,34 +69,19 @@ public class VerifiedScript {
     public int getDownloads() { return downloads; }
     public double getRating() { return rating; }
     public int getRatingCount() { return ratingCount; }
-    
-    /**
-     * Check if this script has a valid signature.
-     * 
-     * @return true if signature is present and valid
-     */
+
     public boolean isSignatureValid() {
-        // TODO: Implement signature verification
+
         return signature != null && !signature.isEmpty();
     }
-    
-    /**
-     * Get a formatted rating string (e.g., "4.5 (123 reviews)")
-     * 
-     * @return Formatted rating string
-     */
+
     public String getFormattedRating() {
         if (ratingCount == 0) {
             return "No ratings yet";
         }
         return String.format("%.1f (%d reviews)", rating, ratingCount);
     }
-    
-    /**
-     * Get a formatted download count (e.g., "1.2K downloads")
-     * 
-     * @return Formatted download count
-     */
+
     public String getFormattedDownloads() {
         if (downloads >= 1_000_000) {
             return String.format("%.1fM downloads", downloads / 1_000_000.0);
@@ -119,7 +90,7 @@ public class VerifiedScript {
         }
         return downloads + " downloads";
     }
-    
+
     @Override
     public String toString() {
         return "VerifiedScript{" +
@@ -129,10 +100,7 @@ public class VerifiedScript {
                 ", author='" + author + '\'' +
                 '}';
     }
-    
-    /**
-     * Builder class for VerifiedScript
-     */
+
     public static class Builder {
         private String id;
         private String name;
@@ -148,7 +116,7 @@ public class VerifiedScript {
         private int downloads = 0;
         private double rating = 0.0;
         private int ratingCount = 0;
-        
+
         public Builder id(String id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
         public Builder description(String description) { this.description = description; return this; }
@@ -163,7 +131,7 @@ public class VerifiedScript {
         public Builder downloads(int downloads) { this.downloads = downloads; return this; }
         public Builder rating(double rating) { this.rating = rating; return this; }
         public Builder ratingCount(int ratingCount) { this.ratingCount = ratingCount; return this; }
-        
+
         public VerifiedScript build() {
             if (id == null || name == null) {
                 throw new IllegalStateException("id and name are required");

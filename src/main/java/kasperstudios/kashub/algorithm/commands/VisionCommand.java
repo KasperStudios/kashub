@@ -35,7 +35,7 @@ public class VisionCommand implements Command {
     public String getCategory() {
         return "Vision";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Vision and entity detection.\n\n" +
@@ -136,11 +136,11 @@ public class VisionCommand implements Command {
 
         int count = 0;
         for (Entity entity : entities) {
-            if (filter.equals("all") || 
+            if (filter.equals("all") ||
                 filter.equals("living") && entity instanceof LivingEntity ||
                 Registries.ENTITY_TYPE.getId(entity.getType()).getPath().contains(filter)) {
-                
-                interpreter.setVariable("scan_" + count + "_type", 
+
+                interpreter.setVariable("scan_" + count + "_type",
                     Registries.ENTITY_TYPE.getId(entity.getType()).getPath());
                 interpreter.setVariable("scan_" + count + "_id", String.valueOf(entity.getId()));
                 interpreter.setVariable("scan_" + count + "_x", String.valueOf(entity.getX()));
@@ -191,7 +191,7 @@ public class VisionCommand implements Command {
             interpreter.setVariable("nearest_type", "none");
         }
     }
-    
+
     private void handleCount(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         String type = args.length > 1 ? args[1].toLowerCase() : "all";
         double radius = args.length > 2 ? Double.parseDouble(args[2]) : 30.0;
@@ -207,28 +207,28 @@ public class VisionCommand implements Command {
                 !Registries.ENTITY_TYPE.getId(entity.getType()).getPath().contains(type)) continue;
             count++;
         }
-        
+
         interpreter.setVariable("mob_count", String.valueOf(count));
     }
-    
+
     private void handleIsLookingAt(MinecraftClient client, ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         if (args.length < 3) {
             interpreter.setVariable("vision_result", "false");
             return;
         }
-        
-        String targetType = args[1].toLowerCase(); // "block" or "entity"
+
+        String targetType = args[1].toLowerCase();
         String targetId = args[2].toLowerCase();
         double maxDist = args.length > 3 ? Double.parseDouble(args[3]) : 5.0;
-        
+
         HitResult hit = client.crosshairTarget;
         if (hit == null || hit.getPos().distanceTo(player.getPos()) > maxDist) {
             interpreter.setVariable("vision_result", "false");
             return;
         }
-        
+
         boolean result = false;
-        
+
         if (targetType.equals("block") && hit.getType() == HitResult.Type.BLOCK) {
             BlockHitResult blockHit = (BlockHitResult) hit;
             String blockId = Registries.BLOCK.getId(
@@ -240,10 +240,10 @@ public class VisionCommand implements Command {
             String entityId = Registries.ENTITY_TYPE.getId(entityHit.getEntity().getType()).toString();
             result = entityId.contains(targetId);
         }
-        
+
         interpreter.setVariable("vision_result", String.valueOf(result));
     }
-    
+
     private boolean isHostile(Entity entity) {
         if (!(entity instanceof LivingEntity)) return false;
         String type = Registries.ENTITY_TYPE.getId(entity.getType()).getPath();

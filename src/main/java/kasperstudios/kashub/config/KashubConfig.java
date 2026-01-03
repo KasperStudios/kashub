@@ -6,15 +6,11 @@ import com.google.gson.GsonBuilder;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * Конфигурация мода Kashub
- */
 public class KashubConfig {
     private static KashubConfig instance;
     private static final Path CONFIG_PATH = Paths.get("config", "kashub", "config.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    // Настройки редактора
     public String editorTheme = "dracula";
     public int editorFontSize = 12;
     public boolean editorLineNumbers = true;
@@ -22,75 +18,69 @@ public class KashubConfig {
     public boolean editorSyntaxHighlight = true;
     public int editorTabSize = 4;
 
-    // Настройки скриптов
     public int maxScriptsPerTick = 10;
     public int maxCommandsPerScript = 1000;
-    public int scriptTimeout = 30000; // мс
+    public int scriptTimeout = 30000;
     public boolean allowCheats = false;
     public List<String> whitelistedCommands = new ArrayList<>();
     public List<String> blacklistedCommands = new ArrayList<>();
 
-    // Настройки безопасности
     public boolean sandboxMode = true;
     public int maxLoopIterations = 10000;
     public boolean allowFileAccess = false;
     public boolean allowNetworkAccess = false;
-    public boolean allowEval = false; // Разрешить выполнение Java-кода через eval
+    public boolean allowEval = false;
 
-    // AI Integration settings
     public boolean allowAiIntegration = false;
-    
-    // AI Settings
-    public enum AiProvider { OFF, GROQ, MEGALLM, CUSTOM }
+
+    public enum AiProvider {
+        OFF, GROQ, MEGALLM, CUSTOM
+    }
+
     public AiProvider aiProvider = AiProvider.OFF;
     public String aiApiKey = "";
-    public String aiBaseUrl = ""; // Empty = use default for selected provider
-    public String aiModel = ""; // Empty = use first available model from API
-    public boolean aiEnableTools = true; // Enable script manipulation tools
-    public boolean aiEnableGui = true; // Enable AI chat GUI
+    public String aiBaseUrl = "";
+    public String aiModel = "";
+    public boolean aiEnableTools = true;
+    public boolean aiEnableGui = true;
     public int aiMaxTokens = 2000;
     public double aiTemperature = 0.7;
-    public int aiContextMaxLength = 8000; // Max characters for context
+    public int aiContextMaxLength = 8000;
 
-    // Настройки прав доступа
     public boolean allowUserScriptsEdit = true;
     public boolean allowDangerousCommands = false;
     public boolean allowSystemScriptsCopy = true;
 
-    // Настройки UI
     public float guiScale = 1.0f;
-    public int openEditorKey = 75; // K
-    public int stopScriptsKey = 90; // Z
-    public int toggleScriptingKey = 293; // F6
-    public boolean hideSystemScripts = false; // Hide system/example scripts in file panel
-    
-    // Hot-reload settings
-    public boolean hotReload = false; // Automatically reload scripts when files change
-    public int hotReloadCheckInterval = 1000; // Check interval in milliseconds (default 1 second)
-    
-    // Autorun settings
-    public boolean autorunEnabled = false; // Enable autorun on startup
-    public List<String> autorunScripts = new ArrayList<>(); // List of scripts to auto-run on startup
+    public int openEditorKey = 75;
+    public int stopScriptsKey = 90;
+    public int toggleScriptingKey = 293;
+    public boolean hideSystemScripts = false;
 
-    // Настройки логирования
+    public boolean hotReload = false;
+    public int hotReloadCheckInterval = 1000;
+
+    public boolean autorunEnabled = false;
+    public List<String> autorunScripts = new ArrayList<>();
+
     public boolean enableLogging = true;
     public String logLevel = "INFO";
     public boolean logToFile = true;
     public boolean logToChat = false;
-    
-    // API Server settings (VSCode integration)
-    public boolean apiEnabled = true; // Enable API server for VSCode integration
-    public int apiPort = 25566; // HTTP API port (25565 is Minecraft default, so use 25566)
-    public int apiWebSocketPort = 25567; // WebSocket port for real-time updates
-    public boolean apiRequireAuth = false; // Require authentication (future feature)
-    
-    // Последний открытый скрипт
+
+    public int editorLeftPanelWidth = 200;
+    public int editorRightPanelWidth = 250;
+    public boolean editorShowDebugPanel = false;
+
+    public boolean apiEnabled = true;
+    public int apiPort = 25566;
+    public int apiWebSocketPort = 25567;
+    public boolean apiRequireAuth = false;
+
     public String lastOpenedScript = null;
-    
-    // Привязки клавиш к скриптам (keyCode -> scriptName)
+
     public Map<Integer, String> scriptKeybinds = new HashMap<>();
 
-    // Темы редактора
     public Map<String, EditorTheme> themes = new HashMap<>();
 
     private KashubConfig() {
@@ -106,7 +96,7 @@ public class KashubConfig {
     }
 
     private void initializeDefaultThemes() {
-        // Dracula theme
+
         EditorTheme dracula = new EditorTheme();
         dracula.name = "Dracula";
         dracula.background = 0xFF282A36;
@@ -122,7 +112,6 @@ public class KashubConfig {
         dracula.currentLine = 0x20FFFFFF;
         themes.put("dracula", dracula);
 
-        // One Dark theme
         EditorTheme oneDark = new EditorTheme();
         oneDark.name = "One Dark";
         oneDark.background = 0xFF282C34;
@@ -138,7 +127,6 @@ public class KashubConfig {
         oneDark.currentLine = 0x202C313C;
         themes.put("onedark", oneDark);
 
-        // Monokai theme
         EditorTheme monokai = new EditorTheme();
         monokai.name = "Monokai";
         monokai.background = 0xFF272822;
@@ -154,7 +142,6 @@ public class KashubConfig {
         monokai.currentLine = 0x203E3D32;
         themes.put("monokai", monokai);
 
-        // Solarized Dark theme
         EditorTheme solarizedDark = new EditorTheme();
         solarizedDark.name = "Solarized Dark";
         solarizedDark.background = 0xFF002B36;
@@ -170,7 +157,6 @@ public class KashubConfig {
         solarizedDark.currentLine = 0x20073642;
         themes.put("solarized_dark", solarizedDark);
 
-        // Solarized Light theme
         EditorTheme solarizedLight = new EditorTheme();
         solarizedLight.name = "Solarized Light";
         solarizedLight.background = 0xFFFDF6E3;
@@ -186,7 +172,6 @@ public class KashubConfig {
         solarizedLight.currentLine = 0x20EEE8D5;
         themes.put("solarized_light", solarizedLight);
 
-        // GitHub Dark theme
         EditorTheme githubDark = new EditorTheme();
         githubDark.name = "GitHub Dark";
         githubDark.background = 0xFF0D1117;
@@ -202,7 +187,6 @@ public class KashubConfig {
         githubDark.currentLine = 0x20161B22;
         themes.put("github_dark", githubDark);
 
-        // Nord theme
         EditorTheme nord = new EditorTheme();
         nord.name = "Nord";
         nord.background = 0xFF2E3440;
@@ -218,7 +202,6 @@ public class KashubConfig {
         nord.currentLine = 0x203B4252;
         themes.put("nord", nord);
 
-        // Gruvbox Dark theme
         EditorTheme gruvbox = new EditorTheme();
         gruvbox.name = "Gruvbox Dark";
         gruvbox.background = 0xFF282828;
@@ -234,7 +217,6 @@ public class KashubConfig {
         gruvbox.currentLine = 0x203C3836;
         themes.put("gruvbox", gruvbox);
 
-        // Tokyo Night theme
         EditorTheme tokyoNight = new EditorTheme();
         tokyoNight.name = "Tokyo Night";
         tokyoNight.background = 0xFF1A1B26;
@@ -250,7 +232,6 @@ public class KashubConfig {
         tokyoNight.currentLine = 0x201E2030;
         themes.put("tokyo_night", tokyoNight);
 
-        // Catppuccin Mocha theme
         EditorTheme catppuccin = new EditorTheme();
         catppuccin.name = "Catppuccin Mocha";
         catppuccin.background = 0xFF1E1E2E;
@@ -268,17 +249,14 @@ public class KashubConfig {
     }
 
     private void initializeDefaultWhitelist() {
-        // Безопасные команды по умолчанию
+
         whitelistedCommands.addAll(Arrays.asList(
-            "print", "wait", "jump", "run", "moveTo", "lookAt",
-            "chat", "eat", "useItem", "selectSlot", "drop",
-            "sneak", "sprint", "getBlock", "loop", "onEvent"
-        ));
-        
-        // Потенциально опасные команды (требуют allowCheats)
+                "print", "wait", "jump", "run", "moveTo", "lookAt",
+                "chat", "eat", "useItem", "selectSlot", "drop",
+                "sneak", "sprint", "getBlock", "loop", "onEvent"));
+
         blacklistedCommands.addAll(Arrays.asList(
-            "tp", "setHealth", "attack", "speedhack", "fullbright"
-        ));
+                "tp", "setHealth", "attack", "speedhack", "fullbright"));
     }
 
     public EditorTheme getCurrentTheme() {
@@ -286,21 +264,19 @@ public class KashubConfig {
     }
 
     public boolean isCommandAllowed(String command) {
-        if (!sandboxMode) return true;
-        
+        if (!sandboxMode)
+            return true;
+
         String cmd = command.toLowerCase();
-        
-        // Проверяем черный список
+
         if (blacklistedCommands.contains(cmd)) {
             return allowCheats;
         }
-        
-        // Если белый список пуст, разрешаем все кроме черного списка
+
         if (whitelistedCommands.isEmpty()) {
             return true;
         }
-        
-        // Проверяем белый список
+
         return whitelistedCommands.contains(cmd);
     }
 
@@ -316,7 +292,7 @@ public class KashubConfig {
         } catch (Exception e) {
             System.err.println("Failed to load config: " + e.getMessage());
         }
-        
+
         KashubConfig config = new KashubConfig();
         config.save();
         return config;
@@ -354,26 +330,25 @@ public class KashubConfig {
             this.scriptKeybinds = new HashMap<>(loaded.scriptKeybinds);
         }
     }
-    
-    // Методы для работы с кейбиндами скриптов
+
     public void setScriptKeybind(int keyCode, String scriptName) {
-        // Удаляем старую привязку для этого скрипта
+
         scriptKeybinds.entrySet().removeIf(e -> e.getValue().equals(scriptName));
         if (keyCode > 0) {
             scriptKeybinds.put(keyCode, scriptName);
         }
         save();
     }
-    
+
     public void removeScriptKeybind(String scriptName) {
         scriptKeybinds.entrySet().removeIf(e -> e.getValue().equals(scriptName));
         save();
     }
-    
+
     public String getScriptForKey(int keyCode) {
         return scriptKeybinds.get(keyCode);
     }
-    
+
     public int getKeyForScript(String scriptName) {
         for (Map.Entry<Integer, String> entry : scriptKeybinds.entrySet()) {
             if (entry.getValue().equals(scriptName)) {
@@ -383,9 +358,6 @@ public class KashubConfig {
         return -1;
     }
 
-    /**
-     * Класс темы редактора
-     */
     public static class EditorTheme {
         public String name;
         public int background;

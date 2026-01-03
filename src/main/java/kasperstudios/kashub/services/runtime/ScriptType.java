@@ -1,8 +1,5 @@
-package kasperstudios.kashub.runtime;
+package kasperstudios.kashub.services.runtime;
 
-/**
- * Типы скриптов по источнику
- */
 public enum ScriptType {
     USER("User", 0xFF50FA7B, true),
     SYSTEM("System", 0xFF8BE9FD, false),

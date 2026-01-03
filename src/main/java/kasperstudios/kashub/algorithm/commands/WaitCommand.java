@@ -28,7 +28,7 @@ public class WaitCommand implements Command {
   public String getCategory() {
     return "Timing";
   }
-  
+
   @Override
   public String getDetailedHelp() {
     return "Pauses script execution for specified time.\n\n" +
@@ -49,9 +49,7 @@ public class WaitCommand implements Command {
         int waitTime = Integer.parseInt(args[0]);
         System.out.println("Ожидание " + waitTime + " мс...");
 
-        // Синхронное ожидание (блокирует текущий поток)
         Thread.sleep(waitTime);
-        System.out.println("Ожидание завершено");
 
       } catch (NumberFormatException e) {
         System.out.println("Неверное время ожидания: " + args[0]);
@@ -68,21 +66,16 @@ public class WaitCommand implements Command {
     if (args.length > 0) {
       try {
         int waitTime = Integer.parseInt(args[0]);
-        System.out.println("Ожидание " + waitTime + " мс...");
 
-        // Планируем задачу, которая завершит future через указанное время
         scheduler.schedule(() -> {
-          System.out.println("Ожидание завершено");
           future.complete(null);
         }, waitTime, TimeUnit.MILLISECONDS);
 
       } catch (NumberFormatException e) {
-        System.out.println("Неверное время ожидания: " + args[0]);
-        future.complete(null); // Завершаем сразу в случае ошибки
+        future.complete(null);
       }
     } else {
-      System.out.println("Использование: wait <время в мс>");
-      future.complete(null); // Завершаем сразу, если нет аргументов
+      future.complete(null);
     }
 
     return future;

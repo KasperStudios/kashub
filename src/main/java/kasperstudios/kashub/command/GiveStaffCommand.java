@@ -15,7 +15,7 @@ public class GiveStaffCommand {
             .executes(context -> {
                 ServerCommandSource source = context.getSource();
                 ServerPlayerEntity player = source.getPlayer();
-                
+
                 if (player != null) {
                     ItemStack staff = new ItemStack(Items.BLAZE_ROD);
                     staff.set(net.minecraft.component.DataComponentTypes.CUSTOM_NAME, Text.literal("§6Teleport Staff"));
@@ -23,7 +23,7 @@ public class GiveStaffCommand {
                     source.sendFeedback(() -> Text.literal("Given Teleport Staff to " + player.getName().getString()), true);
                     return 1;
                 }
-                
+
                 return 0;
             }));
     }

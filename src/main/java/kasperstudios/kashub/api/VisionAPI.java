@@ -41,7 +41,7 @@ public class VisionAPI {
         public final Vec3d hitPos;
         public final double distance;
 
-        public RaycastResult(HitResult.Type type, BlockPos blockPos, String blockId, 
+        public RaycastResult(HitResult.Type type, BlockPos blockPos, String blockId,
                            Entity entity, String entityType, Vec3d hitPos, double distance) {
             this.type = type;
             this.blockPos = blockPos;
@@ -72,7 +72,7 @@ public class VisionAPI {
             this.name = entity.getName().getString();
             this.distance = distance;
             this.position = entity.getPos();
-            
+
             if (entity instanceof LivingEntity living) {
                 this.health = living.getHealth();
                 this.maxHealth = living.getMaxHealth();
@@ -94,7 +94,6 @@ public class VisionAPI {
         Vec3d direction = player.getRotationVec(1.0f);
         Vec3d end = start.add(direction.multiply(maxDistance));
 
-        // Block raycast
         RaycastContext context = new RaycastContext(
             start, end,
             RaycastContext.ShapeType.OUTLINE,
@@ -103,7 +102,6 @@ public class VisionAPI {
         );
         BlockHitResult blockHit = client.world.raycast(context);
 
-        // Entity raycast
         Box searchBox = player.getBoundingBox().stretch(direction.multiply(maxDistance)).expand(1.0);
         Entity closestEntity = null;
         double closestDistance = maxDistance;
@@ -111,7 +109,7 @@ public class VisionAPI {
         for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
             Box entityBox = entity.getBoundingBox().expand(entity.getTargetingMargin());
             Optional<Vec3d> hitOpt = entityBox.raycast(start, end);
-            
+
             if (hitOpt.isPresent()) {
                 double dist = start.distanceTo(hitOpt.get());
                 if (dist < closestDistance) {
@@ -121,8 +119,7 @@ public class VisionAPI {
             }
         }
 
-        // Determine what was hit first
-        double blockDistance = blockHit.getType() != HitResult.Type.MISS 
+        double blockDistance = blockHit.getType() != HitResult.Type.MISS
             ? start.distanceTo(blockHit.getPos()) : Double.MAX_VALUE;
 
         if (closestEntity != null && closestDistance < blockDistance) {
@@ -168,12 +165,12 @@ public class VisionAPI {
         for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
             Vec3d entityPos = entity.getPos();
             double distance = playerPos.distanceTo(entityPos);
-            
+
             if (distance > maxDistance) continue;
 
             Vec3d toEntity = entityPos.subtract(playerPos).normalize();
             double dot = lookDir.dotProduct(toEntity);
-            
+
             if (dot >= cosAngle) {
                 results.add(new EntityInfo(entity, distance));
             }
@@ -192,13 +189,13 @@ public class VisionAPI {
 
         Vec3d playerPos = player.getPos();
         Box searchBox = player.getBoundingBox().expand(maxDistance);
-        
+
         Entity nearest = null;
         double nearestDist = Double.MAX_VALUE;
 
         for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
             if (!matchesType(entity, entityType)) continue;
-            
+
             double dist = playerPos.distanceTo(entity.getPos());
             if (dist < nearestDist && dist <= maxDistance) {
                 nearestDist = dist;
@@ -218,7 +215,7 @@ public class VisionAPI {
 
         Vec3d playerPos = player.getPos();
         Box searchBox = player.getBoundingBox().expand(maxDistance);
-        
+
         int count = 0;
         for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
             if (matchesType(entity, entityType)) {
@@ -233,13 +230,13 @@ public class VisionAPI {
 
     public boolean isLookingAt(String targetType, String targetId, double maxDistance) {
         RaycastResult result = raycast(maxDistance);
-        
+
         if ("block".equalsIgnoreCase(targetType)) {
             return result.isBlock() && (targetId == null || result.blockId.contains(targetId));
         } else if ("entity".equalsIgnoreCase(targetType)) {
             return result.isEntity() && (targetId == null || result.entityType.contains(targetId));
         }
-        
+
         return false;
     }
 
@@ -247,9 +244,9 @@ public class VisionAPI {
         if (type == null || type.isEmpty() || type.equals("*") || type.equalsIgnoreCase("all")) {
             return true;
         }
-        
+
         String lowerType = type.toLowerCase();
-        
+
         return switch (lowerType) {
             case "hostile", "monster", "mob" -> entity instanceof HostileEntity;
             case "passive", "animal" -> entity instanceof AnimalEntity;

@@ -26,4 +26,4 @@ public class EnvironmentVariable {
     public String getDescription() {
         return description;
     }
-} 
+}

@@ -11,10 +11,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Команда для плавного перемещения игрока к указанным координатам
- * Синтаксис: moveTo x y z [speed]
- */
 public class MoveToCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final AtomicBoolean moving = new AtomicBoolean(false);
@@ -36,12 +32,12 @@ public class MoveToCommand implements Command {
     public String getParameters() {
         return "<x> <y> <z> [speed] | stop";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Smoothly moves the player to target coordinates.\n\n" +
@@ -89,7 +85,7 @@ public class MoveToCommand implements Command {
             double x = parseCoordinate(args[0], currentPos.x);
             double y = args.length > 1 ? parseCoordinate(args[1], currentPos.y) : currentPos.y;
             double z = args.length > 2 ? parseCoordinate(args[2], currentPos.z) : currentPos.z;
-            
+
             if (args.length > 3) {
                 moveSpeed = Math.max(0.1, Math.min(1.0, Double.parseDouble(args[3])));
             }
@@ -164,7 +160,7 @@ public class MoveToCommand implements Command {
 
                     Vec3d normalizedDir = direction.normalize();
                     double step = Math.min(moveSpeed, distance);
-                    
+
                     Vec3d newPos = pos.add(normalizedDir.multiply(step));
                     player.setPos(newPos.x, newPos.y, newPos.z);
 

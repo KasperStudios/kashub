@@ -6,10 +6,6 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 
-/**
- * Команда для выбора слота в хотбаре
- * Синтаксис: selectSlot <slot> или selectSlot item <itemName>
- */
 public class SelectSlotCommand implements Command {
 
     @Override
@@ -26,12 +22,12 @@ public class SelectSlotCommand implements Command {
     public String getParameters() {
         return "<0-8> | item <name>";
     }
-    
+
     @Override
     public String getCategory() {
         return "Inventory";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Selects a hotbar slot by number or item name.\n\n" +

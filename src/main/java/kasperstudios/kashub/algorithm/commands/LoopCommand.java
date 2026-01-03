@@ -5,11 +5,6 @@ import kasperstudios.kashub.algorithm.ScriptInterpreter;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Команда для выполнения цикла
- * Синтаксис: loop count { commands }
- * Примечание: Эта команда обрабатывается парсером, здесь только для автокомплита
- */
 public class LoopCommand implements Command {
 
     @Override
@@ -75,9 +70,9 @@ public class LoopCommand implements Command {
             for (int i = 1; i < args.length; i++) {
                 commands.append(args[i]).append(" ");
             }
-            
+
             String commandBlock = commands.toString().trim();
-            // Убираем фигурные скобки если есть
+
             if (commandBlock.startsWith("{")) {
                 commandBlock = commandBlock.substring(1);
             }
@@ -97,14 +92,14 @@ public class LoopCommand implements Command {
     @Override
     public CompletableFuture<Void> executeAsync(String[] args) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        
+
         try {
             execute(args);
             future.complete(null);
         } catch (Exception e) {
             future.completeExceptionally(e);
         }
-        
+
         return future;
     }
 }

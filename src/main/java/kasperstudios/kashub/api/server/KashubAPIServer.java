@@ -13,10 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
-/**
- * HTTP API Server for VSCode integration.
- * Provides REST endpoints for script validation, execution, and real-time communication.
- */
 public class KashubAPIServer {
     private static KashubAPIServer instance;
     private HttpServer server;
@@ -24,57 +20,55 @@ public class KashubAPIServer {
     private final ExecutorService executor;
     private final Gson gson;
     private boolean running = false;
-    
+
     private KashubAPIServer() {
         this.executor = Executors.newFixedThreadPool(4);
         this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
-    
+
     public static KashubAPIServer getInstance() {
         if (instance == null) {
             instance = new KashubAPIServer();
         }
         return instance;
     }
-    
+
     public void start() {
         KashubConfig config = KashubConfig.getInstance();
         if (!config.apiEnabled) {
             Kashub.LOGGER.info("Kashub API Server is disabled in config");
             return;
         }
-        
+
         if (running) {
             Kashub.LOGGER.warn("Kashub API Server is already running");
             return;
         }
-        
+
         try {
             int port = config.apiPort;
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.setExecutor(executor);
-            
-            // Register endpoints
+
             registerEndpoints();
-            
+
             server.start();
             running = true;
             Kashub.LOGGER.info("Kashub API Server started on port {}", port);
-            
-            // Start WebSocket server
+
             int wsPort = config.apiWebSocketPort;
             wsServer = new KashubWebSocketServer(wsPort);
             wsServer.start();
             Kashub.LOGGER.info("Kashub WebSocket Server started on port {}", wsPort);
-            
+
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to start Kashub API Server", e);
         }
     }
-    
+
     public void stop() {
         if (!running) return;
-        
+
         try {
             if (server != null) {
                 server.stop(0);
@@ -88,9 +82,9 @@ public class KashubAPIServer {
             Kashub.LOGGER.error("Error stopping Kashub API Server", e);
         }
     }
-    
+
     private void registerEndpoints() {
-        // Status endpoint
+
         server.createContext("/api/status", exchange -> {
             handleCors(exchange);
             if ("GET".equals(exchange.getRequestMethod())) {
@@ -101,8 +95,7 @@ public class KashubAPIServer {
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         });
-        
-        // Validate endpoint
+
         server.createContext("/api/validate", exchange -> {
             handleCors(exchange);
             if ("POST".equals(exchange.getRequestMethod())) {
@@ -113,8 +106,7 @@ public class KashubAPIServer {
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         });
-        
-        // Autocomplete endpoint
+
         server.createContext("/api/autocomplete", exchange -> {
             handleCors(exchange);
             if ("POST".equals(exchange.getRequestMethod())) {
@@ -125,8 +117,7 @@ public class KashubAPIServer {
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         });
-        
-        // Run script endpoint
+
         server.createContext("/api/run", exchange -> {
             handleCors(exchange);
             if ("POST".equals(exchange.getRequestMethod())) {
@@ -137,18 +128,17 @@ public class KashubAPIServer {
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         });
-        
-        // Tasks endpoint
+
         server.createContext("/api/tasks", exchange -> {
             handleCors(exchange);
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
-            
+
             if ("OPTIONS".equals(method)) {
                 sendResponse(exchange, 200, "");
                 return;
             }
-            
+
             if (path.equals("/api/tasks") && "GET".equals(method)) {
                 TasksEndpoint.handleList(exchange, gson);
             } else if (path.matches("/api/tasks/\\d+/stop") && "POST".equals(method)) {
@@ -161,8 +151,7 @@ public class KashubAPIServer {
                 sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
             }
         });
-        
-        // Variables endpoint
+
         server.createContext("/api/variables", exchange -> {
             handleCors(exchange);
             if ("GET".equals(exchange.getRequestMethod())) {
@@ -173,15 +162,69 @@ public class KashubAPIServer {
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         });
+
+        server.createContext("/api/commands", exchange -> {
+            handleCors(exchange);
+            if ("GET".equals(exchange.getRequestMethod())) {
+                CommandsEndpoint.handle(exchange, gson);
+            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                sendResponse(exchange, 200, "");
+            } else {
+                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+            }
+        });
+
+        server.createContext("/api/profiler", exchange -> {
+            handleCors(exchange);
+            String path = exchange.getRequestURI().getPath();
+            String method = exchange.getRequestMethod();
+
+            if ("OPTIONS".equals(method)) {
+                sendResponse(exchange, 200, "");
+                return;
+            }
+
+            if (path.equals("/api/profiler/status") && "GET".equals(method)) {
+                ProfilerEndpoint.handleStatus(exchange, gson);
+            } else if (path.equals("/api/profiler/start") && "POST".equals(method)) {
+                ProfilerEndpoint.handleStart(exchange, gson);
+            } else if (path.equals("/api/profiler/stop") && "POST".equals(method)) {
+                ProfilerEndpoint.handleStop(exchange, gson);
+            } else if (path.equals("/api/profiler/clear") && "POST".equals(method)) {
+                ProfilerEndpoint.handleClear(exchange, gson);
+            } else if (path.equals("/api/profiler/report") && "GET".equals(method)) {
+                ProfilerEndpoint.handleReport(exchange, gson);
+            } else if (path.equals("/api/profiler/json") && "GET".equals(method)) {
+                ProfilerEndpoint.handleJSON(exchange, gson);
+            } else if (path.equals("/api/profiler/chrome-tracing") && "GET".equals(method)) {
+                ProfilerEndpoint.handleChromeTracing(exchange, gson);
+            } else if (path.equals("/api/profiler/save") && "POST".equals(method)) {
+                ProfilerEndpoint.handleSave(exchange, gson);
+
+            } else if (path.equals("/api/debug/scopes") && "GET".equals(method)) {
+                DebugEndpoint.handleScopes(exchange, gson);
+            } else if (path.equals("/api/debug/variables") && "GET".equals(method)) {
+                DebugEndpoint.handleVariables(exchange, gson);
+            } else if (path.equals("/api/debug/evaluate") && "POST".equals(method)) {
+                DebugEndpoint.handleEvaluate(exchange, gson);
+            } else if (path.equals("/api/debug/stacktrace") && "GET".equals(method)) {
+                DebugEndpoint.handleStackTrace(exchange, gson);
+            } else if (path.equals("/api/debug/setVariable") && "POST".equals(method)) {
+                DebugEndpoint.handleSetVariable(exchange, gson);
+
+            } else {
+                sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
+            }
+        });
     }
-    
+
     private void handleCors(HttpExchange exchange) {
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
         exchange.getResponseHeaders().add("Content-Type", "application/json");
     }
-    
+
     public static void sendResponse(HttpExchange exchange, int code, String response) {
         try {
             byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
@@ -193,7 +236,7 @@ public class KashubAPIServer {
             Kashub.LOGGER.error("Error sending response", e);
         }
     }
-    
+
     public static String readRequestBody(HttpExchange exchange) throws IOException {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
@@ -205,18 +248,15 @@ public class KashubAPIServer {
             return sb.toString();
         }
     }
-    
+
     public boolean isRunning() {
         return running;
     }
-    
+
     public KashubWebSocketServer getWebSocketServer() {
         return wsServer;
     }
-    
-    /**
-     * Broadcast message to all connected WebSocket clients
-     */
+
     public static void broadcast(Object event) {
         KashubAPIServer server = getInstance();
         if (server.wsServer != null) {

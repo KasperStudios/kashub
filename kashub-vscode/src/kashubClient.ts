@@ -65,6 +65,19 @@ export interface TaskInfo {
     tags?: string[];
 }
 
+export interface DebugEvent {
+    type: 'debug_event';
+    event: 'PAUSED' | 'RESUMED' | 'BREAKPOINT_HIT' | 'STEP_COMPLETE';
+    scriptId: number;
+    line: number;
+}
+
+export interface VariablesResponse {
+    type: 'variables_response';
+    scriptId: number;
+    variables: Record<string, string>;
+}
+
 type EventHandler<T> = (event: T) => void;
 
 export class KashubClient {
@@ -73,17 +86,19 @@ export class KashubClient {
     private baseUrl: string;
     private wsUrl: string;
     public connected: boolean = false;
-    
+
     private outputHandlers: EventHandler<ScriptOutputEvent>[] = [];
     private errorHandlers: EventHandler<ScriptErrorEvent>[] = [];
     private stateChangeHandlers: EventHandler<TaskStateChangeEvent>[] = [];
+    private debugEventHandlers: EventHandler<DebugEvent>[] = [];
+    private variablesResponseHandlers: EventHandler<VariablesResponse>[] = [];
     private reconnectTimer?: NodeJS.Timeout;
-    
+
     constructor() {
         const config = vscode.workspace.getConfiguration('kashub');
         this.baseUrl = config.get('apiUrl', 'http://localhost:25566');
         this.wsUrl = config.get('wsUrl', 'ws://localhost:25567');
-        
+
         this.http = axios.create({
             baseURL: this.baseUrl,
             timeout: 5000,
@@ -92,25 +107,25 @@ export class KashubClient {
             }
         });
     }
-    
+
     async connect(): Promise<boolean> {
         try {
             // Test HTTP connection
             const response = await this.http.get('/api/status');
             this.connected = response.data.status === 'running';
-            
+
             if (this.connected) {
                 // Connect WebSocket
                 this.connectWebSocket();
             }
-            
+
             return this.connected;
         } catch (error) {
             this.connected = false;
             return false;
         }
     }
-    
+
     disconnect(): void {
         if (this.ws) {
             this.ws.close();
@@ -122,19 +137,19 @@ export class KashubClient {
         }
         this.connected = false;
     }
-    
+
     private connectWebSocket(): void {
         if (this.ws) {
             this.ws.close();
         }
-        
+
         try {
             this.ws = new WebSocket(this.wsUrl);
-            
+
             this.ws.on('open', () => {
                 console.log('Kashub WebSocket connected');
             });
-            
+
             this.ws.on('message', (data: WebSocket.Data) => {
                 try {
                     const event = JSON.parse(data.toString());
@@ -143,11 +158,11 @@ export class KashubClient {
                     console.error('Failed to parse WebSocket message:', e);
                 }
             });
-            
+
             this.ws.on('error', (error) => {
                 console.error('Kashub WebSocket error:', error);
             });
-            
+
             this.ws.on('close', () => {
                 console.log('Kashub WebSocket disconnected');
                 // Reconnect after 5 seconds
@@ -159,7 +174,7 @@ export class KashubClient {
             console.error('Failed to connect WebSocket:', error);
         }
     }
-    
+
     private handleEvent(event: any): void {
         switch (event.type) {
             case 'script_output':
@@ -171,26 +186,68 @@ export class KashubClient {
             case 'task_state_change':
                 this.stateChangeHandlers.forEach(h => h(event as TaskStateChangeEvent));
                 break;
+            case 'debug_event':
+                this.debugEventHandlers.forEach(h => h(event as DebugEvent));
+                break;
+            case 'variables_response':
+                this.variablesResponseHandlers.forEach(h => h(event as VariablesResponse));
+                break;
         }
     }
-    
+
     onOutput(handler: EventHandler<ScriptOutputEvent>): void {
         this.outputHandlers.push(handler);
     }
-    
+
     onError(handler: EventHandler<ScriptErrorEvent>): void {
         this.errorHandlers.push(handler);
     }
-    
+
     onStateChange(handler: EventHandler<TaskStateChangeEvent>): void {
         this.stateChangeHandlers.push(handler);
     }
-    
+
+    onDebugEvent(handler: EventHandler<DebugEvent>): void {
+        this.debugEventHandlers.push(handler);
+    }
+
+    onVariablesResponse(handler: EventHandler<VariablesResponse>): void {
+        this.variablesResponseHandlers.push(handler);
+    }
+
+    sendDebugAction(action: 'resume' | 'pause' | 'step_over' | 'step_into' | 'step_out', scriptId?: number) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'debug_action',
+                action,
+                scriptId: scriptId ?? -1
+            }));
+        }
+    }
+
+    setBreakpoints(lines: number[]) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'set_breakpoints',
+                lines
+            }));
+        }
+    }
+
+    requestVariables(scriptId: number) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'get_variables',
+                scriptId
+            }));
+        }
+    }
+
     async validate(code: string): Promise<ValidationResult> {
         if (!this.connected) {
             return this.offlineValidation(code);
         }
-        
+
         try {
             const response = await this.http.post('/api/validate', { code });
             return response.data;
@@ -198,7 +255,7 @@ export class KashubClient {
             return this.offlineValidation(code);
         }
     }
-    
+
     async getCompletions(
         code: string,
         prefix: string,
@@ -208,7 +265,7 @@ export class KashubClient {
         if (!this.connected) {
             return this.offlineCompletions(prefix);
         }
-        
+
         try {
             const response = await this.http.post('/api/autocomplete', {
                 code,
@@ -221,63 +278,75 @@ export class KashubClient {
             return this.offlineCompletions(prefix);
         }
     }
-    
+
     async runScript(code: string, filename?: string): Promise<RunResult> {
         if (!this.connected) {
             throw new Error('Not connected to Kashub');
         }
-        
+
         const response = await this.http.post('/api/run', {
             code,
             filename
         });
-        
+
         return response.data;
     }
-    
+
     async getTasks(): Promise<TaskInfo[]> {
         if (!this.connected) return [];
-        
+
         const response = await this.http.get('/api/tasks');
         return response.data.tasks;
     }
-    
+
     async stopTask(taskId: number): Promise<void> {
         await this.http.post(`/api/tasks/${taskId}/stop`);
     }
-    
+
     async pauseTask(taskId: number): Promise<void> {
         await this.http.post(`/api/tasks/${taskId}/pause`);
     }
-    
+
     async resumeTask(taskId: number): Promise<void> {
         await this.http.post(`/api/tasks/${taskId}/resume`);
     }
-    
+
     async getVariables(): Promise<Record<string, string>> {
         if (!this.connected) return {};
-        
+
         const response = await this.http.get('/api/variables');
         return response.data.variables;
     }
-    
+
+    async getCommands(): Promise<any[]> {
+        if (!this.connected) return [];
+
+        try {
+            const response = await this.http.get('/api/commands');
+            return response.data.commands || [];
+        } catch (error) {
+            console.error('Failed to fetch commands:', error);
+            return [];
+        }
+    }
+
     async getStatus(): Promise<any> {
         const response = await this.http.get('/api/status');
         return response.data;
     }
-    
+
     private offlineValidation(code: string): ValidationResult {
         const errors: ValidationError[] = [];
         const lines = code.split('\n');
         let braceDepth = 0;
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith('//') || line === '') continue;
-            
+
             braceDepth += (line.match(/\{/g) || []).length;
             braceDepth -= (line.match(/\}/g) || []).length;
-            
+
             if (braceDepth < 0) {
                 errors.push({
                     line: i + 1,
@@ -288,7 +357,7 @@ export class KashubClient {
                 braceDepth = 0;
             }
         }
-        
+
         if (braceDepth > 0) {
             errors.push({
                 line: lines.length,
@@ -297,7 +366,7 @@ export class KashubClient {
                 severity: 'error'
             });
         }
-        
+
         return {
             valid: errors.length === 0,
             errors,
@@ -305,7 +374,7 @@ export class KashubClient {
             warningCount: errors.filter(e => e.severity === 'warning').length
         };
     }
-    
+
     private offlineCompletions(prefix: string): CompletionItem[] {
         const COMMANDS = [
             'print', 'log', 'wait', 'jump', 'run', 'moveTo', 'lookAt',
@@ -313,9 +382,10 @@ export class KashubClient {
             'drop', 'selectSlot', 'breakBlock', 'placeBlock', 'getBlock',
             'tp', 'onEvent', 'interact', 'swim', 'stop', 'loop',
             'scanner', 'vision', 'input', 'animation', 'fullbright',
-            'scripts', 'eval', 'ai', 'sound', 'autoCraft', 'autoTrade'
+            'scripts', 'eval', 'ai', 'sound', 'autoCraft', 'autoTrade',
+            'export', 'import'
         ];
-        
+
         const lowerPrefix = prefix.toLowerCase();
         return COMMANDS
             .filter(c => c.toLowerCase().startsWith(lowerPrefix))

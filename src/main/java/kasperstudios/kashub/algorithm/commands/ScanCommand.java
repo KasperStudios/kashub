@@ -16,19 +16,8 @@ import net.minecraft.world.World;
 
 import java.util.*;
 
-/**
- * Command for scanning blocks in view/area
- * Syntax:
- *   scan blocks <filter> <radius> - Scan for specific blocks in radius
- *   scan view <filter> <distance> - Scan blocks in player's view direction
- *   scan area <x1> <y1> <z1> <x2> <y2> <z2> <filter> - Scan area for blocks
- *   scan nearest <filter> <radius> - Find nearest matching block
- * 
- * Filter examples: diamond_ore, *_ore, chest, spawner
- */
 public class ScanCommand implements Command {
-    
-    // Common ore blocks for quick detection
+
     private static final Set<String> VALUABLE_ORES = Set.of(
         "diamond_ore", "deepslate_diamond_ore",
         "emerald_ore", "deepslate_emerald_ore",
@@ -41,17 +30,17 @@ public class ScanCommand implements Command {
         "coal_ore", "deepslate_coal_ore",
         "nether_quartz_ore"
     );
-    
+
     @Override
     public String getName() {
         return "scan";
     }
-    
+
     @Override
     public String getDescription() {
         return "Scan for blocks in area or view";
     }
-    
+
     @Override
     public String getParameters() {
         return "<blocks|view|nearest|ores> <filter> <radius/distance>";
@@ -61,7 +50,7 @@ public class ScanCommand implements Command {
     public String getCategory() {
         return "Scanner";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Scans for blocks in specified radius.\n\n" +
@@ -80,97 +69,94 @@ public class ScanCommand implements Command {
                "  $scan_nearest_dist  - Distance\n" +
                "  $scan_diamond_count - Diamond ore count";
     }
-    
+
     @Override
     public void execute(String[] args) throws Exception {
         MinecraftClient client = MinecraftClient.getInstance();
         ClientPlayerEntity player = client.player;
         if (player == null) return;
-        
+
         ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-        
+
         if (args.length == 0) {
             printHelp();
             return;
         }
-        
+
         String subcommand = args[0].toLowerCase();
-        
+
         switch (subcommand) {
             case "blocks":
             case "block":
                 scanBlocks(player, args, interpreter);
                 break;
-                
+
             case "view":
                 scanView(player, args, interpreter);
                 break;
-                
+
             case "nearest":
                 scanNearest(player, args, interpreter);
                 break;
-                
+
             case "ores":
                 scanOres(player, args, interpreter);
                 break;
-                
+
             case "count":
                 countBlocks(player, args, interpreter);
                 break;
-                
+
             default:
-                // Assume it's a filter for quick scan
+
                 String[] newArgs = new String[]{"blocks", subcommand, args.length > 1 ? args[1] : "16"};
                 scanBlocks(player, newArgs, interpreter);
         }
     }
-    
+
     private void scanBlocks(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         String filter = args.length > 1 ? args[1].toLowerCase() : "*";
         int radius = args.length > 2 ? Integer.parseInt(args[2]) : 16;
-        radius = Math.min(radius, 32); // Limit for performance
-        
+        radius = Math.min(radius, 32);
+
         World world = player.getWorld();
         BlockPos playerPos = player.getBlockPos();
-        
+
         List<BlockPos> found = new ArrayList<>();
-        
+
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     BlockPos pos = playerPos.add(x, y, z);
                     BlockState state = world.getBlockState(pos);
                     String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-                    
+
                     if (matchesFilter(blockId, filter)) {
                         found.add(pos);
                     }
                 }
             }
         }
-        
-        // Set results
+
         interpreter.setVariable("scan_count", String.valueOf(found.size()));
         interpreter.setVariable("scan_found", found.isEmpty() ? "false" : "true");
-        
-        // Store first 10 results
+
         for (int i = 0; i < Math.min(found.size(), 10); i++) {
             BlockPos pos = found.get(i);
             BlockState state = world.getBlockState(pos);
             String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-            
+
             interpreter.setVariable("scan_" + i + "_x", String.valueOf(pos.getX()));
             interpreter.setVariable("scan_" + i + "_y", String.valueOf(pos.getY()));
             interpreter.setVariable("scan_" + i + "_z", String.valueOf(pos.getZ()));
             interpreter.setVariable("scan_" + i + "_block", blockId);
         }
-        
-        // Find nearest
+
         if (!found.isEmpty()) {
             BlockPos nearest = found.stream()
                 .min(Comparator.comparingDouble(pos -> pos.getSquaredDistance(playerPos)))
                 .orElse(null);
-            
+
             if (nearest != null) {
                 interpreter.setVariable("scan_nearest_x", String.valueOf(nearest.getX()));
                 interpreter.setVariable("scan_nearest_y", String.valueOf(nearest.getY()));
@@ -180,24 +166,22 @@ public class ScanCommand implements Command {
             }
         }
     }
-    
+
     private void scanView(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         String filter = args.length > 1 ? args[1].toLowerCase() : "*";
         int distance = args.length > 2 ? Integer.parseInt(args[2]) : 64;
         distance = Math.min(distance, 128);
-        
+
         World world = player.getWorld();
         Vec3d eyePos = player.getEyePos();
         Vec3d lookVec = player.getRotationVec(1.0f);
-        
+
         List<BlockPos> found = new ArrayList<>();
         Set<BlockPos> checked = new HashSet<>();
-        
-        // Raycast with some width
+
         for (int d = 1; d <= distance; d++) {
             Vec3d checkPos = eyePos.add(lookVec.multiply(d));
-            
-            // Check in a small cone
+
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dy = -2; dy <= 2; dy++) {
                     for (int dz = -2; dz <= 2; dz++) {
@@ -206,13 +190,13 @@ public class ScanCommand implements Command {
                             (int) checkPos.y + dy,
                             (int) checkPos.z + dz
                         );
-                        
+
                         if (checked.contains(pos)) continue;
                         checked.add(pos);
-                        
+
                         BlockState state = world.getBlockState(pos);
                         String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-                        
+
                         if (matchesFilter(blockId, filter)) {
                             found.add(pos);
                         }
@@ -220,10 +204,10 @@ public class ScanCommand implements Command {
                 }
             }
         }
-        
+
         interpreter.setVariable("scan_count", String.valueOf(found.size()));
         interpreter.setVariable("scan_found", found.isEmpty() ? "false" : "true");
-        
+
         if (!found.isEmpty()) {
             BlockPos nearest = found.get(0);
             interpreter.setVariable("scan_nearest_x", String.valueOf(nearest.getX()));
@@ -231,26 +215,26 @@ public class ScanCommand implements Command {
             interpreter.setVariable("scan_nearest_z", String.valueOf(nearest.getZ()));
         }
     }
-    
+
     private void scanNearest(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         String filter = args.length > 1 ? args[1].toLowerCase() : "*";
         int radius = args.length > 2 ? Integer.parseInt(args[2]) : 16;
         radius = Math.min(radius, 32);
-        
+
         World world = player.getWorld();
         BlockPos playerPos = player.getBlockPos();
-        
+
         BlockPos nearest = null;
         double nearestDist = Double.MAX_VALUE;
         String nearestBlock = "";
-        
+
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     BlockPos pos = playerPos.add(x, y, z);
                     BlockState state = world.getBlockState(pos);
                     String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-                    
+
                     if (matchesFilter(blockId, filter)) {
                         double dist = pos.getSquaredDistance(playerPos);
                         if (dist < nearestDist) {
@@ -262,7 +246,7 @@ public class ScanCommand implements Command {
                 }
             }
         }
-        
+
         if (nearest != null) {
             interpreter.setVariable("scan_found", "true");
             interpreter.setVariable("scan_nearest_x", String.valueOf(nearest.getX()));
@@ -274,28 +258,28 @@ public class ScanCommand implements Command {
             interpreter.setVariable("scan_found", "false");
         }
     }
-    
+
     private void scanOres(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         int radius = args.length > 1 ? Integer.parseInt(args[1]) : 8;
-        radius = Math.min(radius, 16); // Smaller radius for performance
-        
+        radius = Math.min(radius, 16);
+
         boolean allowCheats = KashubConfig.getInstance().allowCheats;
-        
+
         World world = player.getWorld();
         BlockPos playerPos = player.getBlockPos();
         Vec3d playerEyes = player.getEyePos();
-        
+
         Map<String, List<BlockPos>> oresByType = new HashMap<>();
-        
+
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     BlockPos pos = playerPos.add(x, y, z);
                     BlockState state = world.getBlockState(pos);
                     String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-                    
+
                     if (VALUABLE_ORES.contains(blockId)) {
-                        // If cheats disabled, check if block is visible (not behind other blocks)
+
                         if (!allowCheats) {
                             boolean visible = isBlockVisible(world, playerEyes, pos);
                             if (!visible) {
@@ -307,13 +291,11 @@ public class ScanCommand implements Command {
                 }
             }
         }
-        
-        // Set results
+
         int totalOres = oresByType.values().stream().mapToInt(List::size).sum();
         interpreter.setVariable("scan_ore_count", String.valueOf(totalOres));
         interpreter.setVariable("scan_found", totalOres > 0 ? "true" : "false");
-        
-        // Count by type
+
         interpreter.setVariable("scan_diamond_count", String.valueOf(
             oresByType.getOrDefault("diamond_ore", List.of()).size() +
             oresByType.getOrDefault("deepslate_diamond_ore", List.of()).size()));
@@ -329,13 +311,12 @@ public class ScanCommand implements Command {
             oresByType.getOrDefault("deepslate_iron_ore", List.of()).size()));
         interpreter.setVariable("scan_ancient_debris_count", String.valueOf(
             oresByType.getOrDefault("ancient_debris", List.of()).size()));
-        
-        // Find nearest valuable ore (prioritize diamond > emerald > gold)
+
         BlockPos nearestValuable = null;
         String nearestType = "";
         double nearestDist = Double.MAX_VALUE;
-        
-        String[] priority = {"diamond_ore", "deepslate_diamond_ore", "ancient_debris", 
+
+        String[] priority = {"diamond_ore", "deepslate_diamond_ore", "ancient_debris",
                             "emerald_ore", "deepslate_emerald_ore",
                             "gold_ore", "deepslate_gold_ore", "nether_gold_ore",
                             "iron_ore", "deepslate_iron_ore",
@@ -343,7 +324,7 @@ public class ScanCommand implements Command {
                             "redstone_ore", "deepslate_redstone_ore",
                             "copper_ore", "deepslate_copper_ore",
                             "coal_ore", "deepslate_coal_ore", "nether_quartz_ore"};
-        
+
         for (String ore : priority) {
             List<BlockPos> positions = oresByType.get(ore);
             if (positions != null) {
@@ -357,7 +338,7 @@ public class ScanCommand implements Command {
                 }
             }
         }
-        
+
         if (nearestValuable != null) {
             interpreter.setVariable("scan_valuable_found", "true");
             interpreter.setVariable("scan_valuable_x", String.valueOf(nearestValuable.getX()));
@@ -369,14 +350,14 @@ public class ScanCommand implements Command {
             interpreter.setVariable("scan_valuable_found", "false");
         }
     }
-    
+
     private void countBlocks(ClientPlayerEntity player, String[] args, ScriptInterpreter interpreter) {
         String filter = args.length > 1 ? args[1].toLowerCase() : "*";
         int radius = args.length > 2 ? Integer.parseInt(args[2]) : 16;
-        
+
         World world = player.getWorld();
         BlockPos playerPos = player.getBlockPos();
-        
+
         int count = 0;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -384,17 +365,17 @@ public class ScanCommand implements Command {
                     BlockPos pos = playerPos.add(x, y, z);
                     BlockState state = world.getBlockState(pos);
                     String blockId = Registries.BLOCK.getId(state.getBlock()).getPath();
-                    
+
                     if (matchesFilter(blockId, filter)) {
                         count++;
                     }
                 }
             }
         }
-        
+
         interpreter.setVariable("scan_count", String.valueOf(count));
     }
-    
+
     private boolean matchesFilter(String blockId, String filter) {
         if (filter.equals("*")) return !blockId.equals("air");
         if (filter.startsWith("*") && filter.endsWith("*")) {
@@ -408,7 +389,7 @@ public class ScanCommand implements Command {
         }
         return blockId.equals(filter) || blockId.contains(filter);
     }
-    
+
     private void printHelp() {
         System.out.println("Scan commands:");
         System.out.println("  scan blocks <filter> <radius> - Scan for blocks");
@@ -419,31 +400,24 @@ public class ScanCommand implements Command {
         System.out.println("");
         System.out.println("Filter examples: diamond_ore, *_ore, chest, spawner");
     }
-    
-    /**
-     * Check if a block is visible from player's eyes (not obstructed by other blocks)
-     * Used when cheats are disabled to prevent X-ray scanning
-     */
+
     private boolean isBlockVisible(World world, Vec3d eyePos, BlockPos targetPos) {
         Vec3d targetCenter = Vec3d.ofCenter(targetPos);
-        
-        // Raycast from player eyes to block center
+
         RaycastContext context = new RaycastContext(
-            eyePos, 
-            targetCenter, 
-            RaycastContext.ShapeType.COLLIDER, 
-            RaycastContext.FluidHandling.NONE, 
+            eyePos,
+            targetCenter,
+            RaycastContext.ShapeType.COLLIDER,
+            RaycastContext.FluidHandling.NONE,
             net.minecraft.block.ShapeContext.absent()
         );
-        
+
         BlockHitResult result = world.raycast(context);
-        
-        // Block is visible if raycast hits the target block or nothing
+
         if (result.getType() == HitResult.Type.MISS) {
             return true;
         }
-        
-        // Check if we hit the target block
+
         BlockPos hitPos = result.getBlockPos();
         return hitPos.equals(targetPos);
     }

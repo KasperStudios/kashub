@@ -9,10 +9,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Команда для приседания
- * Синтаксис: sneak [duration_ms] или sneak toggle
- */
 public class SneakCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static boolean isSneaking = false;
@@ -31,12 +27,12 @@ public class SneakCommand implements Command {
     public String getParameters() {
         return "[ms] | toggle | stop";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Controls player sneaking (crouching).\n\n" +
@@ -71,7 +67,7 @@ public class SneakCommand implements Command {
     @Override
     public void execute(String[] args) throws Exception {
         MinecraftClient client = MinecraftClient.getInstance();
-        
+
         if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
             isSneaking = !isSneaking;
             client.execute(() -> {

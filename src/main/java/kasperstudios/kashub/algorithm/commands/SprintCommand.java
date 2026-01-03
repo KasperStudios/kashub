@@ -8,10 +8,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Команда для бега
- * Синтаксис: sprint [duration_ms] или sprint toggle/stop
- */
 public class SprintCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static boolean isSprinting = false;
@@ -30,12 +26,12 @@ public class SprintCommand implements Command {
     public String getParameters() {
         return "[ms] | toggle | stop";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Controls player sprinting (fast running).\n\n" +
@@ -66,7 +62,7 @@ public class SprintCommand implements Command {
     @Override
     public void execute(String[] args) throws Exception {
         MinecraftClient client = MinecraftClient.getInstance();
-        
+
         if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
             isSprinting = !isSprinting;
             client.execute(() -> {

@@ -2,6 +2,325 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v0.8.0-beta] - In Progress
+
+### 🔥 Sprint 1: Debug System Foundation
+
+#### Debug System Improvements
+- **Call Stack Tracking** - Added DebugFrame class for function call tracking
+  - `pushFrame()` / `popFrame()` methods in DebugManager
+  - Call stack visualization support
+  - Depth tracking for Step Out functionality
+
+- **Step Out Implementation** - Complete step-through debugging
+  - `stepOut()` method in DebugManager
+  - Exits current function and pauses at caller
+  - Works with call stack depth tracking
+
+- **Code Cleanup** - Production-ready debug code
+  - Removed all `System.err.println` debug output
+  - Replaced with `ScriptLogger.debug()` with null-safe formatting
+  - Removed unused imports (HashMap, Map from DebugSession)
+  - Added SLF4J-style `{}` placeholder formatting to ScriptLogger
+
+### 🎯 Sprint 1.5: Event System Revival
+
+#### Event System Fixes (2026-01-03)
+- **CRITICAL FIX: Event blocks now parse correctly** 🔥
+  - Added `onEvent { }` block parsing in ScriptTask
+  - Events were completely broken - blocks were ignored
+  - Now properly collects event script body
+  - Registers directly with EventManager
+
+- **CRITICAL FIX: Events now work after script restart** 🔥
+  - Fixed event persistence bug when stopping/restarting scripts
+  - Added `registeredEvents` tracking in ScriptTask
+  - Events are now properly unregistered in `stop()` method
+  - Events re-register correctly on `restart()`
+  - Prevents duplicate/stale event handlers
+
+- **Error Logging Improvements**
+  - Replaced all `System.err.println` with `ScriptLogger` in:
+    - EventManager (registerEventScript, fireEvent)
+    - ChatMessageMixin
+    - BlockBreakMixin
+    - BlockPlaceMixin
+    - AttackMixin
+  - Consistent error reporting across event system
+
+#### Package System Foundation (2026-01-03)
+- **NEW: Export/Import System** 🎉
+  - First step towards full package system (see PACKAGE_SYSTEM_CONCEPT.md)
+  - `export` command - share variables between scripts
+  - `import` command - use variables from other scripts
+  - ExportManager for cross-script variable sharing
+  - Automatic cleanup on script stop
+  - Fixed script name tracking for proper export/import resolution
+  
+- **Usage Examples:**
+  ```javascript
+  // script1.kh
+  export myVar 100
+  export playerName "Kasper"
+  
+  // script2.kh
+  import myVar from script1
+  import playerName from script1
+  print $myVar  // Outputs: 100
+  ```
+
+- **Test Scripts:**
+  - `test_export.kh` - demonstrates export functionality
+  - `test_import.kh` - demonstrates import functionality
+
+- **VSCode Extension:**
+  - Added `export` and `import` to command autocomplete
+  - **NEW: Hover Provider** - hover over commands/variables to see documentation
+    - Commands show full help text from mod
+    - Variables show current values and types
+    - Works offline with basic info, full docs when connected
+
+- **Event Validation** - Honest event status reporting
+  - Split events into IMPLEMENTED vs WIP categories
+  - Warning when registering WIP events
+  - Updated documentation to reflect reality
+  - ✅/⚠️ indicators in help text
+
+- **Mixin Implementation** - Critical events now work
+  - **ChatMessageMixin** - onChat event captures chat messages
+  - **BlockBreakMixin** - onBlockBreak event captures block breaking
+  - **BlockPlaceMixin** - onBlockPlace event captures block placement
+  - **AttackMixin** - onAttack event captures entity attacks
+  - All mixins registered in kashub.mixins.json
+
+- **Event Variables** - Rich event data
+  - onChat: `$event_message`, `$event_sender`, `$event_full_message`
+  - onBlockBreak: `$event_x`, `$event_y`, `$event_z`, `$event_block`
+  - onBlockPlace: `$event_x`, `$event_y`, `$event_z`, `$event_block`, `$event_side`
+  - onAttack: `$event_target_name`, `$event_target_id`, `$event_target_type`, `$event_target_x/y/z`
+
+#### Implemented Events (9 total)
+- ✅ onTick - Every 20 ticks (1 second)
+- ✅ onDamage - Player takes damage
+- ✅ onHeal - Player heals
+- ✅ onHunger - Hunger level changes
+- ✅ onDeath - Player dies
+- ✅ onChat - Chat message received
+- ✅ onBlockBreak - Block broken
+- ✅ onBlockPlace - Block placed
+- ✅ onAttack - Entity attacked
+
+#### WIP Events (6 remaining)
+- ⚠️ onRespawn - Player respawns
+- ⚠️ onJump - Player jumps
+- ⚠️ onSneak - Sneak toggled
+- ⚠️ onSprint - Sprint toggled
+- ⚠️ onItemUse - Item used
+- ⚠️ onInventoryChange - Inventory changed
+
+### 🔥 Sprint 2: Advanced Breakpoints (Phase 2.1)
+
+#### Conditional Breakpoints Core
+- **Enhanced Breakpoint Class** - Full-featured breakpoint system
+  - Three types: BREAKPOINT (always stops), CONDITIONAL (stops if true), LOGPOINT (logs without stopping)
+  - Hit count tracking for each breakpoint
+  - Hit conditions: `>= 5`, `% 10 == 0`, `== 3`
+  - Condition and log message support
+
+- **ConditionEvaluator** - Smart condition evaluation
+  - Uses ExpressionParser for condition evaluation
+  - Caches compiled conditions (max 100) for performance
+  - Validates complexity (max 10 operators) to prevent lag
+  - Supports all event variables (`$event_*`)
+  - Variable lookup with fallback strategies
+  - Log message interpolation with `{$var}` placeholders
+
+- **DebugManager Integration** - Conditional logic in shouldPause()
+  - Evaluates conditions with current scope variables
+  - Handles LOGPOINT without pausing
+  - Handles CONDITIONAL with condition check
+  - Increments hit count on each hit
+  - Checks hit conditions before pausing
+
+#### New API Methods
+- `setConditionalBreakpoint(scriptName, line, condition)` - Set conditional breakpoint
+- `setLogpoint(scriptName, line, message)` - Set logpoint
+- `setHitCondition(scriptName, line, hitCondition)` - Set hit condition
+- `getBreakpoint(scriptName, line)` - Get breakpoint for inspection
+
+### 🎯 Sprint 2: Advanced Breakpoints (Phase 2.3)
+
+#### Performance Profiler
+- **ProfilerManager** - Thread-safe performance tracking
+  - CommandStats with atomic operations (total, count, min, max, avg)
+  - Top N queries (hotspots, slowest, most called)
+  - Multiple export formats (text, JSON, Chrome Tracing)
+  - Integrated into ScriptTask execution
+
+- **API Endpoints** - Full profiler control
+  - GET `/api/profiler/status` - Profiler status
+  - POST `/api/profiler/start` - Start profiling
+  - POST `/api/profiler/stop` - Stop profiling
+  - POST `/api/profiler/clear` - Clear data
+  - GET `/api/profiler/report` - Text report
+  - GET `/api/profiler/json` - JSON export
+  - GET `/api/profiler/chrome-tracing` - Chrome Tracing format
+  - POST `/api/profiler/save` - Save to file
+
+- **Chrome Tracing Export** - Premium visualization
+  - Open in `chrome://tracing` for visual analysis
+  - Timeline view of command execution
+  - Hotspot identification
+  - Performance bottleneck detection
+
+### 🔌 Sprint 3: VSCode Integration (Phase 3.1)
+
+#### Debug Adapter Protocol (DAP) API
+- **DTO Classes** - DAP-compatible data structures
+  - `DebugStackFrame` - Stack frame representation
+  - `DebugScope` - Scope representation (Local, Global, Event, Environment)
+  - `DebugVariable` - Variable representation with type inference
+
+- **Debug API Endpoints** - Full debugging support
+  - GET `/api/debug/scopes?scriptId=X&frameId=Y` - Get scopes for frame
+  - GET `/api/debug/variables?variablesReference=X&scriptId=Y` - Get variables for scope
+  - POST `/api/debug/evaluate` - Evaluate expression in context
+  - GET `/api/debug/stacktrace?scriptId=X` - Get call stack
+  - POST `/api/debug/setVariable` - Modify variable during debugging
+
+- **Scope System** - Organized variable access
+  - **Local Scope** (ref: 1) - Task-specific variables
+  - **Event Scope** (ref: 3) - Event variables (`$event_*`)
+  - **Global Scope** (ref: 2) - Interpreter variables
+  - **Environment Scope** (ref: 4) - Environment variables (`$PLAYER_*`)
+
+#### WebSocket Integration (Phase 3.2)
+- **Real-time Debug Events** - Already integrated
+  - `debug_event` - Broadcasts PAUSED, RESUMED, STEP events
+  - `debug_action` - Handles pause, resume, step_over, step_into
+  - `set_breakpoints` - Sync breakpoints from VSCode
+  - `get_variables` - Request variables
+  - `set_variable` - Modify variables
+  - `stackTrace` - Request call stack
+  - `scopes` - Request scopes
+
+- **Bidirectional Communication**
+  - VSCode → Server: Debug actions, breakpoint changes
+  - Server → VSCode: Debug events, variable updates, state changes
+
+### 📝 Notes
+- Test scripts included: `test_events.kh`, `test_conditional_breakpoints.kh`, `test_profiler.kh`
+- All critical events now functional
+- Conditional breakpoints work with event variables
+- Profiler records every command execution
+- DAP-compatible API for VSCode integration
+- WebSocket for real-time debugging
+- No breaking changes to existing scripts
+
+### 🆕 Sprint 4: Command Audit & New Commands
+
+#### New Commands
+- **MacroCommand** - Record and playback player actions
+  - `macro record <name>` - Start recording macro
+  - `macro stop` - Stop recording
+  - `macro play <name> [speed]` - Play macro at custom speed
+  - `macro save <name>` - Save to file
+  - `macro list` - List saved macros
+  - `macro delete <name>` - Delete macro
+  - Captures movement, camera rotation, timing
+  - Useful for automation, farming, building
+
+- **HealthMonitorCommand** - Monitor health and status effects
+  - `healthMonitor monitor <threshold> [action]` - Start monitoring
+  - `healthMonitor check` - Check current status
+  - `healthMonitor effects` - List active effects
+  - `healthMonitor stop` - Stop monitoring
+  - Alerts on low HP and dangerous effects (poison, wither)
+  - Actions: log, chat, sound
+  - 5 second cooldown between alerts
+
+- **TimerCommand** - Timers and delayed execution
+  - `timer set <name> <seconds> [message]` - Create timer
+  - `timer check <name>` - Check remaining time
+  - `timer cancel <name>` - Cancel timer
+  - `timer list` - List active timers
+  - `timer clear` - Clear all timers
+  - Optional message on expiration
+  - Useful for farming, crafting, cooldowns
+
+- **ReportBugCommand** - Bug reporting system
+  - `reportBug <description>` - Send bug report to developers
+  - Automatically collects last 500 lines of logs
+  - Includes system info (OS, Java, MC version)
+  - Sends to Discord webhook with file attachment
+  - Rate limited (1 report per 5 minutes)
+  - Webhook obfuscated (base64 + reverse) to prevent abuse
+  - Fixed: Logs now sent as file attachment instead of embed field (Discord 1024 char limit)
+
+#### Command Improvements
+- **AICommand** - Fixed threading and timeout issues
+  - Added fixed thread pool (2 threads) instead of unlimited
+  - Added 30 second timeout for AI requests
+  - Added rate limiting (6 second cooldown between requests)
+  - Prevents thread exhaustion and API spam
+
+- **SpeedHackCommand** - Added server detection
+  - Max 2.0x speed on multiplayer servers (anti-cheat safe)
+  - Max 10.0x speed in singleplayer
+  - Automatic detection and clamping
+  - Updated documentation with warnings
+
+- **AnimationCommand** - Implemented list action
+  - Added `list` action to show active animations
+  - Added AnimationManager null check
+  - Improved error handling
+
+- **ChatMessageMixin** - Fixed for Minecraft 1.21.1
+  - Removed `boolean overlay` parameter (API change in 1.21.1)
+  - Fixed mixin crash on game startup
+  - Chat events now work correctly
+
+#### Documentation
+- **COMMAND_AUDIT_REPORT.md** - Complete audit of all 42 commands
+  - Identified 4 potential issues (all fixed)
+  - Rated all commands (A+ to C)
+  - Provided fix recommendations
+  - Overall code quality: 9/10
+- **DEVELOPMENT_NOTES.md** - AI development guidelines
+  - Language requirements (English for all user-facing text)
+  - Common pitfalls (Registry API, Chat Mixin changes)
+  - Code style and best practices
+
+---
+
+## [v0.8.0-beta] - 2025-12-28
+
+### 🐛 Bug Fixes
+
+#### Critical Fixes
+- **Removed debug output** - Cleaned up `System.out.println` from production code
+  - Fixed `ScriptInterpreter.processVariables()` debug logging
+  - Replaced `System.out` with `ScriptLogger` in `AttackCommand`
+  - Replaced `System.out` with `ScriptLogger` in `KashubKeybinds`
+
+#### ExpressionParser Improvements
+- **Added ++ and -- operators** - Support for increment/decrement operators
+  - Prefix: `++i`, `--i`
+  - Postfix: `i++`, `i--`
+  - Works in expressions and loops
+- **Removed unused imports** - Cleaned up `Matcher` and `Pattern` imports
+
+#### Code Quality
+- Verified race condition fixes in `ScriptTask.processNextCommand()`
+- Verified memory leak fixes in `ScriptTask.stop()`
+- Improved code readability and maintainability
+
+### 📝 Notes
+- No breaking changes - all existing scripts work without modifications
+- Compound assignment operators (`+=`, `-=`, etc.) planned for v0.8.1
+
+---
+
 ## [v0.7.0 beta] - 2025-12-21
 
 ### 🔥 Major Features

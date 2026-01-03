@@ -5,10 +5,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
 
-/**
- * Команда для отправки сообщения в чат
- * Синтаксис: chat "сообщение"
- */
 public class ChatCommand implements Command {
 
     @Override
@@ -25,12 +21,12 @@ public class ChatCommand implements Command {
     public String getParameters() {
         return "<message> - message text to send";
     }
-    
+
     @Override
     public String getCategory() {
         return "Output";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Sends a chat message visible to all players on the server.\n\n" +
@@ -57,7 +53,7 @@ public class ChatCommand implements Command {
         }
 
         String message = String.join(" ", args);
-        
+
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> {
             ClientPlayerEntity player = client.player;

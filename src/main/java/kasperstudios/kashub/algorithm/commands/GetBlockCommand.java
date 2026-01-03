@@ -27,12 +27,12 @@ public class GetBlockCommand implements Command {
     public String getParameters() {
         return "[x y z] [print]";
     }
-    
+
     @Override
     public String getCategory() {
         return "Vision";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Gets block information and stores in variables.\n\n" +
@@ -97,7 +97,7 @@ public class GetBlockCommand implements Command {
 
         BlockState state = player.getWorld().getBlockState(pos);
         String blockId = Registries.BLOCK.getId(state.getBlock()).toString();
-        
+
         interpreter.setVariable("block_id", blockId);
         interpreter.setVariable("block_x", String.valueOf(pos.getX()));
         interpreter.setVariable("block_y", String.valueOf(pos.getY()));

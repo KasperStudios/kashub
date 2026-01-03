@@ -15,20 +15,20 @@ public class AIService {
     private final OkHttpClient client;
     private final Gson gson;
     private static final String GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-    
+
     private AIService() {
-        this.apiKey = ""; // Замените на ваш ключ
+        this.apiKey = "";
         this.client = new OkHttpClient();
         this.gson = new Gson();
     }
-    
+
     public static AIService getInstance() {
         if (instance == null) {
             instance = new AIService();
         }
         return instance;
     }
-    
+
     private String buildCommandsList() {
         StringBuilder sb = new StringBuilder();
         for (Command cmd : CommandRegistry.getCommands()) {
@@ -39,7 +39,7 @@ public class AIService {
         }
         return sb.toString();
     }
-    
+
     private String buildVariablesList() {
         StringBuilder sb = new StringBuilder();
         ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
@@ -50,10 +50,10 @@ public class AIService {
         }
         return sb.toString();
     }
-    
+
     public String generateResponse(String message, Map<String, String> context) {
         try {
-            // Формируем промпт с контекстом
+
             StringBuilder prompt = new StringBuilder();
             prompt.append("Ты - ИИ-ассистент в Minecraft с возможностью писать и выполнять код на KHScript.\n\n");
             prompt.append("Правила:\n");
@@ -63,13 +63,13 @@ public class AIService {
             prompt.append("4. Если игрок просит выполнить код - выполни его\n");
             prompt.append("5. Не используй нецензурную лексику\n");
             prompt.append("6. Если не знаешь ответа - честно признайся\n\n");
-            
+
             prompt.append("Доступные команды KHScript:\n");
             prompt.append(buildCommandsList()).append("\n");
-            
+
             prompt.append("Переменные окружения:\n");
             prompt.append(buildVariablesList()).append("\n");
-            
+
             prompt.append("Информация о текущем состоянии:\n");
             prompt.append("Игрок: ").append(context.get("sender")).append("\n");
             prompt.append("Сообщение: ").append(message).append("\n");
@@ -80,21 +80,19 @@ public class AIService {
                 }
             }
             prompt.append("\nОтветь на сообщение игрока. Если нужно написать или выполнить код - сделай это.");
-            
-            // Формируем JSON запрос
+
             JsonObject requestBody = new JsonObject();
             requestBody.addProperty("model", "mixtral-8x7b-32768");
-            
+
             JsonObject messageObj = new JsonObject();
             messageObj.addProperty("role", "user");
             messageObj.addProperty("content", prompt.toString());
-            
+
             JsonObject[] messages = new JsonObject[]{messageObj};
             requestBody.add("messages", gson.toJsonTree(messages));
             requestBody.addProperty("temperature", 0.7);
             requestBody.addProperty("max_tokens", 1000);
-            
-            // Создаем HTTP запрос
+
             Request request = new Request.Builder()
                 .url(GROQ_API_URL)
                 .addHeader("Authorization", "Bearer " + apiKey)
@@ -104,17 +102,15 @@ public class AIService {
                     gson.toJson(requestBody)
                 ))
                 .build();
-            
-            // Отправляем запрос
+
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     throw new IOException("Unexpected response code: " + response);
                 }
-                
+
                 String responseBody = response.body().string();
                 JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
-                
-                // Извлекаем ответ из JSON
+
                 return jsonResponse.getAsJsonArray("choices")
                     .get(0).getAsJsonObject()
                     .getAsJsonObject("message")
@@ -125,4 +121,4 @@ public class AIService {
             return "Произошла ошибка при генерации ответа: " + e.getMessage();
         }
     }
-} 
+}

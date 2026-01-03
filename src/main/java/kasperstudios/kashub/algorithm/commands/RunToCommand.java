@@ -90,7 +90,6 @@ public class RunToCommand implements Command {
       double y = args.length > 1 ? parseCoordinate(args[1], currentPos.y) : currentPos.y;
       double z = args.length > 2 ? parseCoordinate(args[2], currentPos.z) : currentPos.z;
 
-      // В синхронном режиме просто устанавливаем направление и velocity один раз
       if (running.get()) {
         stopRunning();
       }
@@ -99,9 +98,6 @@ public class RunToCommand implements Command {
       Vec3d direction = target.subtract(currentPos).normalize();
       player.setVelocity(direction.x, 0, direction.z);
       running.set(true);
-
-      // Примечание: синхронная версия не поддерживает непрерывное движение к цели,
-      // это обрабатывается только в асинхронной версии
 
     } catch (NumberFormatException e) {
       System.out.println("Неверный формат координат");
@@ -116,9 +112,8 @@ public class RunToCommand implements Command {
       try {
         execute(args);
 
-        // Если не команда stop, запускаем движение к цели
         if (args.length > 0 && !args[0].equalsIgnoreCase("stop") && running.get()) {
-          // Когда предыдущая задача завершится, завершаем и наш future
+
           currentTask = startRunning(target);
           currentTask.thenRun(() -> future.complete(null));
         } else {
@@ -135,10 +130,10 @@ public class RunToCommand implements Command {
   private double parseCoordinate(String arg, double current) {
     if (arg.startsWith("~")) {
       if (arg.length() == 1)
-        return current; // Просто "~" означает текущую координату
-      return current + Double.parseDouble(arg.substring(1)); // "~10" означает текущая + 10
+        return current;
+      return current + Double.parseDouble(arg.substring(1));
     }
-    return Double.parseDouble(arg); // Обычная абсолютная координата
+    return Double.parseDouble(arg);
   }
 
   private CompletableFuture<Void> startRunning(Vec3d targetPos) {
@@ -160,17 +155,14 @@ public class RunToCommand implements Command {
           Vec3d pos = player.getPos();
           Vec3d direction = target.subtract(pos).normalize();
 
-          // Если мы близко к цели, останавливаемся
           if (pos.squaredDistanceTo(target) < 1) {
             stopRunning();
             future.complete(null);
             return;
           }
 
-          // Устанавливаем направление движения
           player.setVelocity(direction.x, 0, direction.z);
 
-          // Планируем следующую проверку, если всё ещё бежим
           if (running.get()) {
             scheduler.schedule(this, 50, TimeUnit.MILLISECONDS);
           } else {
@@ -180,7 +172,6 @@ public class RunToCommand implements Command {
       }
     };
 
-    // Запускаем первую итерацию
     scheduler.schedule(runTask, 0, TimeUnit.MILLISECONDS);
 
     return future;
@@ -188,7 +179,7 @@ public class RunToCommand implements Command {
 
   public static void stopRunning() {
     if (running.compareAndSet(true, false)) {
-      // Останавливаем движение игрока
+
       MinecraftClient.getInstance().execute(() -> {
         ClientPlayerEntity player = MinecraftClient.getInstance().player;
         if (player != null) {

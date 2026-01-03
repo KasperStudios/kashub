@@ -8,10 +8,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Команда для плавания
- * Синтаксис: swim [duration_ms] или swim up/down/forward
- */
 public class SwimCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
@@ -29,12 +25,12 @@ public class SwimCommand implements Command {
     public String getParameters() {
         return "[direction] [ms] - up/down/forward";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Controls player swimming in water.\n\n" +
@@ -70,11 +66,11 @@ public class SwimCommand implements Command {
     @Override
     public void execute(String[] args) throws Exception {
         MinecraftClient client = MinecraftClient.getInstance();
-        
+
         if (client.player == null) return;
 
         String direction = args.length > 0 ? args[0].toLowerCase() : "forward";
-        
+
         client.execute(() -> {
             switch (direction) {
                 case "up":

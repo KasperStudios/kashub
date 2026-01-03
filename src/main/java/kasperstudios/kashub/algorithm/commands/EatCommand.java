@@ -14,10 +14,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Команда для употребления еды
- * Синтаксис: eat [itemName]
- */
 public class EatCommand implements Command {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
@@ -35,12 +31,12 @@ public class EatCommand implements Command {
     public String getParameters() {
         return "[food] - food name (optional)";
     }
-    
+
     @Override
     public String getCategory() {
         return "Interaction";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Eats food from inventory to restore hunger.\n\n" +
@@ -84,8 +80,7 @@ public class EatCommand implements Command {
                 } else {
                     swapToHotbar(player, foodSlot);
                 }
-                
-                // Начинаем есть
+
                 client.options.useKey.setPressed(true);
             } else {
                 System.out.println("Еда не найдена" + (targetFood != null ? ": " + targetFood : ""));
@@ -115,10 +110,9 @@ public class EatCommand implements Command {
                 } else {
                     swapToHotbar(player, foodSlot);
                 }
-                
+
                 client.options.useKey.setPressed(true);
-                
-                // Ждём пока игрок поест (примерно 1.6 секунды)
+
                 scheduler.schedule(() -> {
                     client.execute(() -> {
                         client.options.useKey.setPressed(false);
@@ -143,13 +137,13 @@ public class EatCommand implements Command {
             FoodComponent food = stack.get(DataComponentTypes.FOOD);
                 if (!stack.isEmpty() && food != null) {
                 String itemName = Registries.ITEM.getId(stack.getItem()).getPath().toLowerCase();
-                    
+
                     if (targetFood != null) {
                         if (itemName.contains(targetFood) || targetFood.contains(itemName)) {
                             return i;
                         }
                     } else {
-                        // Ищем лучшую еду
+
                         int hunger = food.nutrition();
                         if (hunger > bestHunger) {
                             bestHunger = hunger;
@@ -164,7 +158,7 @@ public class EatCommand implements Command {
     private void swapToHotbar(ClientPlayerEntity player, int inventorySlot) {
         MinecraftClient client = MinecraftClient.getInstance();
         int hotbarSlot = player.getInventory().selectedSlot;
-        
+
         if (client.interactionManager != null) {
             client.interactionManager.clickSlot(
                 player.currentScreenHandler.syncId,

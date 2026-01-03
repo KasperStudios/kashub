@@ -2,6 +2,21 @@
 
 All notable changes to the Kashub VSCode extension will be documented in this file.
 
+## [0.8.1] - 2025-12-29
+
+### Added
+- **Remote Debugging Commands** - Pause, Resume, Step Over/Into from VS Code
+- **Breakpoint Support** - Toggle breakpoints via `Kashub Debug: Add Breakpoint`
+- **Debug Event Integration** - Extension now listens to Kashub debug events
+
+## [0.8.0] - 2025-12-28
+
+### Added
+- **Advanced Debugging Support** - Integration with Kashub v0.8.0-beta Debug API
+- **Live Variable Inspector** - View script variables in real-time side-bar
+- **Socket Protocol Update** - Updated WebSocket client for v0.8.0-beta compatibility
+- **Performance Improvements** - Reduced latency in command execution
+
 ## [0.1.1] - 2025-12-21
 
 ### Fixed

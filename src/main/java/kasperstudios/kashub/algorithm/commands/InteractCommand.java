@@ -27,12 +27,12 @@ public class InteractCommand implements Command {
     public String getParameters() {
         return "[block|entity|auto]";
     }
-    
+
     @Override
     public String getCategory() {
         return "Interaction";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Right-clicks on targeted block or entity.\n\n" +

@@ -1,13 +1,13 @@
 {
   "name": "kashub-vscode",
-  "displayName": "Kashub Script Language Support",
+  "displayName": "Kashub Language",
   "description": "Full language support for Kashub (.kh) scripts with real-time debugging and live connection to Minecraft",
-  "version": "0.1.1",
-  "publisher": "kasperenok",
+  "version": "0.8.1",
+  "publisher": "KasperStudios",
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kasperenok/kashub-vscode"
+    "url": "https://github.com/KasperStudios/kashub"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -34,9 +34,52 @@
     "languages": [
       {
         "id": "khscript",
-        "aliases": ["KHScript", "Kashub Script"],
-        "extensions": [".kh", ".khs", ".khscript"],
+        "aliases": [
+          "KHScript",
+          "Kashub Script"
+        ],
+        "extensions": [
+          ".kh",
+          ".khs",
+          ".khscript"
+        ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "khscript"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "kashub",
+        "label": "Kashub Debugger",
+        "languages": [
+          "khscript"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to a script file.",
+                "default": "${file}"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "kashub",
+            "request": "launch",
+            "name": "Debug Current Script",
+            "program": "${file}"
+          }
+        ]
       }
     ],
     "grammars": [
@@ -53,6 +96,31 @@
       }
     ],
     "commands": [
+      {
+        "command": "kashub.debug.resume",
+        "title": "Kashub Debug: Resume",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "kashub.debug.pause",
+        "title": "Kashub Debug: Pause",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "kashub.debug.stepOver",
+        "title": "Kashub Debug: Step Over",
+        "icon": "$(debug-step-over)"
+      },
+      {
+        "command": "kashub.debug.stepInto",
+        "title": "Kashub Debug: Step Into",
+        "icon": "$(debug-step-into)"
+      },
+      {
+        "command": "kashub.debug.toggleBreakpoint",
+        "title": "Kashub Debug: Add Breakpoint",
+        "icon": "$(debug-breakpoint)"
+      },
       {
         "command": "kashub.runScript",
         "title": "Kashub: Run Current Script",
@@ -121,13 +189,13 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
     "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
     "@types/ws": "^8.5.0",
-    "typescript": "^5.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0"
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "axios": "^1.6.0",

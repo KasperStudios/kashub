@@ -3,7 +3,6 @@ package kasperstudios.kashub.algorithm.commands;
 import kasperstudios.kashub.algorithm.Command;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.services.KasHubAiClient;
-import kasperstudios.kashub.util.ScriptLogger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import org.apache.logging.log4j.LogManager;
@@ -12,14 +11,17 @@ import org.apache.logging.log4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Команда для взаимодействия с ИИ-ассистентом
- * Использует новый KasHubAiClient с поддержкой tools
- */
 public class AICommand implements Command {
     private static boolean enabled = false;
     private static final Logger LOGGER = LogManager.getLogger(AICommand.class);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private static final long REQUEST_COOLDOWN = 6000;
+    private static final long REQUEST_TIMEOUT = 30;
+    private static long lastRequestTime = 0;
 
     @Override
     public String getName() {
@@ -44,43 +46,43 @@ public class AICommand implements Command {
     @Override
     public String getDetailedHelp() {
         return "AI assistant with script manipulation tools.\n\n" +
-               "Usage:\n" +
-               "  ai on       - Enable AI assistant\n" +
-               "  ai off      - Disable AI assistant\n" +
-               "  ai test     - Test AI connection\n" +
-               "  ai <message> - Send message to AI\n\n" +
-               "Features:\n" +
-               "  - Natural language script generation\n" +
-               "  - Context-aware responses (health, position, dimension)\n" +
-               "  - Script manipulation tools\n" +
-               "  - In-game chat integration\n\n" +
-               "Examples:\n" +
-               "  ai on\n" +
-               "  ai test\n" +
-               "  ai How do I mine diamonds?\n" +
-               "  ai Create a script to farm wheat\n" +
-               "  ai off\n\n" +
-               "Requirements:\n" +
-               "  - AI integration must be enabled in config\n" +
-               "  - Valid API key configured\n" +
-               "  - Internet connection required\n\n" +
-               "Notes:\n" +
-               "  - Responses appear in game chat\n" +
-               "  - AI can execute scripts on your behalf\n" +
-               "  - Use responsibly on servers";
+                "Usage:\n" +
+                "  ai on       - Enable AI assistant\n" +
+                "  ai off      - Disable AI assistant\n" +
+                "  ai test     - Test AI connection\n" +
+                "  ai <message> - Send message to AI\n\n" +
+                "Features:\n" +
+                "  - Natural language script generation\n" +
+                "  - Context-aware responses (health, position, dimension)\n" +
+                "  - Script manipulation tools\n" +
+                "  - In-game chat integration\n\n" +
+                "Examples:\n" +
+                "  ai on\n" +
+                "  ai test\n" +
+                "  ai How do I mine diamonds?\n" +
+                "  ai Create a script to farm wheat\n" +
+                "  ai off\n\n" +
+                "Requirements:\n" +
+                "  - AI integration must be enabled in config\n" +
+                "  - Valid API key configured\n" +
+                "  - Internet connection required\n\n" +
+                "Notes:\n" +
+                "  - Responses appear in game chat\n" +
+                "  - AI can execute scripts on your behalf\n" +
+                "  - Use responsibly on servers";
     }
 
     @Override
     public void execute(String[] args) throws Exception {
         if (args.length < 1) {
             KashubConfig config = KashubConfig.getInstance();
-			if (!config.allowAiIntegration) {
-				sendMessage("§cAI integration is disabled in config");
-				return;
-			}
-			throw new IllegalArgumentException("Usage: ai [on|off] or ai <message>");
+            if (!config.allowAiIntegration) {
+                sendMessage("§cAI integration is disabled in config");
+                return;
+            }
+            throw new IllegalArgumentException("Usage: ai [on|off] or ai <message>");
         }
-        
+
         if (args[0].equalsIgnoreCase("on")) {
             enabled = true;
             sendMessage("§a[AI] Enabled");
@@ -95,28 +97,30 @@ public class AICommand implements Command {
         }
     }
 
-    /**
-     * Проверяет, включен ли ИИ-ассистент
-     */
     public static boolean isEnabled() {
         return enabled;
     }
 
-    /**
-     * Обрабатывает сообщение и отправляет его ИИ-ассистенту
-     */
     public static void processMessage(String message, String sender) {
+
+        long now = System.currentTimeMillis();
+        if (now - lastRequestTime < REQUEST_COOLDOWN) {
+            long waitTime = (REQUEST_COOLDOWN - (now - lastRequestTime)) / 1000;
+            sendMessage("§c[AI] Please wait " + waitTime + " seconds before next request");
+            return;
+        }
+        lastRequestTime = now;
+
         CompletableFuture.runAsync(() -> {
             try {
                 if (MinecraftClient.getInstance().player == null) {
                     LOGGER.error("Player is null when trying to process AI message");
                     return;
                 }
-                
+
                 Map<String, String> context = new HashMap<>();
                 context.put("sender", sender);
-                
-                // Добавляем информацию о текущем состоянии игры
+
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player != null) {
                     try {
@@ -127,13 +131,12 @@ public class AICommand implements Command {
                         LOGGER.error("Error getting player context", e);
                     }
                 }
-                
-                // Получаем ответ от ИИ с поддержкой tools
+
                 try {
                     KasHubAiClient aiClient = KasHubAiClient.getInstance();
                     String response = aiClient.generateResponseWithTools(message, context);
                     if (response != null && !response.isEmpty()) {
-                        // Отправляем ответ в чат (разбиваем на строки если длинный)
+
                         String[] lines = response.split("\n");
                         for (String line : lines) {
                             if (!line.trim().isEmpty()) {
@@ -150,12 +153,15 @@ public class AICommand implements Command {
             } catch (Exception e) {
                 LOGGER.error("Critical error in AI processing", e);
             }
+        }, executor)
+        .orTimeout(REQUEST_TIMEOUT, TimeUnit.SECONDS)
+        .exceptionally(ex -> {
+            LOGGER.error("AI request timeout or error", ex);
+            sendMessage("§c[AI] Request timeout or error: " + ex.getMessage());
+            return null;
         });
     }
 
-    /**
-     * Test AI connection
-     */
     private static void testAiConnection() {
         CompletableFuture.runAsync(() -> {
             try {
@@ -171,12 +177,15 @@ public class AICommand implements Command {
                 LOGGER.error("Error testing AI connection", e);
                 sendMessage("§c[AI] Connection test error: " + e.getMessage());
             }
+        }, executor)
+        .orTimeout(10, TimeUnit.SECONDS)
+        .exceptionally(ex -> {
+            LOGGER.error("AI connection test timeout", ex);
+            sendMessage("§c[AI] Connection test timeout");
+            return null;
         });
     }
-    
-    /**
-     * Отправляет сообщение в чат
-     */
+
     private static void sendMessage(String message) {
         try {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -195,4 +204,4 @@ public class AICommand implements Command {
             LOGGER.error("Critical error sending message", e);
         }
     }
-} 
+}

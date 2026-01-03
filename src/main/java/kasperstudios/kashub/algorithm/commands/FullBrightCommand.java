@@ -28,7 +28,7 @@ public class FullBrightCommand implements Command {
     public String getParameters() {
         return "[on|off|toggle] - Enable, disable, or toggle fullbright";
     }
-    
+
     @Override
     public String getCategory() {
         return "Visual";
@@ -63,7 +63,7 @@ public class FullBrightCommand implements Command {
     public void execute(String[] args) {
         ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
         MinecraftClient client = MinecraftClient.getInstance();
-        
+
         if (client.options == null) {
             ScriptLogger.getInstance().error("FullBright: Options not available");
             return;
@@ -91,17 +91,16 @@ public class FullBrightCommand implements Command {
                     }
                 }
             }
-            
-            // Update variable and send feedback
+
             interpreter.setVariable("fullbright", String.valueOf(isEnabled));
-            
+
             String status = isEnabled ? "§aON" : "§cOFF";
             client.execute(() -> {
                 if (client.player != null) {
                     client.player.sendMessage(Text.literal("§7[FullBright] " + status), false);
                 }
             });
-            
+
         } catch (Exception e) {
             ScriptLogger.getInstance().error("FullBright error: " + e.getMessage());
             client.execute(() -> {
@@ -115,15 +114,13 @@ public class FullBrightCommand implements Command {
     private void enableFullbright(MinecraftClient client) {
         if (!isEnabled) {
             client.execute(() -> {
-                // Store original gamma only once
+
                 if (!hasStoredOriginal) {
                     originalGamma = client.options.getGamma().getValue();
                     hasStoredOriginal = true;
                     ScriptLogger.getInstance().info("FullBright: Stored original gamma: " + originalGamma);
                 }
-                
-                // Use reflection to bypass SimpleOption validation
-                // Minecraft's validator rejects values > 1.0, but we need higher for fullbright
+
                 setGammaDirectly(client.options.getGamma(), 100.0);
                 ScriptLogger.getInstance().info("FullBright enabled, gamma set to: " + client.options.getGamma().getValue());
             });
@@ -134,7 +131,7 @@ public class FullBrightCommand implements Command {
     private void disableFullbright(MinecraftClient client) {
         if (isEnabled) {
             client.execute(() -> {
-                // Restore original gamma
+
                 double gammaToRestore = hasStoredOriginal ? originalGamma : 1.0;
                 client.options.getGamma().setValue(gammaToRestore);
                 ScriptLogger.getInstance().info("FullBright disabled, restored gamma to: " + gammaToRestore);
@@ -142,10 +139,7 @@ public class FullBrightCommand implements Command {
             isEnabled = false;
         }
     }
-    
-    /**
-     * Force disable (for cleanup on script stop)
-     */
+
     public static void forceDisable() {
         if (isEnabled) {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -159,21 +153,17 @@ public class FullBrightCommand implements Command {
             }
         }
     }
-    
-    /**
-     * Set gamma value directly using reflection to bypass SimpleOption validation
-     * This is necessary because Minecraft's validator rejects values > 1.0
-     */
+
     private void setGammaDirectly(SimpleOption<Double> gammaOption, double value) {
         try {
-            // Access the private 'value' field in SimpleOption
+
             Field valueField = SimpleOption.class.getDeclaredField("value");
             valueField.setAccessible(true);
             valueField.set(gammaOption, value);
             ScriptLogger.getInstance().info("Gamma set directly via reflection to: " + value);
         } catch (NoSuchFieldException e) {
             ScriptLogger.getInstance().error("Failed to find 'value' field in SimpleOption: " + e.getMessage());
-            // Fallback to normal setValue (will be clamped)
+
             gammaOption.setValue(1.0);
         } catch (IllegalAccessException e) {
             ScriptLogger.getInstance().error("Failed to access 'value' field in SimpleOption: " + e.getMessage());

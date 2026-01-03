@@ -26,12 +26,12 @@ public class JumpCommand implements Command {
     public String getParameters() {
         return "[count] - number of jumps (default: 1)";
     }
-    
+
     @Override
     public String getCategory() {
         return "Movement";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Makes the player jump one or more times.\n\n" +
@@ -56,7 +56,7 @@ public class JumpCommand implements Command {
         ClientPlayerEntity player = client.player;
 
         if (player != null) {
-            int jumps = 1; // По умолчанию 1 прыжок
+            int jumps = 1;
 
             if (args.length > 0) {
                 try {
@@ -66,11 +66,8 @@ public class JumpCommand implements Command {
                 }
             }
 
-            // В синхронной версии просто выполняем один прыжок
             player.jump();
 
-            // Примечание: синхронная версия не поддерживает многократные прыжки,
-            // это обрабатывается только в асинхронной версии
         }
     }
 
@@ -81,7 +78,7 @@ public class JumpCommand implements Command {
         ClientPlayerEntity player = client.player;
 
         if (player != null) {
-            int jumps = 1; // По умолчанию 1 прыжок
+            int jumps = 1;
 
             if (args.length > 0) {
                 try {
@@ -91,14 +88,12 @@ public class JumpCommand implements Command {
                 }
             }
 
-            // Создаем счетчик для отслеживания оставшихся прыжков
             final int[] remainingJumps = { jumps };
 
-            // Планируем выполнение прыжков с интервалом
             Runnable jumpTask = new Runnable() {
                 @Override
                 public void run() {
-                    // Используем runTask для выполнения прыжка в основном потоке игры
+
                     MinecraftClient.getInstance().execute(() -> {
                         if (MinecraftClient.getInstance().player != null) {
                             MinecraftClient.getInstance().player.jump();
@@ -108,19 +103,18 @@ public class JumpCommand implements Command {
                     remainingJumps[0]--;
 
                     if (remainingJumps[0] > 0) {
-                        // Планируем следующий прыжок
+
                         scheduler.schedule(this, 200, TimeUnit.MILLISECONDS);
                     } else {
-                        // Завершаем CompletableFuture, когда все прыжки выполнены
+
                         future.complete(null);
                     }
                 }
             };
 
-            // Запускаем первый прыжок
             scheduler.schedule(jumpTask, 0, TimeUnit.MILLISECONDS);
         } else {
-            future.complete(null); // Завершаем сразу, если игрока нет
+            future.complete(null);
         }
 
         return future;

@@ -1,5 +1,6 @@
 package kasperstudios.kashub.client;
 
+import kasperstudios.kashub.util.ScriptLogger;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
@@ -14,36 +15,32 @@ public class KashubKeybinds {
   public static void register() {
     if (!initialized) {
       try {
-        // Создаем клавиши без регистрации через Fabric API
+
         openMenuKey = new KeyBinding(
-            "key.kashub.openmenu", // ID кнопки
-            InputUtil.Type.KEYSYM, // Тип ввода
-            GLFW.GLFW_KEY_K, // Клавиша K по умолчанию
-            "category.kashub.main" // Категория в настройках
+            "key.kashub.openmenu",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            "category.kashub.main"
         );
 
         stopScriptsKey = new KeyBinding(
-            "key.kashub.stopscripts", // ID кнопки
-            InputUtil.Type.KEYSYM, // Тип ввода
-            GLFW.GLFW_KEY_Z, // Клавиша Z по умолчанию
-            "category.kashub.main" // Категория в настройках
+            "key.kashub.stopscripts",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_Z,
+            "category.kashub.main"
         );
 
-        // Не используем рефлексию, так как она может вызывать ошибки
-        // Просто создаем клавиши, но не регистрируем их в системе Minecraft
-        // Мы будем проверять их состояние вручную
-
         initialized = true;
-        System.out.println("Keybinds registered successfully");
+        ScriptLogger.getInstance().info("Keybinds registered successfully");
       } catch (Exception e) {
-        System.err.println("Failed to register keybindings: " + e.getMessage());
+        ScriptLogger.getInstance().error("Failed to register keybindings: " + e.getMessage());
         e.printStackTrace();
       }
     }
   }
 
   public static void tick() {
-    // Проверяем нажатие клавиш
+
     if (stopScriptsKey != null && isKeyPressed(stopScriptsKey)) {
       RunToCommand.stopRunning();
       if (MinecraftClient.getInstance().player != null) {
@@ -51,14 +48,13 @@ public class KashubKeybinds {
       }
     }
   }
-  
-  // Метод для проверки нажатия клавиши без использования Fabric API
+
   public static boolean isKeyPressed(KeyBinding key) {
     if (key == null) return false;
-    
+
     try {
-      // Проверяем, нажата ли клавиша в данный момент
-      return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 
+
+      return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(),
           ((InputUtil.Key)key.getDefaultKey()).getCode());
     } catch (Exception e) {
       return false;

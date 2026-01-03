@@ -7,10 +7,6 @@ import kasperstudios.kashub.util.ScriptLogger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
-/**
- * Command for displaying messages in chat
- * Simplified: outputs to chat only (no console panel)
- */
 public class PrintCommand implements Command {
     @Override
     public String getName() {
@@ -31,7 +27,7 @@ public class PrintCommand implements Command {
     public String getCategory() {
         return "Output";
     }
-    
+
     @Override
     public String getDetailedHelp() {
         return "Prints message to local chat (only you see it).\n\n" +
@@ -45,21 +41,19 @@ public class PrintCommand implements Command {
 
     @Override
     public void execute(String[] args) throws Exception {
-        // Handle empty args gracefully - just print empty line
+
         String message = args.length > 0 ? String.join(" ", args) : "";
-        
-        // Safe execution on Minecraft main thread - send to player chat only
+
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> {
             if (client.player != null) {
-                // Send as local message with purple prefix (not to server chat)
+
                 client.player.sendMessage(Text.literal("§5[KH] §f" + message), false);
             }
         });
-        
-        // Broadcast to VSCode via WebSocket
+
         KashubAPIServer.broadcast(new ScriptOutputEvent(
-            0, // TODO: get current task ID
+            0,
             message,
             "info",
             System.currentTimeMillis()
