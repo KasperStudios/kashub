@@ -2,7 +2,7 @@
 
 All notable changes to Kashub will be documented in this file.
 
-## [v0.8.0-beta] - In Progress
+## [v0.8.0-beta] - 2026-1-3
 
 ### 🔥 Sprint 1: Debug System Foundation
 
@@ -290,34 +290,6 @@ All notable changes to Kashub will be documented in this file.
   - Language requirements (English for all user-facing text)
   - Common pitfalls (Registry API, Chat Mixin changes)
   - Code style and best practices
-
----
-
-## [v0.8.0-beta] - 2025-12-28
-
-### 🐛 Bug Fixes
-
-#### Critical Fixes
-- **Removed debug output** - Cleaned up `System.out.println` from production code
-  - Fixed `ScriptInterpreter.processVariables()` debug logging
-  - Replaced `System.out` with `ScriptLogger` in `AttackCommand`
-  - Replaced `System.out` with `ScriptLogger` in `KashubKeybinds`
-
-#### ExpressionParser Improvements
-- **Added ++ and -- operators** - Support for increment/decrement operators
-  - Prefix: `++i`, `--i`
-  - Postfix: `i++`, `i--`
-  - Works in expressions and loops
-- **Removed unused imports** - Cleaned up `Matcher` and `Pattern` imports
-
-#### Code Quality
-- Verified race condition fixes in `ScriptTask.processNextCommand()`
-- Verified memory leak fixes in `ScriptTask.stop()`
-- Improved code readability and maintainability
-
-### 📝 Notes
-- No breaking changes - all existing scripts work without modifications
-- Compound assignment operators (`+=`, `-=`, etc.) planned for v0.8.1
 
 ---
 
