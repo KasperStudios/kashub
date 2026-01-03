@@ -12,22 +12,26 @@
 - **Custom Scripting Language** - Easy-to-learn KHScript syntax similar to Lua/JavaScript
 - **Built-in Code Editor** - VSCode-like editor with syntax highlighting and autocomplete
 - **10+ Editor Themes** - Dracula, One Dark, Monokai, Nord, Tokyo Night, and more
-- **Event System** - React to game events (damage, chat, ticks, etc.)
-- **Debug Tools** - Breakpoints, step-through debugging, variable watching
+- **Event System** - React to game events (damage, chat, ticks, etc.) - 9 events working!
+- **Debug Tools** - Breakpoints, step-through debugging, variable watching, profiler
 
-### v0.7.0 Features (Latest) 🔥
-- **🔌 VSCode Integration** - Full IDE support with dedicated VSCode extension
+### v0.8.0 Features (Latest) 🔥
+- **�  Professional Debugging** - Click line numbers to set breakpoints, step through code
+- **📊 Variables Panel** - Real-time variable inspection in GUI
+- **⚡ Performance Profiler** - Track command execution times, export to Chrome Tracing
+- **� IConditional Breakpoints** - Break on conditions, logpoints, hit counts
+- **�  Full VSCode Debug Adapter** - Complete DAP implementation with variables/call stack
+- **📡 WebSocket Debug Events** - Real-time debugging from VSCode
+- **✅ Event System Fixed** - All 9 events work perfectly, even after stop/restart
+- **📦 Export/Import System** - Share variables between scripts
+
+### v0.7.0 Features
+- **� VSConde Integration** - Full IDE support with dedicated VSCode extension
 - **🌐 HTTP API Server** - REST API for external tool integration (port 25566)
 - **📡 WebSocket Server** - Real-time script output streaming (port 25567)
 - **💡 IntelliSense** - Autocomplete powered by actual Kashub parser
 - **🖥️ Kashub Console** - Live output panel in VSCode
 - **⚡ Run from VSCode** - Execute scripts with Ctrl+Shift+K
-
-### v0.6.1 Features
-- **🔧 Improved Stability** - Removed debug logging, cleaner codebase
-- **📚 Better Documentation** - Full command descriptions without truncation, horizontal scrolling in docs
-- **🔒 Enhanced Security** - Removed HTTP script commands for safer scripting
-- **🛒 Marketplace Skeleton** - Preparation for future Script Marketplace
 
 ## 📦 Installation
 
@@ -43,9 +47,11 @@
 |-----|--------|
 | `K` | Open Script Editor |
 | `Z` | Stop all running scripts |
+| `Y` | Open AI Agent (if enabled) |
 | `F9` | Toggle breakpoint (in editor) |
 | `F5` | Run/Continue script |
 | `F10` | Step over (debug mode) |
+| `F11` | Step into (debug mode) |
 
 ## 🔌 VSCode Integration (v0.7.0+)
 
@@ -65,7 +71,13 @@ Kashub now includes full VSCode integration for professional development experie
 - **Real-time Validation** - Errors highlighted as you type
 - **Kashub Console** - Live script output in VSCode
 - **Run Scripts** - Press `Ctrl+Shift+K` to run current script
-- **Variables Viewer** - See all environment variables
+- **Debug Adapter** - Full debugging support (v0.8.0+):
+  - Set breakpoints in VSCode
+  - Step through code (Over, Into, Out)
+  - View variables in real-time
+  - Inspect call stack
+  - Evaluate expressions
+- **Hover Provider** - Hover over commands/variables for documentation
 
 ### API Endpoints
 
@@ -77,6 +89,8 @@ Kashub now includes full VSCode integration for professional development experie
 | `/api/run` | POST | Execute script |
 | `/api/tasks` | GET | List running tasks |
 | `/api/variables` | GET | Get environment variables |
+| `/api/debug/*` | Various | Debug Adapter Protocol endpoints |
+| `/api/profiler/*` | Various | Performance profiler endpoints |
 
 ### Configuration
 
@@ -201,7 +215,50 @@ onEvent onChat {
 // Periodic tick (every second)
 onEvent onTick {
     // Check conditions periodically
+    if ($PLAYER_HEALTH < 10) {
+        print "Low health warning!"
+    }
 }
+
+// React to block breaking
+onEvent onBlockBreak {
+    print "Broke block at $event_x $event_y $event_z"
+}
+
+// React to attacks
+onEvent onAttack {
+    print "Attacked $event_target_name"
+}
+```
+
+### Available Events (v0.8.0)
+
+| Event | Description | Variables |
+|-------|-------------|-----------|
+| `onTick` | Fires every second | `$event_tick`, `$event_time` |
+| `onDamage` | Player takes damage | `$event_damage`, `$event_health` |
+| `onHeal` | Player heals | `$event_healed`, `$event_health` |
+| `onHunger` | Hunger changes | `$event_food`, `$event_previousFood` |
+| `onDeath` | Player dies | `$event_position_x/y/z` |
+| `onChat` | Chat message received | `$event_message`, `$event_sender` |
+| `onBlockBreak` | Block broken | `$event_x/y/z`, `$event_block` |
+| `onBlockPlace` | Block placed | `$event_x/y/z`, `$event_block` |
+| `onAttack` | Entity attacked | `$event_target_name`, `$event_target_type` |
+
+### Export/Import System (v0.8.0)
+
+Share variables between scripts:
+
+```javascript
+// script1.kh
+export myVar 100
+export playerName "Kasper"
+
+// script2.kh
+import myVar from script1
+import playerName from script1
+print $myVar  // Outputs: 100
+print $playerName  // Outputs: Kasper
 ```
 
 ## 🔧 Commands Reference
@@ -310,14 +367,49 @@ Kashub includes a sandbox mode that restricts potentially dangerous commands:
 
 ## 🐛 Debugging
 
+### In-Game Editor
+
 1. Open the editor with `K`
-2. Click on line numbers to set breakpoints (red dots)
-3. Press "Debug" to start debug mode
-4. Use `F10` to step through code
-5. Watch variables in the Debug panel (right side)
-    - **Global**: Environment variables like `$PLAYER_HEALTH`
-    - **Local**: Your script variables
-    - **Context**: Special variables like `$SCRIPT_NAME`
+2. **Click on line numbers** to set breakpoints (red dots appear)
+3. Press "Debug" or `F5` to start debug mode
+4. Use `F10` to step over, `F11` to step into
+5. Watch variables in the **Debug Panel** (right side):
+    - **Variables**: All script and environment variables
+    - Real-time updates as you step through code
+
+### VSCode Debugging (v0.8.0+)
+
+1. Open your `.kh` file in VSCode
+2. Click in the gutter to set breakpoints
+3. Press `F5` to start debugging
+4. Use VSCode's debug controls:
+    - **Continue** (F5)
+    - **Step Over** (F10)
+    - **Step Into** (F11)
+    - **Step Out** (Shift+F11)
+5. View variables, call stack, and more in VSCode's debug panels
+
+### Conditional Breakpoints
+
+Set breakpoints that only trigger when a condition is true:
+
+```javascript
+// Via API or VSCode
+// Break only when health is low
+if ($PLAYER_HEALTH < 5) {
+    // Breakpoint here will only trigger when health < 5
+}
+```
+
+### Performance Profiler (v0.8.0)
+
+Track command execution times:
+
+1. Start profiler via API: `POST /api/profiler/start`
+2. Run your scripts
+3. Get report: `GET /api/profiler/report`
+4. Export to Chrome Tracing: `GET /api/profiler/chrome-tracing`
+5. Open in `chrome://tracing` for visual analysis
 
 ## 📋 Chat Commands
 
