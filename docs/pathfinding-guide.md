@@ -83,7 +83,7 @@ Pathfinding can navigate through water:
 player.moveTo(coordinatesAcrossWater)
 ```
 
-### Climbing
+### Climbing (IN DEVELOPING)
 
 Supports ladders, vines, and scaffolding:
 
@@ -300,23 +300,57 @@ player.moveTo(x, y, z)
 
 ## API Reference
 
-### player.moveTo(x, y, z, [radius])
-
-Navigate to coordinates using pathfinding.
+### player.moveTo(x, y, z)
+Moves the player to exact coordinates using A* pathfinding.
 
 **Parameters:**
-- `x` (number): Target X coordinate
-- `y` (number): Target Y coordinate
-- `z` (number): Target Z coordinate  
-- `radius` (number, optional): Acceptable distance from target (default: 1.0)
-
-**Returns:** `true` if pathfinding started, `false` otherwise
+- `x` - Target X coordinate (number)
+- `y` - Target Y coordinate (number)  
+- `z` - Target Z coordinate (number)
 
 **Example:**
-```javascript
-player.moveTo(100, 64, 200)      // Navigate to exact coords
-player.moveTo(100, 64, 200, 2.0) // Accept 2-block radius
+```khscript
+let pos = player.getPos()
+player.moveTo(pos.x + 50, pos.y, pos.z + 50)
 ```
+
+### player.moveTo(x, y, z, radius)
+Moves the player to within a radius of target coordinates.
+
+**Parameters:**
+- `x`, `y`, `z` - Target coordinates
+- `radius` - Acceptable distance from target (default: 1.0)
+
+**Example:**
+```khscript
+// Get within 5 blocks of target
+player.moveTo(100, 64, 200, 5)
+```
+
+## Known Limitations (v0.9.0-beta)
+
+### Vertical Movement ⚠️
+Pathfinding cannot navigate upward (even 1 block).
+
+**Current behavior:**
+- ✅ Same Y-level: Works perfectly
+- ✅ Downward (falling): Works
+- ❌ Upward (climbing/jumping): Does NOT work
+
+**Workaround:**
+Use direct movement for upward navigation:
+```khscript
+// For now, can't pathfind upward
+// Use direct movement instead (if no obstacles)
+player.moveTo(x, y + 5, z, 0.5)  // May fail if blocked
+```
+
+**Status:** Upward pathfinding planned for v0.9.1+
+
+### Recommended Usage
+✅ **Best for:** Horizontal navigation, downward paths, flat terrain  
+⚠️ **Limited:** Complex terrain with height differences  
+❌ **Avoid:** Upward navigation (use stairs/ladders manually)
 
 ### player.stopMove()
 
