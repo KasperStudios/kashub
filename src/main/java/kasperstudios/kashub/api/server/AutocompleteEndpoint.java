@@ -3,10 +3,9 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.algorithm.Command;
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.EnvironmentVariable;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
+import kasperstudios.kashub.core.Command;
+import kasperstudios.kashub.core.Metadata;
+import kasperstudios.kashub.core.Registry;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -14,9 +13,8 @@ import java.util.stream.Collectors;
 public class AutocompleteEndpoint {
 
     private static final List<String> KEYWORDS = Arrays.asList(
-        "if", "else", "while", "for", "loop", "break", "continue", "return",
-        "let", "const", "fn", "function", "true", "false"
-    );
+            "if", "else", "while", "for", "loop", "break", "continue", "return",
+            "let", "const", "fn", "function", "true", "false");
 
     public static void handle(HttpExchange exchange, Gson gson) {
         try {
@@ -48,29 +46,28 @@ public class AutocompleteEndpoint {
 
         if (prefix.startsWith("$")) {
             String varPrefix = prefix.substring(1).toUpperCase();
-            for (EnvironmentVariable envVar : ScriptInterpreter.getInstance().getAllEnvironmentVariables()) {
+            for (kasperstudios.kashub.core.Environment.Variable envVar : kasperstudios.kashub.core.Environment
+                    .getInstance().getVariableDefinitions().values()) {
                 if (envVar.getName().startsWith(varPrefix)) {
                     items.add(new CompletionItem(
-                        "$" + envVar.getName(),
-                        "Variable",
-                        envVar.getDescription(),
-                        "Environment variable: " + envVar.getValue(),
-                        "$" + envVar.getName()
-                    ));
+                            "$" + envVar.getName(),
+                            "Variable",
+                            envVar.getDescription(),
+                            "Environment variable: " + envVar.getValue(),
+                            "$" + envVar.getName()));
                 }
             }
             return items;
         }
 
-        for (Command cmd : CommandRegistry.getAllCommands()) {
+        for (Command cmd : Registry.getAllCommands()) {
             if (cmd.getName().toLowerCase().startsWith(lowerPrefix)) {
                 items.add(new CompletionItem(
-                    cmd.getName(),
-                    "Function",
-                    cmd.getDescription(),
-                    formatCommandHelp(cmd),
-                    cmd.getName() + " "
-                ));
+                        cmd.getName(),
+                        "Function",
+                        cmd.getMetadata().description,
+                        formatCommandHelp(cmd),
+                        cmd.getName() + " "));
             }
         }
 
@@ -112,12 +109,11 @@ public class AutocompleteEndpoint {
                 }
 
                 items.add(new CompletionItem(
-                    keyword,
-                    "Keyword",
-                    detail,
-                    "",
-                    insertText
-                ));
+                        keyword,
+                        "Keyword",
+                        detail,
+                        "",
+                        insertText));
             }
         }
 
@@ -125,20 +121,21 @@ public class AutocompleteEndpoint {
         for (String varName : userVars) {
             if (varName.toLowerCase().startsWith(lowerPrefix)) {
                 items.add(new CompletionItem(
-                    varName,
-                    "Variable",
-                    "User variable",
-                    "",
-                    varName
-                ));
+                        varName,
+                        "Variable",
+                        "User variable",
+                        "",
+                        varName));
             }
         }
 
         items.sort((a, b) -> {
             boolean aExact = a.label.toLowerCase().equals(lowerPrefix);
             boolean bExact = b.label.toLowerCase().equals(lowerPrefix);
-            if (aExact && !bExact) return -1;
-            if (!aExact && bExact) return 1;
+            if (aExact && !bExact)
+                return -1;
+            if (!aExact && bExact)
+                return 1;
             return a.label.compareToIgnoreCase(b.label);
         });
 
@@ -168,18 +165,20 @@ public class AutocompleteEndpoint {
     }
 
     private static String formatCommandHelp(Command cmd) {
+        Metadata meta = cmd.getMetadata();
         StringBuilder sb = new StringBuilder();
-        sb.append("**").append(cmd.getName()).append("**\n\n");
-        sb.append(cmd.getDescription()).append("\n\n");
+        sb.append("**").append(meta.name).append("**\n\n");
+        sb.append(meta.description).append("\n\n");
 
-        String params = cmd.getParameters();
-        if (params != null && !params.isEmpty()) {
-            sb.append("**Parameters:** `").append(params).append("`\n\n");
+        if (meta.syntax != null && !meta.syntax.isEmpty()) {
+            sb.append("**Syntax:** `").append(meta.syntax).append("`\n\n");
         }
 
-        String detailedHelp = cmd.getDetailedHelp();
-        if (detailedHelp != null && !detailedHelp.isEmpty()) {
-            sb.append(detailedHelp);
+        if (meta.examples != null && !meta.examples.isEmpty()) {
+            sb.append("**Examples:**\n");
+            for (String example : meta.examples) {
+                sb.append("- `").append(example).append("`\n");
+            }
         }
 
         return sb.toString();

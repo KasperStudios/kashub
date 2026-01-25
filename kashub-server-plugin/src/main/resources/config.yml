@@ -1,0 +1,30 @@
+# KasHub Server Configuration
+enabled: true
+
+# Mode: FULL, RESTRICTED, DISABLED
+mode: FULL
+
+# Allow players to open the code editor?
+allowEditor: true
+
+# Allow players to connect with external editors (VS Code)?
+allowExternalEditor: false
+
+# Allow players to use Cheat Mode features?
+allowCheatMode: false
+
+# List of disabled client-side commands (without prefix)
+disabledCommands:
+  - "cheat"
+  - "hack"
+
+# List of allowed namespaces for mod features
+allowedNamespaces:
+  - "kashub"
+
+# Log blocked command attempts to console?
+logBlockedCommands: true
+
+messages:
+  blocked: "KasHub: This command is blocked by the server."
+  disabled: "KasHub is disabled on this server."

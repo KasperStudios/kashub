@@ -1,0 +1,28 @@
+// Test fullbright functionality
+print "=== Fullbright Test ==="
+
+// Check current state
+let isFull = player.getFullbright()
+print "Current fullbright: " + isFull
+
+// Enable fullbright
+print "Enabling fullbright..."
+player.setFullbright(true)
+wait 2000
+
+// Check again
+isFull = player.getFullbright()
+print "Fullbright now: " + isFull
+
+wait 3000
+
+// Disable fullbright
+print "Disabling fullbright..."
+player.setFullbright(false)
+wait 2000
+
+// Final check
+isFull = player.getFullbright()
+print "Fullbright now: " + isFull
+
+print "=== Test Complete ==="

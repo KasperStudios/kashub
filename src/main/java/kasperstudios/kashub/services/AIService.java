@@ -5,9 +5,11 @@ import com.google.gson.JsonObject;
 import okhttp3.*;
 import java.io.IOException;
 import java.util.Map;
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.Command;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.Command;
+import kasperstudios.kashub.core.Environment;
 
 public class AIService {
     private static AIService instance;
@@ -31,22 +33,24 @@ public class AIService {
 
     private String buildCommandsList() {
         StringBuilder sb = new StringBuilder();
-        for (Command cmd : CommandRegistry.getCommands()) {
-            sb.append("- ").append(cmd.getName())
-              .append(" ").append(cmd.getParameters())
-              .append(" - ").append(cmd.getDescription())
-              .append("\n");
+        for (Command cmd : Registry.getAllCommands()) {
+            kasperstudios.kashub.core.Metadata meta = cmd.getMetadata();
+            sb.append("- ").append(meta.name)
+                    .append(" ").append(meta.syntax != null ? meta.syntax : "")
+                    .append(" - ").append(meta.description)
+                    .append("\n");
         }
         return sb.toString();
     }
 
     private String buildVariablesList() {
         StringBuilder sb = new StringBuilder();
-        ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-        for (Map.Entry<String, String> entry : interpreter.getContext().entrySet()) {
+        Map<String, String> variables = Environment.getInstance()
+                .getAllVariables();
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
             sb.append("- $").append(entry.getKey())
-              .append(" - ").append(entry.getValue())
-              .append("\n");
+                    .append(" - ").append(entry.getValue())
+                    .append("\n");
         }
         return sb.toString();
     }
@@ -88,20 +92,19 @@ public class AIService {
             messageObj.addProperty("role", "user");
             messageObj.addProperty("content", prompt.toString());
 
-            JsonObject[] messages = new JsonObject[]{messageObj};
+            JsonObject[] messages = new JsonObject[] { messageObj };
             requestBody.add("messages", gson.toJsonTree(messages));
             requestBody.addProperty("temperature", 0.7);
             requestBody.addProperty("max_tokens", 1000);
 
             Request request = new Request.Builder()
-                .url(GROQ_API_URL)
-                .addHeader("Authorization", "Bearer " + apiKey)
-                .addHeader("Content-Type", "application/json")
-                .post(RequestBody.create(
-                    MediaType.parse("application/json"),
-                    gson.toJson(requestBody)
-                ))
-                .build();
+                    .url(GROQ_API_URL)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("Content-Type", "application/json")
+                    .post(RequestBody.create(
+                            MediaType.parse("application/json"),
+                            gson.toJson(requestBody)))
+                    .build();
 
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
@@ -112,9 +115,9 @@ public class AIService {
                 JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
 
                 return jsonResponse.getAsJsonArray("choices")
-                    .get(0).getAsJsonObject()
-                    .getAsJsonObject("message")
-                    .get("content").getAsString();
+                        .get(0).getAsJsonObject()
+                        .getAsJsonObject("message")
+                        .get("content").getAsString();
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -18,6 +18,8 @@ public class FilePanel {
 
     private List<String> systemScripts = new ArrayList<>();
     private List<String> userScripts = new ArrayList<>();
+    private List<String> modpackScripts = new ArrayList<>();
+    private List<String> remoteScripts = new ArrayList<>();
     private List<String> filteredScripts = new ArrayList<>();
 
     private String searchQuery = "";
@@ -33,6 +35,8 @@ public class FilePanel {
     private static final int ITEM_HEIGHT = 26;
 
     private boolean showCreateDialog = false;
+    private boolean isCreatingModpackScript = false;
+    private boolean isCreatingRemoteScript = false;
     private String newFileName = "";
     private boolean createDialogFocused = false;
 
@@ -63,18 +67,53 @@ public class FilePanel {
             systemScripts = ScriptManager.getSystemScripts();
         }
         userScripts = ScriptManager.getUserScripts();
-        applyFilter();
+
+        // Load modpack scripts (locally stored server scripts) if player is operator
+        if (ScriptManager.isOperator()) {
+            modpackScripts = ScriptManager.getServerScripts();
+        } else {
+            modpackScripts = new ArrayList<>();
+        }
+
+        // Fetch remote scripts (from network) if player is operator
+        if (ScriptManager.isOperator()) {
+            this.applyFilter(); // Show local scripts immediately
+            kasperstudios.kashub.util.RemoteScriptManager.getInstance().fetchList(list -> {
+                this.remoteScripts = list != null ? list : new ArrayList<>();
+                this.applyFilter(); // Update with remote scripts when ready
+            });
+        } else {
+            this.remoteScripts = new ArrayList<>();
+            applyFilter();
+        }
     }
 
     private void applyFilter() {
         filteredScripts.clear();
         String query = searchQuery.toLowerCase();
 
+        // Remote scripts first
+        for (String script : remoteScripts) {
+            if (query.isEmpty() || script.toLowerCase().contains(query)) {
+                filteredScripts.add("[REMOTE] " + script);
+            }
+        }
+
+        // Modpack scripts second
+        for (String script : modpackScripts) {
+            if (query.isEmpty() || script.toLowerCase().contains(query)) {
+                filteredScripts.add("[MODPACK] " + script);
+            }
+        }
+
+        // Then system scripts
         for (String script : systemScripts) {
             if (query.isEmpty() || script.toLowerCase().contains(query)) {
                 filteredScripts.add("[SYS] " + script);
             }
         }
+
+        // Then user scripts
         for (String script : userScripts) {
             if (query.isEmpty() || script.toLowerCase().contains(query)) {
                 filteredScripts.add(script);
@@ -150,6 +189,30 @@ public class FilePanel {
 
         int currentY = listY - scrollY;
 
+        // Remote scripts header
+        if (!remoteScripts.isEmpty()
+                && (searchQuery.isEmpty() || filteredScripts.stream().anyMatch(s -> s.startsWith("[REMOTE]")))) {
+            if (currentY >= listY - HEADER_HEIGHT && currentY < listY + listHeight) {
+                context.fill(x, Math.max(listY, currentY), x + width,
+                        Math.min(listY + listHeight, currentY + HEADER_HEIGHT),
+                        adjustBrightness(theme.sidebarColor, 8));
+                context.drawText(textRenderer, "🌐 REMOTE", x + 10, currentY + 7, theme.accentColor, true);
+            }
+            currentY += HEADER_HEIGHT;
+        }
+
+        // Modpack scripts header
+        if (!modpackScripts.isEmpty()
+                && (searchQuery.isEmpty() || filteredScripts.stream().anyMatch(s -> s.startsWith("[MODPACK]")))) {
+            if (currentY >= listY - HEADER_HEIGHT && currentY < listY + listHeight) {
+                context.fill(x, Math.max(listY, currentY), x + width,
+                        Math.min(listY + listHeight, currentY + HEADER_HEIGHT),
+                        adjustBrightness(theme.sidebarColor, 8));
+                context.drawText(textRenderer, "📦 MODPACK", x + 10, currentY + 7, theme.accentColor, true);
+            }
+            currentY += HEADER_HEIGHT;
+        }
+
         if (!systemScripts.isEmpty()
                 && (searchQuery.isEmpty() || filteredScripts.stream().anyMatch(s -> s.startsWith("[SYS]")))) {
             if (currentY >= listY - HEADER_HEIGHT && currentY < listY + listHeight) {
@@ -164,17 +227,34 @@ public class FilePanel {
         int index = 0;
         for (String script : filteredScripts) {
             if (currentY >= listY - ITEM_HEIGHT && currentY < listY + listHeight) {
+                boolean isRemote = script.startsWith("[REMOTE] ");
+                boolean isModpack = script.startsWith("[MODPACK] ");
                 boolean isSystem = script.startsWith("[SYS] ");
-                String displayName = isSystem ? script.substring(6) : script;
-                String actualName = isSystem ? displayName : script;
 
-                if (!isSystem && index > 0 && filteredScripts.get(index - 1).startsWith("[SYS]")) {
+                String displayName;
+                if (isRemote)
+                    displayName = script.substring(9);
+                else if (isModpack)
+                    displayName = script.substring(10);
+                else if (isSystem)
+                    displayName = script.substring(6);
+                else
+                    displayName = script;
 
-                    context.fill(x, Math.max(listY, currentY), x + width,
-                            Math.min(listY + listHeight, currentY + HEADER_HEIGHT),
-                            adjustBrightness(theme.sidebarColor, 8));
-                    context.drawText(textRenderer, "📂 USER SCRIPTS", x + 10, currentY + 7, theme.accentColor, true);
-                    currentY += HEADER_HEIGHT;
+                String actualName = script;
+
+                // Add USER SCRIPTS header when transitioning from system (or last active
+                // category) to user
+                if (!isSystem && !isRemote && !isModpack && index > 0) {
+                    String prev = filteredScripts.get(index - 1);
+                    if (prev.startsWith("[SYS]") || prev.startsWith("[MODPACK]") || prev.startsWith("[REMOTE]")) {
+                        context.fill(x, Math.max(listY, currentY), x + width,
+                                Math.min(listY + listHeight, currentY + HEADER_HEIGHT),
+                                adjustBrightness(theme.sidebarColor, 8));
+                        context.drawText(textRenderer, "📂 USER SCRIPTS", x + 10, currentY + 7, theme.accentColor,
+                                true);
+                        currentY += HEADER_HEIGHT;
+                    }
                 }
 
                 if (mouseX >= x && mouseX < x + width && mouseY >= currentY && mouseY < currentY + ITEM_HEIGHT
@@ -194,8 +274,9 @@ public class FilePanel {
                 }
 
                 boolean isInFolder = displayName.contains("/");
-                String icon = isSystem ? "📜" : (isInFolder ? "📁" : "📄");
-                context.drawText(textRenderer, icon, x + 12, currentY + 8, theme.textDimColor, false);
+                String icon = isRemote ? "🌐" : (isModpack ? "📦" : (isSystem ? "📜" : (isInFolder ? "📁" : "📄")));
+                int iconColor = isRemote ? theme.accentColor : (isModpack ? theme.variableColor : theme.textDimColor);
+                context.drawText(textRenderer, icon, x + 12, currentY + 8, iconColor, false);
 
                 String name = displayName;
                 if (isInFolder) {
@@ -235,16 +316,62 @@ public class FilePanel {
 
     private void renderCreateButton(DrawContext context, int mouseX, int mouseY) {
         int btnY = y + height - CREATE_BUTTON_HEIGHT;
+        boolean isOperator = ScriptManager.isOperator();
 
-        boolean isHovered = mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= btnY + 4
-                && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4;
+        if (isOperator) {
+            // Three buttons for operators: User, Modpack, Remote
+            int btnWidth = (width - 20) / 3;
 
-        int bgColor = isHovered ? theme.accentColor : theme.buttonColor;
-        context.fill(x + 10, btnY + 4, x + width - 10, btnY + CREATE_BUTTON_HEIGHT - 4, bgColor);
+            // User
+            renderButton(context, x + 5, btnY + 4, btnWidth - 2, CREATE_BUTTON_HEIGHT - 4, "User",
+                    mouseX, mouseY, () -> {
+                        showCreateDialog = true;
+                        isCreatingModpackScript = false;
+                        isCreatingRemoteScript = false;
+                        createDialogFocused = true;
+                    });
 
-        String text = "+ New Script";
-        int textWidth = textRenderer.getWidth(text);
-        context.drawText(textRenderer, text, x + (width - textWidth) / 2, btnY + 12, 0xFFFFFFFF, true);
+            // Modpack
+            renderButton(context, x + 5 + btnWidth, btnY + 4, btnWidth - 2, CREATE_BUTTON_HEIGHT - 4, "Pack",
+                    mouseX, mouseY, () -> {
+                        showCreateDialog = true;
+                        isCreatingModpackScript = true;
+                        isCreatingRemoteScript = false;
+                        createDialogFocused = true;
+                    });
+
+            // Remote
+            renderButton(context, x + 5 + btnWidth * 2, btnY + 4, btnWidth - 2, CREATE_BUTTON_HEIGHT - 4, "Net",
+                    mouseX, mouseY, () -> {
+                        showCreateDialog = true;
+                        isCreatingModpackScript = false;
+                        isCreatingRemoteScript = true;
+                        createDialogFocused = true;
+                    });
+        } else {
+            // Single button
+            renderButton(context, x + 10, btnY + 4, width - 20, CREATE_BUTTON_HEIGHT - 4, "+ New Script",
+                    mouseX, mouseY, () -> {
+                        showCreateDialog = true;
+                        isCreatingModpackScript = false;
+                        isCreatingRemoteScript = false;
+                        createDialogFocused = true;
+                    });
+        }
+    }
+
+    // Helper for rendering small buttons
+    private void renderButton(DrawContext context, int bx, int by, int bw, int bh, String text, int mx, int my,
+            Runnable action) {
+        boolean hovered = mx >= bx && mx < bx + bw && my >= by && my < by + bh;
+        int color = hovered ? theme.accentColor : theme.buttonColor;
+        context.fill(bx, by, bx + bw, by + bh, color);
+        int tw = textRenderer.getWidth(text);
+        context.drawText(textRenderer, text, bx + (bw - tw) / 2, by + (bh - 8) / 2, 0xFFFFFFFF, true);
+
+        if (hovered && net.minecraft.client.gui.screen.Screen.hasShiftDown()) {
+            // Optional: add tooltips if needed
+        }
     }
 
     private void renderCreateDialog(DrawContext context, int mouseX, int mouseY) {
@@ -265,7 +392,9 @@ public class FilePanel {
         context.fill(dialogX + dialogWidth - 1, dialogY, dialogX + dialogWidth, dialogY + dialogHeight,
                 theme.accentColor);
 
-        context.drawText(textRenderer, "Create New Script", dialogX + 15, dialogY + 15, theme.accentColor, true);
+        String typeStr = isCreatingRemoteScript ? "Remote" : (isCreatingModpackScript ? "Modpack" : "User");
+        String title = "Create New " + typeStr + " Script";
+        context.drawText(textRenderer, title, dialogX + 15, dialogY + 15, theme.accentColor, true);
 
         int inputY = dialogY + 40;
         context.fill(dialogX + 15, inputY, dialogX + dialogWidth - 15, inputY + 24, theme.backgroundColor);
@@ -312,6 +441,8 @@ public class FilePanel {
 
             if (mouseX >= dialogX + 15 && mouseX < dialogX + 15 + btnWidth && mouseY >= btnY && mouseY < btnY + 24) {
                 showCreateDialog = false;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
                 newFileName = "";
                 return true;
             }
@@ -320,14 +451,36 @@ public class FilePanel {
                     && mouseY < btnY + 24) {
                 if (!newFileName.isEmpty()) {
                     String fileName = newFileName.endsWith(".kh") ? newFileName : newFileName + ".kh";
-                    ScriptManager.saveScript(fileName, "// New Kashub Script\n// Created: "
-                            + java.time.LocalDateTime.now() + "\n\nprint \"Hello, World!\"\n");
-                    refreshFiles();
-                    if (onFileSelect != null) {
-                        onFileSelect.accept(fileName);
+                    String content = "// New Kashub Script\n// Created: " + java.time.LocalDateTime.now()
+                            + "\n\nprint \"Hello, World!\"\n";
+
+                    if (isCreatingRemoteScript) {
+                        kasperstudios.kashub.util.RemoteScriptManager.getInstance().saveScript(fileName, content,
+                                response -> {
+                                    boolean success = response != null && !response.startsWith("Error");
+                                    if (success)
+                                        refreshFiles();
+                                });
+                        if (onFileSelect != null) {
+                            onFileSelect.accept("[REMOTE] " + fileName);
+                        }
+                    } else if (isCreatingModpackScript) {
+                        ScriptManager.saveServerScript(fileName, content);
+                        refreshFiles();
+                        if (onFileSelect != null) {
+                            onFileSelect.accept("[MODPACK] " + fileName);
+                        }
+                    } else {
+                        ScriptManager.saveScript(fileName, content);
+                        refreshFiles();
+                        if (onFileSelect != null) {
+                            onFileSelect.accept(fileName);
+                        }
                     }
                 }
                 showCreateDialog = false;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
                 newFileName = "";
                 return true;
             }
@@ -366,17 +519,90 @@ public class FilePanel {
         }
 
         int btnY = y + height - CREATE_BUTTON_HEIGHT;
-        if (mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= btnY + 4
-                && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4) {
-            showCreateDialog = true;
-            createDialogFocused = true;
-            return true;
+        boolean isOperator = ScriptManager.isOperator();
+
+        if (isOperator) {
+            int btnWidth = (width - 20) / 3;
+
+            // User
+            if (mouseX >= x + 5 && mouseX < x + 5 + btnWidth - 2 && mouseY >= btnY + 4
+                    && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4) {
+                showCreateDialog = true;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
+                createDialogFocused = true;
+                return true;
+            }
+
+            // Modpack
+            if (mouseX >= x + 5 + btnWidth && mouseX < x + 5 + btnWidth + btnWidth - 2 && mouseY >= btnY + 4
+                    && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4) {
+                showCreateDialog = true;
+                isCreatingModpackScript = true;
+                isCreatingRemoteScript = false;
+                createDialogFocused = true;
+                return true;
+            }
+
+            // Remote
+            if (mouseX >= x + 5 + btnWidth * 2 && mouseX < x + 5 + btnWidth * 2 + btnWidth - 2 && mouseY >= btnY + 4
+                    && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4) {
+                showCreateDialog = true;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = true;
+                createDialogFocused = true;
+                return true;
+            }
+        } else {
+            // Single button for non-operators
+            if (mouseX >= x + 10 && mouseX < x + width - 10 && mouseY >= btnY + 4
+                    && mouseY < btnY + CREATE_BUTTON_HEIGHT - 4) {
+                showCreateDialog = true;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
+                createDialogFocused = true;
+                return true;
+            }
         }
 
         if (hoveredIndex >= 0 && hoveredIndex < filteredScripts.size()) {
             String script = filteredScripts.get(hoveredIndex);
+
+            // Logic to determine actual name based on display list
+            String actualName;
+            if (script.startsWith("[REMOTE]"))
+                actualName = script;
+            else if (script.startsWith("[MODPACK]"))
+                actualName = script;
+            else if (script.startsWith("[SYS]"))
+                actualName = script.substring(6); // System scripts often used without prefix for logic but displayed
+                                                  // with one
+            else
+                actualName = script;
+
+            // Re-evaluating actual logic since renderFileList constructs visual list
+            // differently
+            // filteredScripts contains keys like "[REMOTE] foo.kh", "[MODPACK] bar.kh",
+            // "[SYS] baz.kh", "user.kh"
+            // FilePanel needs to emit these keys so ModernEditorScreen can parse them.
+
             boolean isSystem = script.startsWith("[SYS] ");
-            String actualName = isSystem ? script.substring(6) : script;
+            // ModernEditorScreen.loadScript expects:
+            // [SERVER] for modpack (which we renamed to MODPACK)
+            // [REMOTE] for remote
+            // nothing for user
+            // system scripts? loadScript handles them if check isSystemScript
+
+            // Wait, ModernEditorScreen.java loads system scripts if loadScript() detects
+            // it.
+            // But FilePanel currently passes `actualName` which strips [SYS].
+
+            if (isSystem) {
+                actualName = script.substring(6);
+            } else {
+                actualName = script;
+            }
+
             selectedFile = actualName;
 
             if (onFileSelect != null) {
@@ -419,19 +645,43 @@ public class FilePanel {
             if (keyCode == 257) {
                 if (!newFileName.isEmpty()) {
                     String fileName = newFileName.endsWith(".kh") ? newFileName : newFileName + ".kh";
-                    ScriptManager.saveScript(fileName, "// New Kashub Script\n\nprint \"Hello, World!\"\n");
-                    refreshFiles();
-                    if (onFileSelect != null) {
-                        onFileSelect.accept(fileName);
+                    String content = "// New Kashub Script\n\nprint \"Hello, World!\"\n";
+
+                    if (isCreatingRemoteScript) {
+                        kasperstudios.kashub.util.RemoteScriptManager.getInstance().saveScript(fileName, content,
+                                response -> {
+                                    boolean success = response != null && !response.startsWith("Error");
+                                    if (success)
+                                        refreshFiles();
+                                });
+                        if (onFileSelect != null) {
+                            onFileSelect.accept("[REMOTE] " + fileName);
+                        }
+                    } else if (isCreatingModpackScript) {
+                        ScriptManager.saveServerScript(fileName, content);
+                        refreshFiles();
+                        if (onFileSelect != null) {
+                            onFileSelect.accept("[MODPACK] " + fileName);
+                        }
+                    } else {
+                        ScriptManager.saveScript(fileName, content);
+                        refreshFiles();
+                        if (onFileSelect != null) {
+                            onFileSelect.accept(fileName);
+                        }
                     }
                 }
                 showCreateDialog = false;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
                 newFileName = "";
                 return true;
             }
 
             if (keyCode == 256) {
                 showCreateDialog = false;
+                isCreatingModpackScript = false;
+                isCreatingRemoteScript = false;
                 newFileName = "";
                 return true;
             }

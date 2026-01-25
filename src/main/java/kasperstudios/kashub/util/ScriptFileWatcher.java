@@ -2,9 +2,10 @@ package kasperstudios.kashub.util;
 
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.config.KashubConfig;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
-import kasperstudios.kashub.services.runtime.ScriptState;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.State;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -23,7 +24,7 @@ public class ScriptFileWatcher {
     private boolean running = false;
 
     private ScriptFileWatcher() {
-        this.scriptsDir = Paths.get("config", "kashub", "scripts");
+        this.scriptsDir = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("scripts");
     }
 
     public static ScriptFileWatcher getInstance() {
@@ -131,17 +132,17 @@ public class ScriptFileWatcher {
     }
 
     private synchronized void reloadScript(String scriptName, int oldTaskId) {
-        ScriptTaskManager manager = ScriptTaskManager.getInstance();
-        ScriptTask oldTask = manager.getTask(oldTaskId);
+        TaskManager manager = TaskManager.getInstance();
+        Task oldTask = manager.getTask(oldTaskId);
 
-        if (oldTask == null || oldTask.getState() == ScriptState.STOPPED) {
+        if (oldTask == null || oldTask.getState() == State.STOPPED) {
 
             unregisterScript(scriptName);
             return;
         }
 
-        ScriptState currentState = oldTask.getState();
-        if (currentState == ScriptState.RUNNING) {
+        State currentState = oldTask.getState();
+        if (currentState == State.RUNNING) {
             ScriptLogger.getInstance()
                     .debug("Hot-reload: Waiting for task " + oldTaskId + " to finish current command...");
         }
@@ -165,13 +166,13 @@ public class ScriptFileWatcher {
                 return;
             }
 
-            if (oldTask.getState() != ScriptState.STOPPED) {
+            if (oldTask.getState() != State.STOPPED) {
                 ScriptLogger.getInstance()
                         .warn("Hot-reload: Old task " + oldTaskId + " did not stop cleanly, forcing...");
                 oldTask.stop();
             }
 
-            ScriptTask newTask = manager.startScript(scriptName, newContent);
+            Task newTask = manager.startScript(scriptName, newContent);
             if (newTask != null) {
 
                 runningScriptIds.put(scriptName, newTask.getId());
@@ -183,7 +184,7 @@ public class ScriptFileWatcher {
         } catch (Exception e) {
             ScriptLogger.getInstance().error("Error reloading script " + scriptName + ": " + e.getMessage());
 
-            if (oldTask.getState() == ScriptState.RUNNING) {
+            if (oldTask.getState() == State.RUNNING) {
                 runningScriptIds.put(scriptName, oldTaskId);
             }
         }

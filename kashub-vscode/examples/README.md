@@ -1,46 +1,64 @@
-# KHScript Examples
+# Kashub VSCode Extension Examples
 
-This folder contains example scripts demonstrating various features of KHScript.
+This folder contains example scripts to demonstrate the features of the Kashub VSCode extension.
 
 ## Files
 
 ### syntax_showcase.kh
-Complete syntax highlighting showcase demonstrating:
-- Comments (single-line and multi-line)
-- Variables (user and environment)
-- Control flow (if/else, while, for, loop)
-- Operators (comparison, logical, arithmetic, assignment)
+Demonstrates all KHScript syntax features:
+- Variables and constants
+- Control flow (if/else, loops)
+- Functions
+- Events
+- Comments
 - All 44+ commands organized by category
-- Functions and function calls
-- Event handlers
-- Special keywords
-- Numbers and strings
-- Complex real-world example
 
-Open this file in VSCode to see the full syntax highlighting in action!
+### test_hover.kh
+Test file for hover documentation:
+- Hover over any method name to see documentation
+- Shows usage examples for all object methods
+- Tests System, player, scanner, vision, inventory, and Math objects
 
-## Testing Syntax Highlighting
+## Features to Test
 
-1. Open `syntax_showcase.kh` in VSCode
-2. Make sure the Kashub extension is installed
-3. Check that:
-   - Keywords are highlighted (if, while, for, etc.)
-   - Commands are highlighted (print, moveTo, attack, etc.)
-   - Variables with `$` are highlighted as one unit
-   - Strings show variable interpolation
-   - Operators are distinct
-   - Comments are grayed out
-   - Numbers are highlighted
+### Hover Documentation
+Open `test_hover.kh` and hover over any method like:
+- `System.print` - See description, usage, and return type
+- `player.moveTo` - See parameters and examples
+- `scanner.blocks` - See what it returns
 
-## Color Scheme
+### Auto-completion
+Start typing in any .kh file:
+- Type `player.` to see all player methods
+- Type `System.` to see all System methods
+- Use snippets like `sysprint`, `pmove`, `scanblocks`
 
-The syntax highlighting uses standard VSCode token types:
-- **Keywords** - Purple/Pink (if, while, let, const)
-- **Commands** - Blue (print, moveTo, attack)
-- **Variables** - Light Blue/Cyan ($PLAYER_X, $myVar)
-- **Strings** - Orange/Yellow
-- **Numbers** - Green
-- **Comments** - Gray/Green
-- **Operators** - White/Gray
+### Syntax Highlighting
+Open `syntax_showcase.kh` to see:
+- Keywords in purple
+- Objects in teal
+- Methods in yellow
+- Strings in orange
+- Comments in green
 
-Colors may vary depending on your VSCode theme!
+## How to Use
+
+1. Open any `.kh` file in VSCode
+2. The extension will automatically activate
+3. Hover over commands to see documentation
+4. Use auto-completion (Ctrl+Space) for suggestions
+5. Press F5 to run the script (requires connection to Kashub mod)
+
+## Tips
+
+1. **Connect to Kashub**: Use `Ctrl+Shift+P` → "Kashub: Reconnect" to connect to Minecraft
+2. **Run Scripts**: Press `F5` or use "Kashub: Run Script" command
+3. **View Console**: Use "Kashub: Open Console" to see script output
+4. **Stop Scripts**: Use "Kashub: Stop All Tasks" to stop running scripts
+
+## More Examples
+
+For more complete examples, see the main documentation:
+- [Quick Start Guide](../../docs/quick-start.md)
+- [API Documentation](../../docs/api-overview.md)
+- [Example Scripts](../../docs/examples/README.md)

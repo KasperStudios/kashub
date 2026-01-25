@@ -8,9 +8,12 @@ import kasperstudios.kashub.api.dto.DebugStackFrame;
 import kasperstudios.kashub.api.dto.DebugVariable;
 import kasperstudios.kashub.debug.DebugFrame;
 import kasperstudios.kashub.debug.DebugManager;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +30,6 @@ public class DebugEndpoint {
         try {
             String query = exchange.getRequestURI().getQuery();
             int scriptId = extractIntParam(query, "scriptId", -1);
-            int frameId = extractIntParam(query, "frameId", 0);
 
             if (scriptId == -1) {
                 JsonObject error = new JsonObject();
@@ -38,9 +40,11 @@ public class DebugEndpoint {
 
             List<DebugScope> scopes = new ArrayList<>();
 
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+            // v0.9.0: Get variables from script's execution context
+            Task task = TaskManager.getInstance().getTask(scriptId);
             if (task != null) {
-                int localVarCount = task.getVariables().size();
+                Context context = task.getContext();
+                int localVarCount = context.getLocalVariables().size();
                 DebugScope localScope = new DebugScope("Local", SCOPE_LOCAL, false, "locals");
                 localScope.namedVariables = localVarCount;
                 scopes.add(localScope);
@@ -48,8 +52,8 @@ public class DebugEndpoint {
 
             Map<String, String> allVars = DebugManager.getInstance().getVariables(scriptId);
             int eventVarCount = (int) allVars.keySet().stream()
-                .filter(k -> k.startsWith("event_"))
-                .count();
+                    .filter(k -> k.startsWith("event_"))
+                    .count();
 
             if (eventVarCount > 0) {
                 DebugScope eventScope = new DebugScope("Event Variables", SCOPE_EVENT, false, "locals");
@@ -57,12 +61,11 @@ public class DebugEndpoint {
                 scopes.add(eventScope);
             }
 
-            int globalVarCount = ScriptInterpreter.getInstance().getVariables().size();
-            DebugScope globalScope = new DebugScope("Global", SCOPE_GLOBAL, false, "globals");
-            globalScope.namedVariables = globalVarCount;
-            scopes.add(globalScope);
+            // Global scope removed - ScriptInterpreter deprecated
+            // Scripts now use isolated contexts
 
-            int envVarCount = ScriptInterpreter.getInstance().getEnvironmentVariables().size();
+            // v0.9.0: Use EnvironmentVariableProvider for environment variables
+            int envVarCount = Environment.getInstance().getVariableDefinitions().size();
             DebugScope envScope = new DebugScope("Environment", SCOPE_ENVIRONMENT, true, "registers");
             envScope.namedVariables = envVarCount;
             scopes.add(envScope);
@@ -95,28 +98,27 @@ public class DebugEndpoint {
 
             switch (variablesReference) {
                 case SCOPE_LOCAL:
-
+                    // v0.9.0: Get variables from script's execution context
                     if (scriptId != -1) {
-                        ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+                        Task task = TaskManager.getInstance().getTask(scriptId);
                         if (task != null) {
-                            for (Map.Entry<String, String> entry : task.getVariables().entrySet()) {
-                                String type = DebugVariable.inferType(entry.getValue());
-                                variables.add(new DebugVariable(entry.getKey(), entry.getValue(), type));
+                            Context context = task.getContext();
+                            for (Map.Entry<String, Value> entry : context.getLocalVariables().entrySet()) {
+                                String valStr = entry.getValue().asString();
+                                String type = DebugVariable.inferType(valStr);
+                                variables.add(new DebugVariable(entry.getKey(), valStr, type));
                             }
                         }
                     }
                     break;
 
                 case SCOPE_GLOBAL:
-
-                    for (Map.Entry<String, String> entry : ScriptInterpreter.getInstance().getVariables().entrySet()) {
-                        String type = DebugVariable.inferType(entry.getValue());
-                        variables.add(new DebugVariable(entry.getKey(), entry.getValue(), type));
-                    }
+                    // Global scope removed - ScriptInterpreter deprecated
+                    // No global variables in new architecture
                     break;
 
                 case SCOPE_EVENT:
-
+                    // Event variables
                     if (scriptId != -1) {
                         Map<String, String> allVars = DebugManager.getInstance().getVariables(scriptId);
                         for (Map.Entry<String, String> entry : allVars.entrySet()) {
@@ -129,9 +131,9 @@ public class DebugEndpoint {
                     break;
 
                 case SCOPE_ENVIRONMENT:
-
-                    for (Map.Entry<String, kasperstudios.kashub.algorithm.EnvironmentVariable> entry :
-                         ScriptInterpreter.getInstance().getEnvironmentVariables().entrySet()) {
+                    // v0.9.0: Use EnvironmentVariableProvider for environment variables
+                    for (Map.Entry<String, Environment.Variable> entry : Environment
+                            .getInstance().getVariableDefinitions().entrySet()) {
                         String value = entry.getValue().getValue();
                         String type = DebugVariable.inferType(value);
                         variables.add(new DebugVariable("$" + entry.getKey(), value, type));
@@ -165,11 +167,11 @@ public class DebugEndpoint {
             int scriptId = request.has("scriptId") ? request.get("scriptId").getAsInt() : -1;
 
             Map<String, String> variables = scriptId != -1
-                ? DebugManager.getInstance().getVariables(scriptId)
-                : ScriptInterpreter.getInstance().getVariables();
+                    ? DebugManager.getInstance().getVariables(scriptId)
+                    : Environment.getInstance().getAllVariables();
 
-            kasperstudios.kashub.debug.ConditionEvaluator evaluator =
-                kasperstudios.kashub.debug.ConditionEvaluator.getInstance();
+            kasperstudios.kashub.debug.ConditionEvaluator evaluator = kasperstudios.kashub.debug.ConditionEvaluator
+                    .getInstance();
 
             boolean boolResult = evaluator.evaluate(expression, variables);
 
@@ -204,27 +206,25 @@ public class DebugEndpoint {
             List<DebugStackFrame> stackFrames = new ArrayList<>();
             List<DebugFrame> callStack = DebugManager.getInstance().getCallStack(scriptId);
 
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+            Task task = TaskManager.getInstance().getTask(scriptId);
             String scriptName = task != null ? task.getName() : "unknown";
 
             for (int i = 0; i < callStack.size(); i++) {
                 DebugFrame frame = callStack.get(i);
                 DebugStackFrame stackFrame = new DebugStackFrame(
-                    i,
-                    frame.getFunctionName() != null ? frame.getFunctionName() : "<main>",
-                    scriptName,
-                    frame.getLine()
-                );
+                        i,
+                        frame.getFunctionName() != null ? frame.getFunctionName() : "<main>",
+                        scriptName,
+                        frame.getLine());
                 stackFrames.add(stackFrame);
             }
 
             if (stackFrames.isEmpty() && task != null) {
                 DebugStackFrame mainFrame = new DebugStackFrame(
-                    0,
-                    "<main>",
-                    scriptName,
-                    task.getCurrentLine()
-                );
+                        0,
+                        "<main>",
+                        scriptName,
+                        task.getCurrentLine());
                 stackFrames.add(mainFrame);
             }
 
@@ -250,13 +250,14 @@ public class DebugEndpoint {
             String scope = request.has("scope") ? request.get("scope").getAsString() : "local";
 
             if (scope.equals("local") && scriptId != -1) {
-                ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+                // v0.9.0: Set variable in script's execution context
+                Task task = TaskManager.getInstance().getTask(scriptId);
                 if (task != null) {
                     task.setVariable(name, value);
                 }
             } else {
-
-                ScriptInterpreter.getInstance().setVariable(name, value);
+                // Global scope removed - cannot set variables without script context
+                throw new IllegalArgumentException("Cannot set variable without script context");
             }
 
             JsonObject response = new JsonObject();
@@ -273,7 +274,8 @@ public class DebugEndpoint {
     }
 
     private static int extractIntParam(String query, String paramName, int defaultValue) {
-        if (query == null) return defaultValue;
+        if (query == null)
+            return defaultValue;
 
         String[] params = query.split("&");
         for (String param : params) {

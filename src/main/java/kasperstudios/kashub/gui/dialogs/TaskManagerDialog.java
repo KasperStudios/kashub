@@ -3,9 +3,9 @@ package kasperstudios.kashub.gui.dialogs;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.theme.EditorTheme;
 import kasperstudios.kashub.gui.theme.ThemeManager;
-import kasperstudios.kashub.services.runtime.ScriptState;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.core.State;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
 import kasperstudios.kashub.util.ScriptManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -39,7 +39,7 @@ public class TaskManagerDialog extends Screen {
 
     private Tab currentTab = Tab.PROCESSES;
 
-    private List<ScriptTask> tasks = new ArrayList<>();
+    private List<Task> tasks = new ArrayList<>();
     private int scrollY = 0;
     private int selectedTaskId = -1;
     private int hoveredTaskId = -1;
@@ -140,7 +140,7 @@ public class TaskManagerDialog extends Screen {
 
         context.drawText(textRenderer, "📋 TASK MANAGER", dx + 16, dy + 14, theme.textColor, true);
 
-        int runningCount = (int) tasks.stream().filter(t -> t.getState() == ScriptState.RUNNING).count();
+        int runningCount = (int) tasks.stream().filter(t -> t.getState() == State.RUNNING).count();
         String countText = runningCount + " running / " + tasks.size() + " total";
         int countColor = runningCount > 0 ? theme.consoleSuccessColor : theme.textDimColor;
         int countWidth = textRenderer.getWidth(countText);
@@ -206,7 +206,7 @@ public class TaskManagerDialog extends Screen {
         int endIndex = Math.min(startIndex + visibleRows + 1, tasks.size());
 
         for (int i = startIndex; i < endIndex; i++) {
-            ScriptTask task = tasks.get(i);
+            Task task = tasks.get(i);
             int rowY = dy + (i * ROW_HEIGHT) - scrollY;
 
             if (rowY + ROW_HEIGHT < dy || rowY > dy + listHeight)
@@ -231,7 +231,7 @@ public class TaskManagerDialog extends Screen {
         }
     }
 
-    private void renderTaskRow(DrawContext context, ScriptTask task, int x, int y, int width, int mouseX, int mouseY) {
+    private void renderTaskRow(DrawContext context, Task task, int x, int y, int width, int mouseX, int mouseY) {
         boolean isSelected = task.getId() == selectedTaskId;
         boolean isHovered = task.getId() == hoveredTaskId;
 
@@ -244,7 +244,7 @@ public class TaskManagerDialog extends Screen {
         int dotX = x + 12;
         int dotY = y + ROW_HEIGHT / 2;
 
-        if (task.getState() == ScriptState.RUNNING) {
+        if (task.getState() == State.RUNNING) {
             float pulse = (float) (Math.sin(pulseAnimation) * 0.3 + 0.7);
             int alpha = (int) (255 * pulse);
             int pulseColor = (alpha << 24) | (statusColor & 0x00FFFFFF);
@@ -267,10 +267,10 @@ public class TaskManagerDialog extends Screen {
         String uptime = task.getUptimeFormatted();
         context.drawText(textRenderer, uptime, x + 300, y + 12, theme.textDimColor, false);
 
-        String cmdInfo = task.getExecutedCommands() + " / " + (task.getExecutedCommands() + task.getQueuedCommands());
+        String cmdInfo = String.valueOf(task.getExecutedCommands());
         context.drawText(textRenderer, cmdInfo, x + 380, y + 12, theme.textDimColor, false);
 
-        if (task.getLastError() != null && task.getState() == ScriptState.ERROR) {
+        if (task.getLastError() != null && task.getState() == State.ERROR) {
             String error = task.getLastError();
             if (error.length() > 40) {
                 error = error.substring(0, 37) + "...";
@@ -342,19 +342,19 @@ public class TaskManagerDialog extends Screen {
         int spacing = 10;
 
         if (isButtonClicked(buttonX, buttonY, buttonWidth, BUTTON_HEIGHT, mouseX, mouseY)) {
-            ScriptTaskManager.getInstance().pauseAll();
+            TaskManager.getInstance().pauseAll();
             return true;
         }
 
         buttonX += buttonWidth + spacing;
         if (isButtonClicked(buttonX, buttonY, buttonWidth, BUTTON_HEIGHT, mouseX, mouseY)) {
-            ScriptTaskManager.getInstance().resumeAll();
+            TaskManager.getInstance().resumeAll();
             return true;
         }
 
         buttonX += buttonWidth + spacing;
         if (isButtonClicked(buttonX, buttonY, buttonWidth, BUTTON_HEIGHT, mouseX, mouseY)) {
-            ScriptTaskManager.getInstance().stopAll();
+            TaskManager.getInstance().stopAll();
             return true;
         }
 
@@ -437,7 +437,7 @@ public class TaskManagerDialog extends Screen {
     }
 
     private void refreshTasks() {
-        Collection<ScriptTask> allTasks = ScriptTaskManager.getInstance().getAllTasks();
+        Collection<Task> allTasks = TaskManager.getInstance().getAllTasks();
         tasks = new ArrayList<>(allTasks);
     }
 

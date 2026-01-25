@@ -2,12 +2,13 @@ package kasperstudios.kashub.marketplace;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.*;
 
 public class MarketplaceConfig {
     private static MarketplaceConfig instance;
-    private static final Path CONFIG_PATH = Paths.get("config", "kashub", "marketplace.json");
+    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("marketplace.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final String DEFAULT_REPOSITORY = "https://github.com/kasperstudios/kashub-scripts";

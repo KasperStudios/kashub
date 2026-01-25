@@ -2,6 +2,55 @@
 
 All notable changes to the Kashub VSCode extension will be documented in this file.
 
+## [0.9.1] - 2026-01-23
+
+### Added
+- **New Player Methods**:
+  - `player.moveBy(dx, dy, dz)` - Move by relative coordinates
+  - `player.stopMoving()` - Stop navigation and clear input
+  - `player.input(action, type)` - Direct input control (forward, back, left, right, jump, sneak, sprint, attack, use)
+- **New Snippets**: Added snippets for new player methods
+  - `pmoveby` - Move by relative coordinates
+  - `pstop` - Stop movement
+  - `pinput` - Control player input
+- **Improved Hover Documentation**: Updated player.moveTo to indicate auto-cleanup on script end
+
+### Fixed
+- **Hover Provider**: Fixed hover not working for object.method patterns (e.g., `player.moveTo`, `System.print`)
+- **Word Pattern**: Added wordPattern to language configuration to properly detect object.method as single word
+- Updated hover provider with new player methods
+- Added input types (press, release, tap) to snippets
+
+## [0.9.0] - 2026-01-23
+
+### Added
+- **V2 API Support**: Full support for new object-oriented syntax
+  - System object (print, log, wait, memory, etc.)
+  - player object (getHealth, moveTo, attack, etc.)
+  - scanner object (blocks, entities)
+  - vision object (nearest, getTarget, count, etc.)
+  - inventory object (check, count, use, craft, etc.)
+  - world object (getBlock, getTime, getWeather)
+  - game object (setGamma, fullBright, setFov)
+  - Math object (sqrt, abs, min, max, floor, ceil, round, random, pow)
+- **Enhanced Syntax Highlighting**: Objects and methods now have distinct colors
+- **New Snippets**: 15+ new code snippets for V2 API
+  - System.print, player.moveTo, scanner.blocks, etc.
+  - Auto-heal, combat bot, mining bot templates
+  - CrashGuard block template
+- **Improved Hover Documentation**: Detailed docs for all object methods with return types
+- **Better Auto-completion**: Context-aware suggestions for object methods
+
+### Changed
+- Updated syntax highlighting to distinguish objects from methods
+- Improved hover provider with return types and usage examples
+- Enhanced snippets with V2 API patterns
+- Updated to match Kashub v0.9.0-beta
+
+### Fixed
+- Fixed method highlighting for object-oriented syntax
+- Corrected auto-completion for chained method calls
+
 ## [0.8.1] - 2025-12-29
 
 ### Added

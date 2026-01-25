@@ -1,0 +1,13 @@
+// Debug test
+print "Step 1: Starting test"
+
+print "Step 2: Checking if player exists"
+print player
+
+print "Step 3: Trying to call getHealth"
+let h = player.getHealth()
+
+print "Step 4: Health value:"
+print h
+
+print "Done!"

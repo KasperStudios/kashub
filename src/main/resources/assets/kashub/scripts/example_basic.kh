@@ -1,20 +1,29 @@
-// ===================================
-// Kashub Script - Basic Example
-// ===================================
-// This script demonstrates basic commands
+// Kashub Basic Example - V2 Syntax
+// Demonstrates core features of the v2 engine
 
-// Print a message to chat
-print "Hello from Kashub Script!"
+print "=== Kashub V2 Basic Example ==="
 
-// Wait for 1 second
-wait 1000
+// Variables
+let health = player.getHealth()
+let pos = player.getPos()
 
-// Make the player jump 3 times
-jump 3
+print "Current Health: " + health
+print "Position: X=" + pos.x + " Y=" + pos.y + " Z=" + pos.z
 
-// Print player position
-print "Player position: $PLAYER_X, $PLAYER_Y, $PLAYER_Z"
+// Conditional logic
+if (health < 10) {
+    print "⚠ Low health detected!"
+} else {
+    print "✓ Health is good"
+}
 
-// Wait and print health
-wait 500
-print "Player health: $PLAYER_HEALTH"
+// Simple loop
+print "Counting to 5..."
+let i = 0
+while (i < 5) {
+    print "Count: " + i
+    i = i + 1
+    wait 500
+}
+
+print "=== Example Complete ==="

@@ -1,43 +1,56 @@
-// ===================================
-// Kashub Script - Auto Combat
-// ===================================
-// Automated combat and survival script
+// Kashub Combat Automation - V2 Syntax
+// Automated combat with targeting and healing
 
-// Auto-heal when low health
-onEvent onDamage {
-    if ($PLAYER_HEALTH < 10) {
-        print "Low health! Eating..."
-        eat golden_apple
-    }
-}
+print "=== Combat Automation ==="
 
-// Combat function
-function attackNearby() {
-    attack 5 hostile 3
-    wait 500
-}
+// Configure combat settings
+let combatRange = 4
+let healThreshold = 10
+let escapeHealth = 5
 
-// Main combat loop
-print "Combat mode activated!"
-print "Press Z to stop"
+print "Combat range: " + combatRange + " blocks"
+print "Heal threshold: " + healThreshold + " HP"
+print "Escape threshold: " + escapeHealth + " HP"
 
 while (true) {
-    // Check health with else if chain
-    if ($PLAYER_HEALTH < 6) {
-        print "Critical health! Retreating..."
-        run ~-10 ~ ~-10
-        wait 2000
-        eat
-        wait 2000
-    } else if ($PLAYER_HEALTH < 12) {
-        print "Low health, being careful..."
-        eat
-        wait 1000
-    } else {
-        // Health is good, attack!
-        attackNearby()
+    // Check health first
+    let health = player.getHealth()
+    
+    if (health <= escapeHealth) {
+        print "Critical health! Escaping..."
+        player.chat("/spawn")
+        break
     }
     
-    // Small delay between attacks
-    wait 200
+    if (health <= healThreshold) {
+        print "Low health, eating food..."
+        inventory.use("golden_apple")
+        wait 1000
+        continue
+    }
+    
+    // Look for enemies
+    let enemy = vision.nearest("hostile", combatRange)
+    
+    if (enemy != null) {
+        print "Target acquired: " + enemy.type
+        print "Distance: " + enemy.distance
+        
+        // Move toward enemy
+        player.moveTo(enemy.pos.x, enemy.pos.y, enemy.pos.z)
+        wait 500
+        
+        // Attack
+        player.attack()
+        print "Attacking!"
+        
+        // Face enemy
+        player.lookAt(enemy.pos.x, enemy.pos.y, enemy.pos.z)
+    } else {
+        print "No enemies nearby"
+    }
+    
+    wait 1000
 }
+
+print "Combat ended"

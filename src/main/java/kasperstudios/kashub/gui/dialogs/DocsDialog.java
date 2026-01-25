@@ -1,8 +1,8 @@
 package kasperstudios.kashub.gui.dialogs;
 
-import kasperstudios.kashub.algorithm.Command;
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.types.KHType;
+import kasperstudios.kashub.core.Command;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.types.KHType;
 import kasperstudios.kashub.gui.theme.EditorTheme;
 import kasperstudios.kashub.gui.theme.ThemeManager;
 import net.minecraft.client.MinecraftClient;
@@ -13,7 +13,6 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DocsDialog extends Screen {
     private final Screen parent;
@@ -70,38 +69,7 @@ public class DocsDialog extends Screen {
         sections.add(new DocSection("📖 Overview", "Overview", Arrays.asList(
             "# KHScript Language",
             "",
-            "KHScript is a scripting language for Minecraft automation.",
-            "",
-            "## Features",
-            "• Variables: let x = 5, const MAX = 100, or x = 5 (legacy)",
-            "• Control flow: if, for, while, loop (Rust-style & legacy)",
-            "• Commands: 40+ built-in commands",
-            "• Environment variables: $PLAYER_X, etc.",
-            "",
-            "## Syntax Styles",
-            "KHScript supports both Legacy and Rust-style syntax:",
-            "",
-            "### Legacy Style",
-            "x = 5",
-            "if (x > 3) { ... }",
-            "while (counter < 10) { ... }",
-            "",
-            "### Rust-style",
-            "let x = 5",
-            "if x > 3 { ... }",
-            "while counter < 10 { ... }",
-            "",
-            "## Quick Start",
-            "let message = \"Hello World!\"",
-            "print $message",
-            "wait 1000",
-            "lookAt entity zombie",
-            "",
-            "## Tips",
-            "• Use Ctrl+Space for autocomplete",
-            "• Use F5 to run script",
-            "• Use search below to find commands",
-            "• Variables in conditions work with or without $ prefix"
+            "Soon.."
         )));
 
         Map<String, List<Command>> categories = getCommandsByCategory();
@@ -122,6 +90,8 @@ public class DocsDialog extends Screen {
         }
 
         sections.add(createAllCommandsSection());
+
+        sections.add(createObjectsSection());
 
         sections.add(createTypesSection());
 
@@ -158,7 +128,7 @@ public class DocsDialog extends Screen {
 
         Map<String, List<Command>> categories = new LinkedHashMap<>();
 
-        for (Command cmd : CommandRegistry.getAllCommands()) {
+        for (Command cmd : Registry.getAllCommands()) {
             String category = cmd.getCategory();
             categories.computeIfAbsent(category, k -> new ArrayList<>()).add(cmd);
         }
@@ -178,19 +148,19 @@ public class DocsDialog extends Screen {
         lines.add("");
 
         for (Command cmd : commands) {
-            lines.add("## " + cmd.getName());
-            lines.add(cmd.getDescription());
+            kasperstudios.kashub.core.Metadata meta = cmd.getMetadata();
+            lines.add("## " + meta.name);
+            lines.add(meta.description);
 
-            String params = cmd.getParameters();
-            if (params != null && !params.isEmpty()) {
-                lines.add("Usage: " + cmd.getName() + " " + params);
+            if (meta.syntax != null && !meta.syntax.isEmpty()) {
+                lines.add("Usage: " + meta.syntax);
             }
 
-            String help = cmd.getDetailedHelp();
-            if (help != null && !help.isEmpty()) {
+            if (meta.examples != null && !meta.examples.isEmpty()) {
                 lines.add("");
-                for (String helpLine : help.split("\n")) {
-                    lines.add(helpLine);
+                lines.add("Examples:");
+                for (String example : meta.examples) {
+                    lines.add("- " + example);
                 }
             }
 
@@ -226,20 +196,132 @@ public class DocsDialog extends Screen {
         lines.add("Quick reference (use search to filter):");
         lines.add("");
 
-        List<Command> allCommands = CommandRegistry.getAllCommands();
+        List<Command> allCommands = Registry.getAllCommands();
         allCommands.sort(Comparator.comparing(Command::getName));
 
         for (Command cmd : allCommands) {
-            String params = cmd.getParameters();
-            if (params != null && !params.isEmpty()) {
-                lines.add("• " + cmd.getName() + " " + params);
+            kasperstudios.kashub.core.Metadata meta = cmd.getMetadata();
+            if (meta.syntax != null && !meta.syntax.isEmpty()) {
+                lines.add("• " + meta.syntax);
             } else {
-                lines.add("• " + cmd.getName());
+                lines.add("• " + meta.name);
             }
-            lines.add("  " + cmd.getDescription());
+            lines.add("  " + meta.description);
         }
 
         return new DocSection("📚 All Commands", "All", lines);
+    }
+
+    private DocSection createObjectsSection() {
+        List<String> lines = new ArrayList<>();
+        lines.add("# 🎯 Built-in Objects");
+        lines.add("");
+        lines.add("KHScript provides built-in objects for common game interactions.");
+        lines.add("");
+        
+        // Player Object
+        lines.add("## player");
+        lines.add("Player control and information");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• player.getHealth() - Get current health (0-20)");
+        lines.add("• player.getPos() - Get position {x, y, z}");
+        lines.add("• player.moveTo(x, y, z, [radius]) - Navigate to coordinates");
+        lines.add("• player.attack([entity]) - Attack entity (crosshair or passed entity)");
+        lines.add("• player.lookAt(x, y, z) - Look at coordinates");
+        lines.add("• player.chat(message) - Send chat message or command");
+        lines.add("• player.animation(action, name, [duration]) - Play animation");
+        lines.add("• player.setFullbright(enabled) - Enable/disable fullbright (gamma 16)");
+        lines.add("• player.getFullbright() - Check if fullbright is enabled");
+        lines.add("");
+        lines.add("Examples:");
+        lines.add("  let health = player.getHealth()");
+        lines.add("  if (health < 10) {");
+        lines.add("      player.chat(\"/spawn\")");
+        lines.add("  }");
+        lines.add("  player.moveTo(100, 64, 200)");
+        lines.add("  player.setFullbright(true)  // Enable fullbright");
+        lines.add("");
+        
+        // Inventory Object
+        lines.add("## inventory");
+        lines.add("Inventory management");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• inventory.count(itemName) - Count items by name");
+        lines.add("• inventory.getItems() - Get all items [{slot, id, count, name}]");
+        lines.add("• inventory.getEmptySlots() - Count empty slots");
+        lines.add("• inventory.drop(slot, [dropAll]) - Drop item from slot");
+        lines.add("• inventory.swap(slot1, slot2) - Swap items between slots");
+        lines.add("• inventory.equip(slot) - Equip item (armor/shield)");
+        lines.add("• inventory.use(itemName) - Find and use item by name");
+        lines.add("• inventory.craft(itemName, count) - Auto-craft item");
+        lines.add("");
+        lines.add("Examples:");
+        lines.add("  let diamonds = inventory.count(\"diamond\")");
+        lines.add("  print(\"Diamonds: \" + diamonds)");
+        lines.add("  ");
+        lines.add("  inventory.use(\"golden_apple\")");
+        lines.add("  inventory.swap(0, 9)");
+        lines.add("");
+        
+        // Vision Object
+        lines.add("## vision");
+        lines.add("Vision and entity detection");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• vision.getTarget() - Get crosshair target {type, x, y, z, blockId/entityId}");
+        lines.add("• vision.nearest(type, [maxDist], [target]) - Find nearest entity");
+        lines.add("  Types: \"hostile\", \"living\", \"all\", or entity name");
+        lines.add("  Target: \"head\", \"body\", \"legs\" (default: \"body\")");
+        lines.add("  Returns: {type, id, pos{x,y,z}, x, y, z, distance, health}");
+        lines.add("• vision.isLookingAt(targetId, [maxDist]) - Check if looking at target");
+        lines.add("");
+        lines.add("Examples:");
+        lines.add("  let enemy = vision.nearest(\"hostile\", 10, \"head\")");
+        lines.add("  if (enemy != null) {");
+        lines.add("      print(\"Found: \" + enemy.type)");
+        lines.add("      player.lookAt(enemy.pos.x, enemy.pos.y, enemy.pos.z)");
+        lines.add("      player.attack(enemy)");
+        lines.add("  }");
+        lines.add("");
+        
+        // Scanner Object
+        lines.add("## scanner");
+        lines.add("Advanced block and entity scanning");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• scanner.findBlocks(types, radius, [yMin], [yMax]) - Find blocks");
+        lines.add("• scanner.findEntities(types, radius) - Find entities");
+        lines.add("• scanner.clearCache() - Clear scan cache");
+        lines.add("");
+        lines.add("Examples:");
+        lines.add("  let ores = scanner.findBlocks(\"*ore*\", 32, -64, 20)");
+        lines.add("  let mobs = scanner.findEntities(\"hostile\", 50)");
+        lines.add("");
+        
+        // World Object
+        lines.add("## world");
+        lines.add("World information");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• world.getTime() - Get world time in ticks");
+        lines.add("• world.isDay() - Check if daytime");
+        lines.add("• world.isNight() - Check if nighttime");
+        lines.add("• world.getWeather() - Get weather (\"clear\", \"rain\", \"thunder\")");
+        lines.add("");
+        
+        // Game Object
+        lines.add("## game");
+        lines.add("Game state information");
+        lines.add("");
+        lines.add("Methods:");
+        lines.add("• game.getMode() - Get game mode (\"survival\", \"creative\", \"spectator\")");
+        lines.add("• game.getDimension() - Get current dimension");
+        lines.add("• game.isSingleplayer() - Check if singleplayer");
+        lines.add("");
+
+        return new DocSection("🎯 Objects", "Objects", lines);
     }
 
     private DocSection createTypesSection() {
@@ -336,27 +418,25 @@ public class DocsDialog extends Screen {
         matchingLines.add("");
 
         int matchCount = 0;
-        for (Command cmd : CommandRegistry.getAllCommands()) {
-            boolean matches = cmd.getName().toLowerCase().contains(lowerQuery) ||
-                            cmd.getDescription().toLowerCase().contains(lowerQuery) ||
-                            cmd.getParameters().toLowerCase().contains(lowerQuery) ||
-                            cmd.getDetailedHelp().toLowerCase().contains(lowerQuery);
+        for (Command cmd : Registry.getAllCommands()) {
+            kasperstudios.kashub.core.Metadata meta = cmd.getMetadata();
+            boolean matches = meta.name.toLowerCase().contains(lowerQuery) ||
+                            meta.description.toLowerCase().contains(lowerQuery) ||
+                            (meta.syntax != null && meta.syntax.toLowerCase().contains(lowerQuery));
 
             if (matches) {
                 matchCount++;
-                matchingLines.add("## " + cmd.getName());
-                matchingLines.add(cmd.getDescription());
+                matchingLines.add("## " + meta.name);
+                matchingLines.add(meta.description);
 
-                String params = cmd.getParameters();
-                if (params != null && !params.isEmpty()) {
-                    matchingLines.add("Usage: " + cmd.getName() + " " + params);
+                if (meta.syntax != null && !meta.syntax.isEmpty()) {
+                    matchingLines.add("Usage: " + meta.syntax);
                 }
 
-                String help = cmd.getDetailedHelp();
-                if (help != null && !help.isEmpty()) {
+                if (meta.examples != null && !meta.examples.isEmpty()) {
                     matchingLines.add("");
-                    for (String helpLine : help.split("\n")) {
-                        matchingLines.add(helpLine);
+                    for (String example : meta.examples) {
+                        matchingLines.add("- " + example);
                     }
                 }
                 matchingLines.add("");
@@ -438,7 +518,7 @@ public class DocsDialog extends Screen {
 
         context.drawText(textRenderer, "📚 KHSCRIPT DOCUMENTATION", dx + 16, dy + 14, theme.textColor, true);
 
-        int cmdCount = CommandRegistry.getAllCommands().size();
+        int cmdCount = Registry.getAllCommands().size();
         context.drawText(textRenderer, cmdCount + " commands", dx + 16, dy + 28, theme.textDimColor, false);
 
         int closeX = dx + getDialogWidth() - 36;

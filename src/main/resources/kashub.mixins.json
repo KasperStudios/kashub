@@ -9,7 +9,8 @@
 		"ChatMessageMixin",
 		"BlockBreakMixin",
 		"BlockPlaceMixin",
-		"AttackMixin"
+		"AttackMixin",
+		"CraftingScreenHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

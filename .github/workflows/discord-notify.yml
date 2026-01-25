@@ -1,8 +1,10 @@
-name: Discord Notify
+name: Discord Notify & Auto Release
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     types: [ opened, closed ]
   issues:
@@ -23,31 +25,52 @@ jobs:
           ROLE_ID: "1451606112309608741"
           ROLE_ID1: "1451607224991355062"
         run: |
+          # Get commit info
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_AUTHOR="${{ github.event.head_commit.author.name }}"
+          COMMIT_URL="${{ github.event.head_commit.url }}"
+          COMMIT_HASH="${{ github.event.head_commit.id }}"
+          COMMIT_HASH_SHORT="${COMMIT_HASH:0:7}"
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH | head -5 | sed 's/^/• /')
+          if [ $(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH | wc -l) -gt 5 ]; then
+            CHANGED_FILES="$CHANGED_FILES\n• ... and more"
+          fi
+          
           if [ "$EVENT_NAME" = "push" ]; then
             TITLE="📤 New commit to ${{ github.ref_name }}"
-            DESC="${{ github.event.head_commit.message }}"
-            URL="${{ github.event.head_commit.url }}"
+            DESC="**$COMMIT_MSG**\n\n**Author:** $COMMIT_AUTHOR\n**Commit:** \`$COMMIT_HASH_SHORT\`\n\n**Changed files:**\n$CHANGED_FILES"
+            URL="$COMMIT_URL"
             PING="<@&$ROLE_ID> <@&$ROLE_ID1>"
+            COLOR=3447003
             IMAGE="${{ github.event.head_commit.author.avatar_url }}"
           elif [ "$EVENT_NAME" = "pull_request" ]; then
-            TITLE="🔀 [${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
-            DESC="Status: ${{ github.event.action }}"
+            TITLE="🔀 PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+            DESC="**Status:** ${{ github.event.action }}\n**Author:** ${{ github.event.pull_request.user.login }}"
             URL="${{ github.event.pull_request.html_url }}"
             PING=""
+            COLOR=16776960
             IMAGE="${{ github.event.pull_request.user.avatar_url }}"
           elif [ "$EVENT_NAME" = "issues" ]; then
-            TITLE="🐛 [${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
-            DESC="Status: ${{ github.event.action }}"
+            TITLE="🐛 Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+            DESC="**Status:** ${{ github.event.action }}\n**Author:** ${{ github.event.issue.user.login }}"
             URL="${{ github.event.issue.html_url }}"
             PING=""
+            COLOR=15158332
             IMAGE="${{ github.event.issue.user.avatar_url }}"
           elif [ "$EVENT_NAME" = "release" ]; then
-            TITLE="🚀 ${{ github.event.release.tag_name }}"
-            DESC="${{ github.event.release.name }}"
+            TITLE="🚀 Release: ${{ github.event.release.tag_name }}"
+            DESC="**${{ github.event.release.name }}**\n\n${{ github.event.release.body }}"
             URL="${{ github.event.release.html_url }}"
-            PING=""
-            IMAGE=""
+            PING="<@&$ROLE_ID> <@&$ROLE_ID1>"
+            COLOR=3066993
+            IMAGE="https://raw.githubusercontent.com/KasperStudios/Kashub/main/src/main/resources/assets/kashub/icon.png"
           fi
+          
+          # Escape JSON special characters
+          DESC=$(echo "$DESC" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          TITLE=$(echo "$TITLE" | sed 's/"/\\"/g')
           
           cat > /tmp/payload.json <<EOF
           {
@@ -56,12 +79,15 @@ jobs:
               "title": "$TITLE",
               "description": "$DESC",
               "url": "$URL",
+              "color": $COLOR,
               "thumbnail": {
-                "url": "$IMAGE",
-                "height": 0,
-                "width": 0
+                "url": "$IMAGE"
               },
-              "color": 3447003
+              "footer": {
+                "text": "Kashub • ${{ github.repository }}",
+                "icon_url": "https://raw.githubusercontent.com/KasperStudios/Kashub/main/src/main/resources/assets/kashub/icon.png"
+              },
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
             }]
           }
           EOF
@@ -69,3 +95,64 @@ jobs:
           curl -X POST "$WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d @/tmp/payload.json
+
+  build:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: notify
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+      
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Kashub ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## 🎮 Kashub ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Installation
+            1. Install [Fabric 1.21.1](https://fabricmc.net/use/)
+            2. Install [Fabric API](https://modrinth.com/mod/fabric-api)
+            3. Download `kashub-${{ steps.get_version.outputs.VERSION }}.jar` below
+            4. Place in your `mods` folder
+            5. Launch Minecraft and press `K` to open the editor!
+            
+            ### Links
+            - 📚 [Documentation](https://github.com/KasperStudios/Kashub/tree/main/docs)
+            - 💬 [Discord](https://discord.gg/gFeWtpEKN9)
+            - 🐛 [Report Issues](https://github.com/KasperStudios/Kashub/issues)
+            
+            ### Changelog
+            See [CHANGELOG.md](https://github.com/KasperStudios/Kashub/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/libs/kashub-${{ steps.get_version.outputs.VERSION }}.jar
+          asset_name: kashub-${{ steps.get_version.outputs.VERSION }}.jar
+          asset_content_type: application/java-archive

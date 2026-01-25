@@ -2,7 +2,7 @@
   "name": "kashub-vscode",
   "displayName": "Kashub Language",
   "description": "Full language support for Kashub (.kh) scripts with real-time debugging and live connection to Minecraft",
-  "version": "0.8.1",
+  "version": "0.9.1",
   "publisher": "KasperStudios",
   "icon": "images/icon.png",
   "repository": {

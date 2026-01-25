@@ -1,6 +1,6 @@
 package kasperstudios.kashub.mixin;
 
-import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.core.events.EventManager;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;

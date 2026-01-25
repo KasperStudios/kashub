@@ -157,5 +157,172 @@
       "scanner ${1|blocks,entities,players|} ${2:10}"
     ],
     "description": "Scan for blocks or entities"
+  },
+  "System Print": {
+    "prefix": ["sysprint", "sprint"],
+    "body": [
+      "System.print(${1:message})"
+    ],
+    "description": "System.print() - Output to chat and console"
+  },
+  "System Wait": {
+    "prefix": ["syswait", "swait"],
+    "body": [
+      "System.wait(${1:1000})"
+    ],
+    "description": "System.wait() - Sleep for milliseconds"
+  },
+  "Player Get Health": {
+    "prefix": ["phealth", "gethealth"],
+    "body": [
+      "let health = player.getHealth()"
+    ],
+    "description": "Get player health"
+  },
+  "Player Move To": {
+    "prefix": ["pmove", "moveto"],
+    "body": [
+      "player.moveTo(${1:x}, ${2:y}, ${3:z})"
+    ],
+    "description": "Move player to coordinates"
+  },
+  "Player Move By": {
+    "prefix": ["pmoveby", "moveby"],
+    "body": [
+      "player.moveBy(${1:dx}, ${2:dy}, ${3:dz})"
+    ],
+    "description": "Move player by relative coordinates"
+  },
+  "Player Stop Moving": {
+    "prefix": ["pstop", "stopmove"],
+    "body": [
+      "player.stopMoving()"
+    ],
+    "description": "Stop player navigation"
+  },
+  "Player Input": {
+    "prefix": ["pinput", "input"],
+    "body": [
+      "player.input(\"${1|forward,back,left,right,jump,sneak,sprint,attack,use|}\", \"${2|press,release,tap|}\")"
+    ],
+    "description": "Control player input"
+  },
+  "Player Look At": {
+    "prefix": ["plook", "lookat"],
+    "body": [
+      "player.lookAt(${1:x}, ${2:y}, ${3:z})"
+    ],
+    "description": "Look at coordinates"
+  },
+  "Scanner Blocks": {
+    "prefix": ["scanblocks", "sblocks"],
+    "body": [
+      "let ${1:blocks} = scanner.blocks(\"${2:diamond_ore}\", ${3:32})"
+    ],
+    "description": "Scan for blocks"
+  },
+  "Scanner Entities": {
+    "prefix": ["scanentities", "sentities"],
+    "body": [
+      "let ${1:entities} = scanner.entities(\"${2:zombie}\", ${3:50})"
+    ],
+    "description": "Scan for entities"
+  },
+  "Vision Nearest": {
+    "prefix": ["vnearest", "nearest"],
+    "body": [
+      "let ${1:enemy} = vision.nearest(\"${2:hostile}\", ${3:10})"
+    ],
+    "description": "Find nearest entity"
+  },
+  "Inventory Count": {
+    "prefix": ["invcount", "icount"],
+    "body": [
+      "let ${1:count} = inventory.count(\"${2:diamond}\")"
+    ],
+    "description": "Count items in inventory"
+  },
+  "Inventory Use": {
+    "prefix": ["invuse", "iuse"],
+    "body": [
+      "inventory.use(\"${1:golden_apple}\")"
+    ],
+    "description": "Use item from inventory"
+  },
+  "CrashGuard Block": {
+    "prefix": ["crashguard", "guard"],
+    "body": [
+      "crashguard(timeout=${1:10000}, minFps=${2:30}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "CrashGuard protection block"
+  },
+  "Auto-Heal V2": {
+    "prefix": ["autoheal", "heal"],
+    "body": [
+      "// Auto-heal script",
+      "while (true) {",
+      "\tlet health = player.getHealth()",
+      "\t",
+      "\tif (health < ${1:10}) {",
+      "\t\tSystem.print(\"Low health! Healing...\")",
+      "\t\tinventory.use(\"golden_apple\")",
+      "\t\tSystem.wait(5000)",
+      "\t}",
+      "\t",
+      "\tSystem.wait(1000)",
+      "}"
+    ],
+    "description": "Auto-heal template (V2)"
+  },
+  "Combat Bot V2": {
+    "prefix": ["combat", "combatbot"],
+    "body": [
+      "// Combat bot",
+      "crashguard(minFps=30) {",
+      "\twhile (true) {",
+      "\t\tlet enemy = vision.nearest(\"hostile\", ${1:4})",
+      "\t\t",
+      "\t\tif (enemy != null) {",
+      "\t\t\tplayer.lookAt(enemy.x, enemy.y, enemy.z)",
+      "\t\t\tplayer.attack(enemy)",
+      "\t\t\tSystem.print(\"Attacking \" + enemy.type)",
+      "\t\t}",
+      "\t\t",
+      "\t\tSystem.wait(100)",
+      "\t}",
+      "}"
+    ],
+    "description": "Combat bot template (V2)"
+  },
+  "Mining Bot V2": {
+    "prefix": ["mining", "miningbot"],
+    "body": [
+      "// Mining bot",
+      "let mined = 0",
+      "",
+      "while (mined < ${1:10}) {",
+      "\tlet ores = scanner.blocks(\"${2:diamond_ore}\", 32)",
+      "\t",
+      "\tif (ores.length() == 0) {",
+      "\t\tSystem.print(\"No ores found\")",
+      "\t\tbreak",
+      "\t}",
+      "\t",
+      "\tlet ore = ores[0]",
+      "\tplayer.moveTo(ore.x, ore.y, ore.z)",
+      "\tSystem.wait(1000)",
+      "\t",
+      "\tplayer.lookAt(ore.x, ore.y, ore.z)",
+      "\tplayer.breakBlock()",
+      "\tSystem.wait(2000)",
+      "\t",
+      "\tmined = mined + 1",
+      "}",
+      "",
+      "System.print(\"Mining complete!\")"
+    ],
+    "description": "Mining bot template (V2)"
   }
 }

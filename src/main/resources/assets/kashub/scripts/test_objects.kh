@@ -1,0 +1,23 @@
+// Test script for V2 object syntax
+print "=== Testing V2 Objects ==="
+
+// Test player object
+print "Player health: " + player.getHealth()
+
+let pos = player.getPos()
+print "Player position: " + pos.x + ", " + pos.y + ", " + pos.z
+
+// Test inventory object
+let emptySlots = inventory.getEmptySlots()
+print "Empty inventory slots: " + emptySlots
+
+// Test vision object
+print "Looking for nearest entity..."
+let nearest = vision.nearest("living", 10)
+if (nearest != null) {
+    print "Found: " + nearest.type + " at distance " + nearest.distance
+} else {
+    print "No entities nearby"
+}
+
+print "=== Test Complete ==="

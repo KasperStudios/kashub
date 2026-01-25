@@ -3,8 +3,8 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -17,7 +17,7 @@ public class TasksEndpoint {
 
     public static void handleList(HttpExchange exchange, Gson gson) {
         try {
-            Collection<ScriptTask> tasks = ScriptTaskManager.getInstance().getAllTasks();
+            Collection<Task> tasks = TaskManager.getInstance().getAllTasks();
 
             List<Map<String, Object>> taskList = tasks.stream()
                     .map(TasksEndpoint::taskToMap)
@@ -26,7 +26,7 @@ public class TasksEndpoint {
             Map<String, Object> response = new HashMap<>();
             response.put("tasks", taskList);
             response.put("total", taskList.size());
-            response.put("stats", ScriptTaskManager.getInstance().getStats());
+            response.put("stats", TaskManager.getInstance().getStats());
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
 
@@ -39,14 +39,14 @@ public class TasksEndpoint {
     public static void handleStop(HttpExchange exchange, Gson gson) {
         try {
             int taskId = extractTaskId(exchange.getRequestURI().getPath());
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(taskId);
+            Task task = TaskManager.getInstance().getTask(taskId);
 
             if (task == null) {
                 KashubAPIServer.sendResponse(exchange, 404, "{\"error\":\"Task not found\"}");
                 return;
             }
 
-            ScriptTaskManager.getInstance().stop(taskId);
+            TaskManager.getInstance().stop(taskId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -64,14 +64,14 @@ public class TasksEndpoint {
     public static void handlePause(HttpExchange exchange, Gson gson) {
         try {
             int taskId = extractTaskId(exchange.getRequestURI().getPath());
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(taskId);
+            Task task = TaskManager.getInstance().getTask(taskId);
 
             if (task == null) {
                 KashubAPIServer.sendResponse(exchange, 404, "{\"error\":\"Task not found\"}");
                 return;
             }
 
-            ScriptTaskManager.getInstance().pause(taskId);
+            TaskManager.getInstance().pause(taskId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -89,14 +89,14 @@ public class TasksEndpoint {
     public static void handleResume(HttpExchange exchange, Gson gson) {
         try {
             int taskId = extractTaskId(exchange.getRequestURI().getPath());
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(taskId);
+            Task task = TaskManager.getInstance().getTask(taskId);
 
             if (task == null) {
                 KashubAPIServer.sendResponse(exchange, 404, "{\"error\":\"Task not found\"}");
                 return;
             }
 
-            ScriptTaskManager.getInstance().resume(taskId);
+            TaskManager.getInstance().resume(taskId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -119,13 +119,13 @@ public class TasksEndpoint {
         throw new IllegalArgumentException("Invalid task ID in path: " + path);
     }
 
-    private static Map<String, Object> taskToMap(ScriptTask task) {
+    private static Map<String, Object> taskToMap(Task task) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", task.getId());
         map.put("name", task.getName());
         map.put("state", task.getState().toString());
         map.put("uptime", task.getUptime());
-        map.put("scriptType", task.getScriptType().toString());
+        map.put("scriptType", task.getType().toString());
 
         String lastError = task.getLastError();
         if (lastError != null) {

@@ -1,38 +1,39 @@
 package kasperstudios.kashub.gui;
 
-import kasperstudios.kashub.algorithm.Command;
-import kasperstudios.kashub.algorithm.CommandRegistry;
+import kasperstudios.kashub.core.*;
 import java.util.*;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
-import kasperstudios.kashub.algorithm.EnvironmentVariable;
 
 public class CodeCompletionManager {
     private static final Map<String, String> commandParameters = new HashMap<>();
     private static final Map<String, String> builtInParameters = new HashMap<>();
     private static final Map<String, String> snippets = new HashMap<>();
     private static final Set<String> keywords = new HashSet<>(Arrays.asList(
-            "if", "else", "while", "for", "function", "return", "break", "continue"
-    ));
+            "if", "else", "while", "for", "function", "return", "break", "continue"));
 
-    private static final Map<String, String> snippetDescriptions = new HashMap<String, String>() {{
-        put("if", "Conditional statement");
-        put("ifelse", "Conditional with alternative");
-        put("while", "Loop with condition");
-        put("for", "Loop with counter");
-        put("function", "Function declaration");
-        put("loop", "Infinite loop");
-        put("loop_break", "Loop with break");
-    }};
+    private static final Map<String, String> snippetDescriptions = new HashMap<String, String>() {
+        {
+            put("if", "Conditional statement");
+            put("ifelse", "Conditional with alternative");
+            put("while", "Loop with condition");
+            put("for", "Loop with counter");
+            put("function", "Function declaration");
+            put("loop", "Infinite loop");
+            put("loop_break", "Loop with break");
+            put("crashguard", "Protected code block");
+            put("crashguard_timeout", "Protected block with timeout");
+            put("crashguard_fps", "Protected block with FPS monitoring");
+        }
+    };
 
     private static final Map<String, String> environmentVariables = new HashMap<>();
-
-    private static final List<String> completions = new ArrayList<>();
-    private static final Map<String, String> descriptions = new HashMap<>();
 
     private static final Set<String> userVariables = new HashSet<>();
 
     private static final Map<String, List<String>> commandArguments = new HashMap<>();
     private static final Map<String, String> argumentDescriptions = new HashMap<>();
+
+    private static final Map<String, List<String>> objectMembers = new HashMap<>();
+    private static final Set<String> objectDisplayNames = new HashSet<>();
 
     static {
         initializeCommandParameters();
@@ -40,12 +41,73 @@ public class CodeCompletionManager {
         initializeSnippets();
         initializeEnvironmentVariables();
         initializeCommandArguments();
+        initializeV2Completions();
+    }
+
+    private static void initializeV2Completions() {
+        refreshCompletions();
+    }
+
+    public static void refreshCompletions() {
+        try {
+            objectMembers.clear();
+            objectDisplayNames.clear();
+
+            // Create temporary context to discover all registered objects
+            kasperstudios.kashub.core.Context tempCtx = new kasperstudios.kashub.core.Context();
+            kasperstudios.kashub.core.Interpreter.execute(Collections.emptyList(), tempCtx);
+
+            // Expected objects + fallback for safety
+            String[] possibleObjects = { "System", "player", "scanner", "vision", "inventory", "world", "game", "w2p",
+                    "Math", "tag" };
+
+            for (String objName : possibleObjects) {
+                Value val = tempCtx.getVariable(objName);
+                if (val != null && !val.isNull() && val.isObject()) {
+                    registerObjectMembers(objName, val);
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Failed to initialize V2 completions: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void registerObjectMembers(String name, Value obj) {
+        if (obj.asObject() == null)
+            return;
+        List<String> members = new ArrayList<>(obj.asObject().keySet());
+        Collections.sort(members);
+        // Always store with lowercase key for case-insensitive method lookup
+        objectMembers.put(name.toLowerCase(), members);
+
+        // Store original name for display in autocomplete list
+        objectDisplayNames.add(name);
+    }
+
+    public static List<String> getMemberCompletions(String objectName, String partialMember) {
+        List<String> result = new ArrayList<>();
+        List<String> members = objectMembers.get(objectName.toLowerCase());
+
+        if (members != null) {
+            for (String member : members) {
+                if (partialMember.isEmpty() || member.toLowerCase().startsWith(partialMember.toLowerCase())) {
+                    result.add(member);
+                }
+            }
+        }
+        return result;
+    }
+
+    public static boolean hasObjectSuggestions(String objectName) {
+        return objectMembers.containsKey(objectName.toLowerCase());
     }
 
     private static void initializeCommandParameters() {
-        for (Command command : CommandRegistry.getAllCommands()) {
+        for (Command command : Registry.getCommands()) {
             String name = command.getName().toLowerCase();
-            String params = command.getParameters();
+            String params = command.getMetadata().syntax;
             commandParameters.put(name, params);
         }
     }
@@ -55,7 +117,7 @@ public class CodeCompletionManager {
         builtInParameters.put("else", "{ <commands> }");
         builtInParameters.put("while", "<condition> { <commands> }");
         builtInParameters.put("for", "<start> <end> <step> { <commands> }");
-        builtInParameters.put("function", "<name> { <commands> }");
+        builtInParameters.put("fn", "<name> { <commands> }");
         builtInParameters.put("return", "<value>");
         builtInParameters.put("break", "");
         builtInParameters.put("continue", "");
@@ -66,9 +128,12 @@ public class CodeCompletionManager {
         snippets.put("ifelse", "if ($condition) {\n    $cursor\n} else {\n    \n}");
         snippets.put("while", "while ($condition) {\n    $cursor\n}");
         snippets.put("for", "for ($i = $start; $i < $end; $i += $step) {\n    $cursor\n}");
-        snippets.put("function", "function $name() {\n    $cursor\n}");
+        snippets.put("fn", "fn $name() {\n    $cursor\n}");
         snippets.put("loop", "while (true) {\n    $cursor\n}");
         snippets.put("loop_break", "while (true) {\n    if ($condition) {\n        break\n    }\n    $cursor\n}");
+        snippets.put("crashguard", "crashguard {\n    $cursor\n}");
+        snippets.put("crashguard_timeout", "crashguard(timeout=$ms) {\n    $cursor\n}");
+        snippets.put("crashguard_fps", "crashguard(minFps=$fps) {\n    $cursor\n}");
     }
 
     private static void initializeEnvironmentVariables() {
@@ -76,97 +141,17 @@ public class CodeCompletionManager {
     }
 
     private static void initializeCommandArguments() {
-
-        commandArguments.put("moveto", Arrays.asList("~ ~ ~", "0 64 0", "$PLAYER_X $PLAYER_Y $PLAYER_Z"));
-        argumentDescriptions.put("moveto:~ ~ ~", "Relative coordinates");
-        argumentDescriptions.put("moveto:0 64 0", "Absolute coordinates");
-
-        commandArguments.put("pathfind", Arrays.asList("~ ~ ~", "0 64 0", "home", "spawn"));
-        argumentDescriptions.put("pathfind:home", "Home waypoint");
-        argumentDescriptions.put("pathfind:spawn", "Spawn point");
-
-        commandArguments.put("runto", Arrays.asList("~ ~ ~", "0 64 0"));
-
-        commandArguments.put("lookat", Arrays.asList("~ ~ ~", "0 64 0", "entity", "block"));
-        argumentDescriptions.put("lookat:entity", "Look at nearest entity");
-        argumentDescriptions.put("lookat:block", "Look at target block");
-
-        commandArguments.put("wait", Arrays.asList("100", "500", "1000", "2000", "5000"));
-        argumentDescriptions.put("wait:100", "100ms (0.1 sec)");
-        argumentDescriptions.put("wait:500", "500ms (0.5 sec)");
-        argumentDescriptions.put("wait:1000", "1 second");
-        argumentDescriptions.put("wait:2000", "2 seconds");
-        argumentDescriptions.put("wait:5000", "5 seconds");
-
-        commandArguments.put("loop", Arrays.asList("5", "10", "100", "infinite"));
-        argumentDescriptions.put("loop:infinite", "Infinite loop");
-
-        commandArguments.put("selectslot", Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8"));
-        argumentDescriptions.put("selectslot:0", "First hotbar slot");
-        argumentDescriptions.put("selectslot:8", "Last hotbar slot");
-
-        commandArguments.put("print", Arrays.asList("\"Hello World!\"", "$PLAYER_NAME", "$PLAYER_HEALTH"));
-        commandArguments.put("chat", Arrays.asList("/help", "/gamemode creative", "/tp ~ ~ ~"));
-
-        commandArguments.put("inventory", Arrays.asList("open", "close", "drop", "swap", "move"));
-        argumentDescriptions.put("inventory:open", "Open inventory");
-        argumentDescriptions.put("inventory:close", "Close inventory");
-        argumentDescriptions.put("inventory:drop", "Drop item");
-
-        commandArguments.put("attack", Arrays.asList("once", "hold", "release"));
-        argumentDescriptions.put("attack:once", "Single attack");
-        argumentDescriptions.put("attack:hold", "Hold attack");
-        argumentDescriptions.put("attack:release", "Release attack");
-
-        commandArguments.put("useitem", Arrays.asList("once", "hold", "release"));
-        commandArguments.put("interact", Arrays.asList("block", "entity"));
-
-        commandArguments.put("sprint", Arrays.asList("on", "off", "toggle"));
-        commandArguments.put("sneak", Arrays.asList("on", "off", "toggle"));
-        commandArguments.put("jump", Arrays.asList("once", "hold", "release"));
-        commandArguments.put("swim", Arrays.asList("on", "off"));
-
-        commandArguments.put("breakblock", Arrays.asList("~ ~ ~", "0 64 0"));
-        commandArguments.put("placeblock", Arrays.asList("~ ~ ~", "0 64 0"));
-        commandArguments.put("getblock", Arrays.asList("~ ~ ~", "0 64 0"));
-
-        commandArguments.put("scan", Arrays.asList("diamond_ore", "iron_ore", "gold_ore", "chest", "spawner"));
-        argumentDescriptions.put("scan:diamond_ore", "Find diamond ore");
-        argumentDescriptions.put("scan:chest", "Find chests");
-        argumentDescriptions.put("scan:spawner", "Find spawners");
-
-        commandArguments.put("scanner", Arrays.asList("start", "stop", "radius"));
-
-        commandArguments.put("stop", Arrays.asList("all", "current"));
-        argumentDescriptions.put("stop:all", "Stop all scripts");
-        argumentDescriptions.put("stop:current", "Stop current script");
-
-        commandArguments.put("fullbright", Arrays.asList("on", "off", "toggle"));
-        commandArguments.put("vision", Arrays.asList("normal", "night", "xray"));
-
-        commandArguments.put("teleport", Arrays.asList("~ ~ ~", "0 64 0", "spawn", "home"));
-        commandArguments.put("sethealth", Arrays.asList("20", "10", "1"));
-        commandArguments.put("speedhack", Arrays.asList("1.0", "1.5", "2.0", "3.0", "off"));
-
-        commandArguments.put("onevent", Arrays.asList("tick", "chat", "damage", "death", "respawn"));
-        argumentDescriptions.put("onevent:tick", "Every game tick");
-        argumentDescriptions.put("onevent:chat", "On chat message");
-        argumentDescriptions.put("onevent:damage", "On damage taken");
-        argumentDescriptions.put("onevent:death", "On death");
-
-        commandArguments.put("ai", Arrays.asList("ask", "generate", "analyze"));
-        commandArguments.put("http", Arrays.asList("get", "post", "put", "delete"));
-
-        commandArguments.put("eat", Arrays.asList("auto", "once"));
-        commandArguments.put("dropitem", Arrays.asList("all", "one", "stack"));
-
-        commandArguments.put("equiparmor", Arrays.asList("auto", "best", "slot"));
+        // Core command arguments are now handled by the commands themselves via
+        // getArgumentCompletions
     }
 
     public static void updateEnvironmentVariables() {
         environmentVariables.clear();
-        ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-        for (Map.Entry<String, EnvironmentVariable> entry : interpreter.getEnvironmentVariables().entrySet()) {
+        Environment provider = Environment
+                .getInstance();
+
+        for (Map.Entry<String, Environment.Variable> entry : provider
+                .getVariableDefinitions().entrySet()) {
             String varName = "$" + entry.getKey();
             environmentVariables.put(varName, entry.getValue().getDescription());
         }
@@ -180,17 +165,25 @@ public class CodeCompletionManager {
         userVariables.clear();
     }
 
-    public static List<String> getArgumentCompletions(String command, String partialArg) {
+    public static List<String> getArgumentCompletions(String commandName, String partialArg) {
         List<String> result = new ArrayList<>();
-        String cmdLower = command.toLowerCase();
+        String cmdLower = commandName.toLowerCase();
 
-        if (!commandArguments.containsKey(cmdLower)) {
-            return result;
+        // Check Registry for dynamic completions
+        for (Command cmd : Registry.getCommands()) {
+            if (cmd.getName().equalsIgnoreCase(cmdLower)) {
+                // For now, we only support the first argument group completion
+                // ModernTextArea splits by spaces to determine the index in the future
+                result.addAll(cmd.getArgumentCompletions(0, partialArg));
+                break;
+            }
         }
 
-        for (String arg : commandArguments.get(cmdLower)) {
-            if (partialArg.isEmpty() || arg.toLowerCase().startsWith(partialArg.toLowerCase())) {
-                result.add(arg);
+        // Fallback to server commands
+        for (ServerCommandMetadata meta : serverCommands) {
+            if (meta.name.equalsIgnoreCase(cmdLower)) {
+                // Server commands don't have argument completions yet
+                break;
             }
         }
 
@@ -203,7 +196,79 @@ public class CodeCompletionManager {
     }
 
     public static boolean hasArgumentSuggestions(String command) {
-        return commandArguments.containsKey(command.toLowerCase());
+        String cmdLower = command.toLowerCase();
+        if (commandArguments.containsKey(cmdLower))
+            return true;
+
+        for (Command cmd : Registry.getCommands()) {
+            if (cmd.getName().equalsIgnoreCase(cmdLower))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static final List<ServerCommandMetadata> serverCommands = new ArrayList<>();
+
+    public static List<ServerCommandMetadata> getServerCommandMetadata() {
+        return serverCommands;
+    }
+
+    public static void setServerCommands(List<ServerCommandMetadata> commands) {
+        serverCommands.clear();
+        serverCommands.addAll(commands);
+    }
+
+    public static String getCommandDescription(String command) {
+        if (command.startsWith("$")) {
+            String description = environmentVariables.get(command.toUpperCase());
+            if (description != null) {
+                return description;
+            }
+            if (userVariables.contains(command.substring(1))) {
+                return "User variable";
+            }
+            return "";
+        }
+
+        for (ServerCommandMetadata meta : serverCommands) {
+            if (meta.name.equalsIgnoreCase(command)) {
+                return meta.description + "\nSyntax: " + meta.syntax;
+            }
+        }
+
+        Command cmd = null;
+        for (Command sc : Registry.getCommands()) {
+            if (sc.getName().equalsIgnoreCase(command)) {
+                cmd = sc;
+                break;
+            }
+        }
+
+        if (cmd != null) {
+            return cmd.getMetadata().description + "\nParams: " + cmd.getMetadata().syntax;
+        }
+
+        if (snippets.containsKey(command)) {
+            return snippetDescriptions.getOrDefault(command, "");
+        }
+
+        return "";
+    }
+
+    public static String getCommandParameters(String command) {
+        command = command.toLowerCase();
+
+        for (ServerCommandMetadata meta : serverCommands) {
+            if (meta.name.equalsIgnoreCase(command)) {
+                return meta.syntax;
+            }
+        }
+
+        if (builtInParameters.containsKey(command)) {
+            return builtInParameters.get(command);
+        }
+        return commandParameters.getOrDefault(command, "");
     }
 
     public static List<String> getCompletions(String partialWord) {
@@ -232,72 +297,45 @@ public class CodeCompletionManager {
             return result;
         }
 
-        for (Command command : CommandRegistry.getAllCommands()) {
+        for (ServerCommandMetadata meta : serverCommands) {
+            if (meta.name.toLowerCase().startsWith(partialWord.toLowerCase())) {
+                if (!result.contains(meta.name)) {
+                    result.add(meta.name);
+                }
+            }
+        }
+
+        for (Command command : Registry.getCommands()) {
             String cmdName = command.getName().toLowerCase();
             if (cmdName.startsWith(partialWord.toLowerCase())) {
-                result.add(cmdName);
+                if (!result.contains(cmdName)) {
+                    result.add(cmdName);
+                }
             }
         }
 
         for (String snippet : snippets.keySet()) {
             if (snippet.toLowerCase().startsWith(partialWord.toLowerCase())) {
-                result.add(snippet);
+                if (!result.contains(snippet)) {
+                    result.add(snippet);
+                }
+            }
+        }
+
+        // Add object names to completions (using display names for correct casing)
+        for (String objName : objectDisplayNames) {
+            if (objName.toLowerCase().startsWith(partialWord.toLowerCase())) {
+                if (!result.contains(objName)) {
+                    result.add(objName);
+                }
             }
         }
 
         return result;
     }
 
-    public static String getCommandParameters(String command) {
-        command = command.toLowerCase();
-        if (builtInParameters.containsKey(command)) {
-            return builtInParameters.get(command);
-        }
-        return commandParameters.getOrDefault(command, "");
-    }
-
-    public static String getCommandDescription(String command) {
-        if (command.startsWith("$")) {
-            String description = environmentVariables.get(command.toUpperCase());
-            if (description != null) {
-                return description;
-            }
-            if (userVariables.contains(command.substring(1))) {
-                return "User variable";
-            }
-            return "";
-        }
-
-        Command cmd = CommandRegistry.getCommand(command.toLowerCase());
-        if (cmd != null) {
-            return cmd.getDescription() + "\nParams: " + cmd.getParameters();
-        }
-
-        if (snippets.containsKey(command)) {
-            return snippetDescriptions.getOrDefault(command, "");
-        }
-
-        return "";
-    }
-
     public static String getSnippet(String name) {
         return snippets.getOrDefault(name.toLowerCase(), "");
     }
 
-    private void initializeCompletions() {
-        completions.clear();
-        descriptions.clear();
-
-        for (Command cmd : CommandRegistry.getCommands()) {
-            completions.add(cmd.getName());
-        }
-
-        ScriptInterpreter interpreter = ScriptInterpreter.getInstance();
-        for (Map.Entry<String, EnvironmentVariable> entry : interpreter.getEnvironmentVariables().entrySet()) {
-            String varName = "$" + entry.getKey();
-            String description = entry.getValue().getDescription();
-            completions.add(varName);
-            descriptions.put(varName, description);
-        }
-    }
 }

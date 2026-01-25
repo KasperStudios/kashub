@@ -33,5 +33,8 @@ kashub-vscode/out/
 kashub-vscode/*.vsix
 kashub-vscode/.vscode-test/
 
+# Server Plugin
+kashub-server-plugin/build
+
 # Keep roadmap for now
 # ROADMAP_FUTURE.md

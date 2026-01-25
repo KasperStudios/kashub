@@ -1,7 +1,7 @@
 package kasperstudios.kashub;
 
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.command.ScriptCommand;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.command.KashubCommand;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 public class Kashub implements ModInitializer {
     public static final String MOD_ID = "kashub";
+    public static final String MOD_VERSION = "0.9.0-beta"; // v0.9.0
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public static final String VERSION = FabricLoader.getInstance()
@@ -29,10 +30,10 @@ public class Kashub implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Kashub {} initializing...", VERSION);
 
-        CommandRegistry.initialize();
+        Registry.initialize();
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            ScriptCommand.register(dispatcher);
+            KashubCommand.register(dispatcher);
         });
 
         LOGGER.info("Kashub {} initialized successfully!", VERSION);

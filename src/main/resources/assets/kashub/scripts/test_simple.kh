@@ -1,0 +1,24 @@
+// Simple test for object syntax
+print "=== Simple Object Test ==="
+
+// Test 1: Print function
+print "Test 1: Print works!"
+
+// Test 2: Player health
+print "Test 2: Getting player health..."
+let health = player.getHealth()
+print "Player health: " + health
+
+// Test 3: Player position
+print "Test 3: Getting player position..."
+let pos = player.getPos()
+print "Position X: " + pos.x
+print "Position Y: " + pos.y
+print "Position Z: " + pos.z
+
+// Test 4: Inventory
+print "Test 4: Checking inventory..."
+let empty = inventory.getEmptySlots()
+print "Empty slots: " + empty
+
+print "=== All Tests Complete ==="

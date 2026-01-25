@@ -6,8 +6,9 @@ import kasperstudios.kashub.debug.DebugManager;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.Command;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.Command;
+import kasperstudios.kashub.core.Environment;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -39,6 +40,7 @@ public class ModernTextArea {
 
     private boolean focused = false;
     private long cursorBlinkTime = 0;
+    private boolean editable = true;
 
     private Map<Integer, String> lineErrors = new HashMap<>();
     private long lastValidationTime = 0;
@@ -66,8 +68,8 @@ public class ModernTextArea {
 
     public static void refreshCommands() {
         COMMANDS = new HashSet<>();
-        for (Command cmd : CommandRegistry.getAllCommands()) {
-            COMMANDS.add(cmd.getName().toLowerCase());
+        for (Command cmd : Registry.getAllCommands()) {
+            COMMANDS.add(cmd.getMetadata().name.toLowerCase());
         }
     }
 
@@ -77,6 +79,10 @@ public class ModernTextArea {
     private String autocompletePrefix = "";
     private int autocompleteX = 0;
     private int autocompleteY = 0;
+    private boolean isArgumentMode = false;
+    private boolean isMemberMode = false;
+    private String currentCommandContext = null;
+    private String syntaxHint = null;
     private static final int AUTOCOMPLETE_MAX_ITEMS = 8;
     private static final int AUTOCOMPLETE_ITEM_HEIGHT = 14;
 
@@ -85,6 +91,38 @@ public class ModernTextArea {
     private static final Pattern COMMENT_PATTERN = Pattern.compile("//.*$");
     private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\$[A-Za-z_][A-Za-z0-9_]*");
     private static final Pattern FUNCTION_PATTERN = Pattern.compile("\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(");
+    private static final Pattern OBJECT_CALL_PATTERN = Pattern
+            .compile("\\b([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)");
+
+    // V2 objects - discovered dynamically from Interpreter
+    private static Set<String> KNOWN_OBJECTS = null;
+
+    private static Set<String> getKnownObjects() {
+        if (KNOWN_OBJECTS == null) {
+            refreshKnownObjects();
+        }
+        return KNOWN_OBJECTS;
+    }
+
+    public static void refreshKnownObjects() {
+        KNOWN_OBJECTS = new HashSet<>();
+
+        // Create temporary context to discover registered objects
+        kasperstudios.kashub.core.Context tempCtx = new kasperstudios.kashub.core.Context();
+        kasperstudios.kashub.core.Interpreter.execute(java.util.Collections.emptyList(), tempCtx);
+
+        // Extract all object names from context
+        // Objects are: System, player, scanner, vision, inventory, world, game, w2p,
+        // Math, tag
+        String[] possibleObjects = { "System", "player", "scanner", "vision", "inventory", "world", "game", "w2p",
+                "Math", "tag" };
+        for (String objName : possibleObjects) {
+            kasperstudios.kashub.core.Value val = tempCtx.getVariable(objName);
+            if (val != null && !val.isNull()) {
+                KNOWN_OBJECTS.add(objName.toLowerCase());
+            }
+        }
+    }
 
     public ModernTextArea(TextRenderer textRenderer, int x, int y, int width, int height, EditorTheme theme) {
         this.textRenderer = textRenderer;
@@ -101,6 +139,10 @@ public class ModernTextArea {
         this.y = y;
         this.width = width;
         this.height = height;
+    }
+
+    public void setEditable(boolean editable) {
+        this.editable = editable;
     }
 
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
@@ -223,6 +265,19 @@ public class ModernTextArea {
         if (showAutocomplete && !autocompleteItems.isEmpty()) {
             renderAutocomplete(context, mouseX, mouseY);
         }
+
+        if (syntaxHint != null && !showAutocomplete) {
+            renderSyntaxHint(context);
+        }
+    }
+
+    private void renderSyntaxHint(DrawContext context) {
+        int cursorX = x + LINE_NUMBER_WIDTH + PADDING + getTextWidth(getCurrentLineBeforeCursor()) - scrollX;
+        int cursorY = y + (cursorLine - scrollY) * LINE_HEIGHT + PADDING + LINE_HEIGHT;
+
+        int hintWidth = textRenderer.getWidth(syntaxHint) + 8;
+        context.fill(cursorX, cursorY, cursorX + hintWidth, cursorY + 12, 0xAA000000);
+        context.drawText(textRenderer, syntaxHint, cursorX + 4, cursorY + 2, 0xFFAAAAAA, false);
     }
 
     private void renderAutocomplete(DrawContext context, int mouseX, int mouseY) {
@@ -288,15 +343,16 @@ public class ModernTextArea {
     }
 
     private String getAutocompleteIcon(String item) {
+        if (isMemberMode)
+            return "Ⓜ"; // Member
         if (isArgumentMode)
-            return "▸";
+            return "▸"; // Arg
         if (item.startsWith("$"))
-            return "📦";
-        if (KEYWORDS.contains(item.toLowerCase()))
-            return "🔑";
-        if (getCommands().contains(item.toLowerCase()))
-            return "⚡";
-        return "📝";
+            return "⛁"; // Variable
+        String snippet = CodeCompletionManager.getSnippet(item);
+        if (snippet != null && !snippet.isEmpty())
+            return "↲"; // Snippet
+        return "➲"; // Command
     }
 
     private int getMaxLineWidth() {
@@ -352,6 +408,38 @@ public class ModernTextArea {
             }
         }
 
+        // Highlight object calls (e.g., player.attack, vision.nearest)
+        Matcher objectMatcher = OBJECT_CALL_PATTERN.matcher(line);
+        while (objectMatcher.find()) {
+            String objectName = objectMatcher.group(1);
+
+            // Highlight object name if it's a known object
+            if (getKnownObjects().contains(objectName.toLowerCase())) {
+                int objectStart = objectMatcher.start(1);
+                int objectEnd = objectMatcher.end(1);
+                for (int i = objectStart; i < objectEnd && i < colors.length; i++) {
+                    if (colors[i] == theme.textColor) {
+                        colors[i] = 0xFFFF9800; // Orange for objects
+                    }
+                }
+
+                // Highlight method name
+                int methodStart = objectMatcher.start(2);
+                int methodEnd = objectMatcher.end(2);
+                for (int i = methodStart; i < methodEnd && i < colors.length; i++) {
+                    if (colors[i] == theme.textColor) {
+                        colors[i] = 0xFF9C27B0; // Purple for methods
+                    }
+                }
+
+                // Highlight the dot
+                int dotPos = objectMatcher.end(1);
+                if (dotPos < colors.length && colors[dotPos] == theme.textColor) {
+                    colors[dotPos] = 0xFF666666; // Gray for dot
+                }
+            }
+        }
+
         String[] words = line.split("(?<=\\s)|(?=\\s)|(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])");
         int pos = 0;
         for (String word : words) {
@@ -384,8 +472,22 @@ public class ModernTextArea {
         if (!focused)
             return false;
 
-        cursorBlinkTime = System.currentTimeMillis();
         boolean ctrlPressed = (modifiers & 2) != 0;
+
+        // Allow copy even if not editable
+        if (ctrlPressed && keyCode == 67) {
+            copy();
+            return true;
+        }
+
+        // Navigation keys should work
+        if (keyCode >= 262 && keyCode <= 269) {
+            // Let navigation pass through to switch logic
+        } else if (!editable) {
+            return false;
+        }
+
+        cursorBlinkTime = System.currentTimeMillis();
         boolean shiftPressed = (modifiers & 1) != 0;
         boolean altPressed = (modifiers & 4) != 0;
 
@@ -614,6 +716,8 @@ public class ModernTextArea {
     public boolean charTyped(char chr, int modifiers) {
         if (!focused)
             return false;
+        if (!editable)
+            return false;
         if (chr < 32)
             return false;
 
@@ -627,7 +731,7 @@ public class ModernTextArea {
 
         insertText(String.valueOf(chr));
 
-        if (Character.isLetterOrDigit(chr) || chr == '$' || chr == '_') {
+        if (Character.isLetterOrDigit(chr) || chr == '$' || chr == '_' || chr == '.') {
             triggerAutocomplete();
         } else {
             hideAutocomplete();
@@ -642,22 +746,24 @@ public class ModernTextArea {
         cursorColumn += text.length();
     }
 
-    private String currentCommandContext = null;
-    private boolean isArgumentMode = false;
-
     private void triggerAutocomplete() {
 
-        String[] lineContext = getLineContext();
+        isArgumentMode = false;
+        isMemberMode = false;
+        currentCommandContext = null;
+
         String currentWord = getCurrentWord();
 
-        if (lineContext != null && lineContext.length >= 1) {
-            String command = lineContext[0].toLowerCase();
-            if (CodeCompletionManager.hasArgumentSuggestions(command)) {
+        // Check for object member access (object.member)
+        String precedingLine = getCurrentLineBeforeCursor();
+        int wordStart = precedingLine.length() - currentWord.length();
 
-                currentCommandContext = command;
-                isArgumentMode = true;
+        if (wordStart > 0 && precedingLine.charAt(wordStart - 1) == '.') {
+            String objectName = getPrecedingIdentifier(wordStart - 1);
+            if (!objectName.isEmpty() && CodeCompletionManager.hasObjectSuggestions(objectName)) {
+                isMemberMode = true;
                 autocompletePrefix = currentWord;
-                autocompleteItems = CodeCompletionManager.getArgumentCompletions(command, currentWord);
+                autocompleteItems = CodeCompletionManager.getMemberCompletions(objectName, currentWord);
 
                 if (!autocompleteItems.isEmpty()) {
                     autocompleteSelectedIndex = 0;
@@ -667,8 +773,25 @@ public class ModernTextArea {
             }
         }
 
-        isArgumentMode = false;
-        currentCommandContext = null;
+        String[] lineContext = getLineContext();
+        if (lineContext != null && lineContext.length >= 1) {
+            String command = lineContext[0].toLowerCase();
+            // Don't trigger argument mode if we are typing the command itself
+            if (lineContext.length > 1 || (lineContext.length == 1 && precedingLine.endsWith(" "))) {
+                if (CodeCompletionManager.hasArgumentSuggestions(command)) {
+                    currentCommandContext = command;
+                    isArgumentMode = true;
+                    autocompletePrefix = currentWord;
+                    autocompleteItems = CodeCompletionManager.getArgumentCompletions(command, currentWord);
+
+                    if (!autocompleteItems.isEmpty()) {
+                        autocompleteSelectedIndex = 0;
+                        showAutocomplete = true;
+                        return;
+                    }
+                }
+            }
+        }
 
         if (currentWord.isEmpty()) {
             hideAutocomplete();
@@ -688,18 +811,22 @@ public class ModernTextArea {
     }
 
     private void updateAutocomplete() {
+        isArgumentMode = false;
+        isMemberMode = false;
+        currentCommandContext = null;
+        syntaxHint = null;
+
         String currentWord = getCurrentWord();
+        String precedingLine = getCurrentLineBeforeCursor();
+        int wordStart = precedingLine.length() - currentWord.length();
 
-        String[] lineContext = getLineContext();
-
-        if (lineContext != null && lineContext.length >= 1) {
-            String command = lineContext[0].toLowerCase();
-            if (CodeCompletionManager.hasArgumentSuggestions(command) && cursorColumn > command.length()) {
-
-                currentCommandContext = command;
-                isArgumentMode = true;
+        // Member Update
+        if (wordStart > 0 && precedingLine.charAt(wordStart - 1) == '.') {
+            String objectName = getPrecedingIdentifier(wordStart - 1);
+            if (!objectName.isEmpty() && CodeCompletionManager.hasObjectSuggestions(objectName)) {
+                isMemberMode = true;
                 autocompletePrefix = currentWord;
-                autocompleteItems = CodeCompletionManager.getArgumentCompletions(command, currentWord);
+                autocompleteItems = CodeCompletionManager.getMemberCompletions(objectName, currentWord);
 
                 if (autocompleteItems.isEmpty()) {
                     hideAutocomplete();
@@ -712,8 +839,31 @@ public class ModernTextArea {
             }
         }
 
-        isArgumentMode = false;
-        currentCommandContext = null;
+        // Argument Update
+        String[] lineContext = getLineContext();
+        if (lineContext != null && lineContext.length >= 1) {
+            String command = lineContext[0].toLowerCase();
+            if (lineContext.length > 1 || (lineContext.length == 1 && precedingLine.contains(" "))) {
+                if (CodeCompletionManager.hasArgumentSuggestions(command) && cursorColumn > command.length()) {
+                    currentCommandContext = command;
+                    isArgumentMode = true;
+                    autocompletePrefix = currentWord;
+                    autocompleteItems = CodeCompletionManager.getArgumentCompletions(command, currentWord);
+                    syntaxHint = CodeCompletionManager.getCommandParameters(command);
+
+                    if (autocompleteItems.isEmpty()) {
+                        // showAutocomplete = false; // Keep it true if we have a hint?
+                        // For now just hide if no items, but syntaxHint will be rendered
+                        showAutocomplete = false;
+                        return;
+                    }
+
+                    autocompleteSelectedIndex = Math.min(autocompleteSelectedIndex, autocompleteItems.size() - 1);
+                    showAutocomplete = true;
+                    return;
+                }
+            }
+        }
 
         if (currentWord.isEmpty()) {
             hideAutocomplete();
@@ -731,11 +881,27 @@ public class ModernTextArea {
         autocompleteSelectedIndex = Math.min(autocompleteSelectedIndex, autocompleteItems.size() - 1);
     }
 
+    private String getPrecedingIdentifier(int dotIndex) {
+        String line = lines.get(cursorLine);
+        int start = dotIndex - 1;
+        while (start >= 0) {
+            char c = line.charAt(start);
+            if (!Character.isLetterOrDigit(c) && c != '_' && c != '$') {
+                break;
+            }
+            start--;
+        }
+        start++;
+        if (start >= dotIndex)
+            return "";
+        return line.substring(start, dotIndex);
+    }
+
     private String[] getLineContext() {
         if (cursorLine >= lines.size())
             return null;
-        String line = lines.get(cursorLine).trim();
-        if (line.isEmpty())
+        String line = lines.get(cursorLine);
+        if (line.trim().isEmpty())
             return null;
 
         String beforeCursor = line.substring(0, Math.min(cursorColumn, line.length())).trim();
@@ -994,28 +1160,49 @@ public class ModernTextArea {
         lineErrors.clear();
 
         Set<String> userFunctions = new HashSet<>();
-        for (String line : lines) {
-            String trimmed = line.trim();
-            String rest = null;
-            if (trimmed.startsWith("function ")) {
-                rest = trimmed.substring(9).trim();
-            } else if (trimmed.startsWith("fn ")) {
-                rest = trimmed.substring(3).trim();
-            }
-            if (rest != null) {
+        Set<String> declaredVariables = new HashSet<>();
+        CodeCompletionManager.clearUserVariables();
 
-                int parenIdx = rest.indexOf('(');
-                int braceIdx = rest.indexOf('{');
-                int endIdx = parenIdx > 0 ? parenIdx : (braceIdx > 0 ? braceIdx : rest.length());
-                String funcName = rest.substring(0, endIdx).trim();
+        // Pass 1: Collect user functions and variables
+        for (String lineText : lines) {
+            String trimmed = lineText.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("//"))
+                continue;
+
+            // Function detection
+            String funcRest = null;
+            if (trimmed.startsWith("function ")) {
+                funcRest = trimmed.substring(9).trim();
+            } else if (trimmed.startsWith("fn ")) {
+                funcRest = trimmed.substring(3).trim();
+            }
+
+            if (funcRest != null) {
+                int parenIdx = funcRest.indexOf('(');
+                int braceIdx = funcRest.indexOf('{');
+                int endIdx = parenIdx > 0 ? parenIdx : (braceIdx > 0 ? braceIdx : funcRest.length());
+                String funcName = funcRest.substring(0, endIdx).trim();
                 if (!funcName.isEmpty()) {
                     userFunctions.add(funcName.toLowerCase());
                 }
+            }
+
+            // Variable declaration detection (let, const, or direct assignment)
+            Matcher varMatch = Pattern.compile("^(?:let\\s+|const\\s+)?([$a-zA-Z_][$a-zA-Z0-9_]*)\\s*=")
+                    .matcher(trimmed);
+            if (varMatch.find()) {
+                String varName = varMatch.group(1);
+                if (varName.startsWith("$")) {
+                    varName = varName.substring(1);
+                }
+                declaredVariables.add(varName.toLowerCase());
+                CodeCompletionManager.addUserVariable(varName);
             }
         }
 
         int braceDepth = 0;
 
+        // Pass 2: Line by line validation
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
 
@@ -1023,6 +1210,7 @@ public class ModernTextArea {
                 continue;
             }
 
+            // Brace tracking
             for (char c : line.toCharArray()) {
                 if (c == '{')
                     braceDepth++;
@@ -1036,51 +1224,97 @@ public class ModernTextArea {
                 continue;
             }
 
-            if (line.equals("}") || line.startsWith("} else") || line.equals("else {") || line.equals("else")) {
-                continue;
-            }
-
-            if (line.startsWith("if ") || line.startsWith("if(") ||
+            // Skip block keywords
+            if (line.equals("}") || line.startsWith("} else") || line.equals("else {") || line.equals("else") ||
+                    line.startsWith("if ") || line.startsWith("if(") ||
                     line.startsWith("while ") || line.startsWith("while(") ||
-                    line.startsWith("for ") || line.startsWith("for(")) {
+                    line.startsWith("for ") || line.startsWith("for(") ||
+                    line.startsWith("else if ") || line.startsWith("} else if ") ||
+                    line.startsWith("else if(") || line.startsWith("} else if(") ||
+                    line.startsWith("loop") || line.startsWith("function ") || line.startsWith("fn ")) {
+                continue;
+            }
 
-                if (!line.contains("{") && !line.endsWith("{")) {
-
+            // Variable usage check in the line
+            Matcher usageMatch = VARIABLE_PATTERN.matcher(line);
+            while (usageMatch.find()) {
+                String usedVar = usageMatch.group().substring(1).toLowerCase();
+                // Check if it's an environment variable or declared user variable
+                if (!Environment.getInstance().getVariableDefinitions().containsKey(usedVar.toUpperCase()) &&
+                        !declaredVariables.contains(usedVar)) {
+                    // Only flag if it's not on the left side of an assignment (which we already
+                    // handled in pass 1)
+                    // This is a bit simplified but effective
+                    lineErrors.put(i, "Possibly undeclared variable: $" + usageMatch.group().substring(1));
                 }
-                continue;
             }
 
-            if (line.startsWith("else if ") || line.startsWith("} else if ") ||
-                    line.startsWith("else if(") || line.startsWith("} else if(")) {
-                continue;
+            // Server/Command validation
+            boolean isServerValid = false;
+            for (kasperstudios.kashub.gui.ServerCommandMetadata meta : CodeCompletionManager
+                    .getServerCommandMetadata()) {
+                try {
+                    if (line.matches(meta.pattern)) {
+                        isServerValid = true;
+                        break;
+                    }
+                } catch (Exception ignored) {
+                }
             }
-
-            if (line.startsWith("loop")) {
+            if (isServerValid)
                 continue;
-            }
-
-            if (line.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*") ||
-                    line.matches("^let\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*") ||
-                    line.matches("^const\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*")) {
-                continue;
-            }
-
-            if (line.startsWith("function ") || line.startsWith("fn ")) {
-                continue;
-            }
 
             String[] parts = line.split("\\s+", 2);
             String commandName = parts[0].toLowerCase();
 
-            if (KEYWORDS.contains(commandName)) {
+            if (KEYWORDS.contains(commandName) || userFunctions.contains(commandName)) {
                 continue;
             }
 
-            if (userFunctions.contains(commandName)) {
+            // Registry Match and Dynamic Validation
+            Command cmdMatch = Registry.findMatch(line);
+            if (cmdMatch != null) {
+                String error = cmdMatch.validate(line, null);
+                if (error != null) {
+                    lineErrors.put(i, error);
+                }
                 continue;
             }
 
-            if (!getCommands().contains(commandName) && CommandRegistry.getCommand(commandName) == null) {
+            // Check if it's an object method call (e.g., player.lookAt(...) or
+            // vision.nearest(...))
+            if (line.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z_][a-zA-Z0-9_]*.*$")) {
+                // Extract object name
+                String objectName = line.split("\\.")[0];
+                // Use dynamic known objects list
+                Set<String> knownObjects = getKnownObjects();
+
+                if (knownObjects.contains(objectName.toLowerCase())
+                        || declaredVariables.contains(objectName.toLowerCase())) {
+                    // Valid object method call
+                    continue;
+                } else {
+                    lineErrors.put(i, "Unknown object: " + objectName);
+                    continue;
+                }
+            }
+
+            // Check if it's a variable access (e.g., let x = player.getHealth())
+            if (line.contains(".") && !line.startsWith(".")) {
+                // Likely an object member access, skip validation
+                continue;
+            }
+
+            // Fallback: check if the command name is at least known
+            boolean commandNameKnown = false;
+            for (Command cmd : Registry.getCommands()) {
+                if (cmd.getName().equalsIgnoreCase(commandName)) {
+                    commandNameKnown = true;
+                    break;
+                }
+            }
+
+            if (!commandNameKnown) {
                 lineErrors.put(i, "Unknown command: " + commandName);
             }
         }

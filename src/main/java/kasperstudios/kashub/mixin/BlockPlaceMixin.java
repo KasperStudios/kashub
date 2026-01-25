@@ -1,6 +1,6 @@
 package kasperstudios.kashub.mixin;
 
-import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.core.events.EventManager;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;

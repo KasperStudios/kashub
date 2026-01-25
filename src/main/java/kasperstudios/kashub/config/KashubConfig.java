@@ -2,13 +2,14 @@ package kasperstudios.kashub.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.*;
 import java.util.*;
 
 public class KashubConfig {
     private static KashubConfig instance;
-    private static final Path CONFIG_PATH = Paths.get("config", "kashub", "config.json");
+    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("config.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public String editorTheme = "dracula";
@@ -32,6 +33,19 @@ public class KashubConfig {
     public boolean allowEval = false;
 
     public boolean allowAiIntegration = false;
+    
+    // v0.9.0 - Discord Rich Presence
+    public boolean discordRpcEnabled = true;
+    public boolean discordShowDimension = true;
+    public boolean discordShowCoords = false;
+    public boolean discordShowServerName = true;
+    
+    // v0.9.0 - Flexible Configuration
+    public boolean restrictedMode = false;
+    public boolean allowEditorAccess = true;
+    public boolean allowDebuggerAccess = true;
+    public List<String> disabledCommands = new ArrayList<>();
+    public boolean clientEnforcement = true;
 
     public enum AiProvider {
         OFF, GROQ, MEGALLM, CUSTOM

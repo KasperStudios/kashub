@@ -3,7 +3,7 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.core.TaskManager;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.HashMap;
@@ -39,7 +39,7 @@ public class StatusEndpoint {
                 response.put("player", player);
             }
 
-            Map<String, Object> tasks = ScriptTaskManager.getInstance().getStats();
+            Map<String, Object> tasks = TaskManager.getInstance().getStats();
             response.put("tasks", tasks);
 
             KashubWebSocketServer wsServer = KashubAPIServer.getInstance().getWebSocketServer();

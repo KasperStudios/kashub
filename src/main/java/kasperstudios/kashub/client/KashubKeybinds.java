@@ -5,7 +5,6 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.MinecraftClient;
-import kasperstudios.kashub.algorithm.commands.*;
 
 public class KashubKeybinds {
   public static KeyBinding openMenuKey;
@@ -20,15 +19,13 @@ public class KashubKeybinds {
             "key.kashub.openmenu",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_K,
-            "category.kashub.main"
-        );
+            "category.kashub.main");
 
         stopScriptsKey = new KeyBinding(
             "key.kashub.stopscripts",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_Z,
-            "category.kashub.main"
-        );
+            "category.kashub.main");
 
         initialized = true;
         ScriptLogger.getInstance().info("Keybinds registered successfully");
@@ -40,22 +37,17 @@ public class KashubKeybinds {
   }
 
   public static void tick() {
-
-    if (stopScriptsKey != null && isKeyPressed(stopScriptsKey)) {
-      RunToCommand.stopRunning();
-      if (MinecraftClient.getInstance().player != null) {
-        SpeedHackCommand.disable(MinecraftClient.getInstance().player);
-      }
-    }
+    // V1 commands removed - keybind handling now in KashubClient
   }
 
   public static boolean isKeyPressed(KeyBinding key) {
-    if (key == null) return false;
+    if (key == null)
+      return false;
 
     try {
 
       return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(),
-          ((InputUtil.Key)key.getDefaultKey()).getCode());
+          ((InputUtil.Key) key.getDefaultKey()).getCode());
     } catch (Exception e) {
       return false;
     }

@@ -1,0 +1,36 @@
+// Test file for hover functionality
+// Hover over any method to see documentation
+
+// System object methods
+System.print("Testing hover")
+System.wait(1000)
+System.log("Console only")
+
+// Player object methods
+let health = player.getHealth()
+let pos = player.getPos()
+player.moveTo(100, 64, 200)
+player.moveBy(10, 0, 0)
+player.stopMoving()
+player.input("forward", "press")
+player.lookAt(100, 64, 200)
+player.attack()
+player.breakBlock()
+
+// Scanner object methods
+let blocks = scanner.blocks("diamond_ore", 32)
+let entities = scanner.entities("zombie", 50)
+
+// Vision object methods
+let enemy = vision.nearest("hostile", 10)
+let count = vision.count("zombie", 20)
+
+// Inventory object methods
+let items = inventory.getItems()
+let count = inventory.count("diamond")
+inventory.use("golden_apple")
+
+// Math object methods
+let sqrt = Math.sqrt(16)
+let max = Math.max(10, 20)
+let random = Math.random()

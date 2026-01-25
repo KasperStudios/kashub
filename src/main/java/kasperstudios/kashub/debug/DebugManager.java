@@ -1,8 +1,10 @@
 package kasperstudios.kashub.debug;
 
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.Environment;
 import kasperstudios.kashub.util.ScriptLogger;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -75,7 +77,7 @@ public class DebugManager {
 
                 if (!bp.checkHitCondition()) {
                     ScriptLogger.getInstance().debug("Debug: Breakpoint hit condition not satisfied (hit count: {})",
-                        bp.getHitCount());
+                            bp.getHitCount());
                     return false;
                 }
 
@@ -93,12 +95,13 @@ public class DebugManager {
 
                     if (!conditionMet) {
                         ScriptLogger.getInstance().debug("Debug: Conditional breakpoint condition not met: {}",
-                            bp.getCondition());
+                                bp.getCondition());
                         return false;
                     }
 
-                    ScriptLogger.getInstance().debug("Debug: Pausing at conditional breakpoint on line {} (condition: {})",
-                        currentLine, bp.getCondition());
+                    ScriptLogger.getInstance().debug(
+                            "Debug: Pausing at conditional breakpoint on line {} (condition: {})",
+                            currentLine, bp.getCondition());
                     pause(scriptId, currentLine);
                     return true;
 
@@ -168,7 +171,7 @@ public class DebugManager {
             session.setState(DebugState.RUNNING);
             session.setStepMode(StepMode.STEP_INTO);
 
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+            Task task = TaskManager.getInstance().getTask(scriptId);
             if (task != null) {
                 session.setIgnoreBreakpointsAtLine(task.getCurrentLine());
             }
@@ -180,10 +183,9 @@ public class DebugManager {
     public void stepOver(int scriptId) {
         DebugSession session = sessions.get(scriptId);
         if (session != null) {
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+            Task task = TaskManager.getInstance().getTask(scriptId);
             if (task != null) {
                 session.setStopAtLine(task.getCurrentLine());
-
                 session.setIgnoreBreakpointsAtLine(task.getCurrentLine());
             }
 
@@ -196,7 +198,6 @@ public class DebugManager {
     public void stepOut(int scriptId) {
         DebugSession session = sessions.get(scriptId);
         if (session != null) {
-
             if (session.getCallDepth() == 0) {
                 resume(scriptId);
                 return;
@@ -205,7 +206,7 @@ public class DebugManager {
             int currentDepth = session.getCallDepth();
             session.setStepStartDepth(currentDepth - 1);
 
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+            Task task = TaskManager.getInstance().getTask(scriptId);
             if (task != null) {
                 session.setIgnoreBreakpointsAtLine(task.getCurrentLine());
             }
@@ -229,11 +230,11 @@ public class DebugManager {
             session.setState(DebugState.RUNNING);
             session.setStepMode(StepMode.NONE);
 
-            ScriptTask task = ScriptTaskManager.getInstance().getTask(entry.getKey());
+            Task task = TaskManager.getInstance().getTask(entry.getKey());
             if (task != null) {
                 session.setIgnoreBreakpointsAtLine(task.getCurrentLine());
                 ScriptLogger.getInstance().debug("Debug: Set ignore line for session {} to {}",
-                    entry.getKey(), task.getCurrentLine());
+                        entry.getKey(), task.getCurrentLine());
             } else {
                 ScriptLogger.getInstance().warn("Debug: Task not found for session {}", entry.getKey());
             }
@@ -243,16 +244,24 @@ public class DebugManager {
 
     public Map<String, String> getAggregateVariables() {
         Map<String, String> vars = new HashMap<>();
-        vars.putAll(ScriptInterpreter.getInstance().getVariables());
-        for (var entry : ScriptInterpreter.getInstance().getEnvironmentVariables().entrySet()) {
-            vars.put(entry.getKey(), entry.getValue().getValue());
-        }
+
+        // Add Environment Variables
+        vars.putAll(Environment.getInstance().getAllVariables());
+
+        // Add variables from all paused sessions/tasks
         for (Map.Entry<Integer, DebugSession> entry : sessions.entrySet()) {
             if (entry.getValue().getState() == DebugState.PAUSED) {
-                ScriptTask task = ScriptTaskManager.getInstance().getTask(entry.getKey());
+            Task task = TaskManager.getInstance().getTask(entry.getKey());
                 if (task != null) {
                     vars.putAll(task.getVariables());
                 }
+                // Break or continue? Original code broke after first paused session?
+                // "break;" was in original. Probably meant to just show variables of ONE paused
+                // session context?
+                // If multiple are paused, which one?
+                // For "Aggregate", implies all? But conflicting names?
+                // If the UI expects a single context, this method is ambiguous.
+                // Preserving original behavior (break after first).
                 break;
             }
         }
@@ -261,11 +270,13 @@ public class DebugManager {
 
     public Map<String, String> getVariables(int scriptId) {
         Map<String, String> allVars = new HashMap<>();
-        allVars.putAll(ScriptInterpreter.getInstance().getVariables());
-        for (var entry : ScriptInterpreter.getInstance().getEnvironmentVariables().entrySet()) {
-            allVars.put(entry.getKey(), entry.getValue().getValue());
-        }
-        ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+
+        // Add Environment Variables
+        allVars.putAll(
+                Environment.getInstance().getAllVariables());
+
+        // Add Script Variables
+        Task task = TaskManager.getInstance().getTask(scriptId);
         if (task != null) {
             allVars.putAll(task.getVariables());
         }
@@ -305,7 +316,7 @@ public class DebugManager {
         bp.setCondition(condition);
 
         ScriptLogger.getInstance().debug("Debug: Set conditional breakpoint at {}:{} (condition: {})",
-            scriptName, line, condition);
+                scriptName, line, condition);
     }
 
     public void setLogpoint(String scriptName, int line, String logMessage) {
@@ -316,7 +327,7 @@ public class DebugManager {
         bp.setLogMessage(logMessage);
 
         ScriptLogger.getInstance().debug("Debug: Set logpoint at {}:{} (message: {})",
-            scriptName, line, logMessage);
+                scriptName, line, logMessage);
     }
 
     public void setHitCondition(String scriptName, int line, String hitCondition) {
@@ -335,7 +346,7 @@ public class DebugManager {
 
         bp.setHitCondition(hitCondition);
         ScriptLogger.getInstance().debug("Debug: Set hit condition for {}:{} ({})",
-            scriptName, line, hitCondition);
+                scriptName, line, hitCondition);
     }
 
     public Breakpoint getBreakpoint(String scriptName, int line) {
@@ -361,7 +372,7 @@ public class DebugManager {
     }
 
     public int getCurrentLine(int scriptId) {
-        ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+        Task task = TaskManager.getInstance().getTask(scriptId);
         if (task != null) {
             return task.getCurrentLine();
         }
@@ -411,14 +422,13 @@ public class DebugManager {
     }
 
     public void setVariable(int scriptId, String name, String value) {
-        ScriptTask task = ScriptTaskManager.getInstance().getTask(scriptId);
+        Task task = TaskManager.getInstance().getTask(scriptId);
         if (task != null) {
             task.setVariable(name, value);
             ScriptLogger.getInstance().debug("Debug: Set variable " + name + " = " + value + " in script " + scriptId);
         } else {
-
-            ScriptInterpreter.getInstance().setVariable(name, value);
-            ScriptLogger.getInstance().debug("Debug: Set global variable " + name + " = " + value);
+            ScriptLogger.getInstance()
+                    .warn("Debug: Cannot set variable " + name + " - Script " + scriptId + " not found");
         }
     }
 }

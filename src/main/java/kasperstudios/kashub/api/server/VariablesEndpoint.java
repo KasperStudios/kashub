@@ -3,8 +3,6 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.algorithm.EnvironmentVariable;
-import kasperstudios.kashub.algorithm.ScriptInterpreter;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.*;
@@ -23,9 +21,14 @@ public class VariablesEndpoint {
                 return;
             }
 
-            ScriptInterpreter.getInstance().updateEnvironmentVariables();
+            // Use Environment instead of ScriptInterpreter
+            kasperstudios.kashub.core.Environment envProvider = kasperstudios.kashub.core.Environment
+                    .getInstance();
 
-            List<EnvironmentVariable> envVars = ScriptInterpreter.getInstance().getAllEnvironmentVariables();
+            envProvider.update();
+
+            Map<String, kasperstudios.kashub.core.Environment.Variable> varDefs = envProvider
+                    .getVariableDefinitions();
 
             Map<String, Object> variables = new LinkedHashMap<>();
             Map<String, List<Map<String, String>>> categorized = new LinkedHashMap<>();
@@ -34,7 +37,8 @@ public class VariablesEndpoint {
             categorized.put("world", new ArrayList<>());
             categorized.put("system", new ArrayList<>());
 
-            for (EnvironmentVariable var : envVars) {
+            for (kasperstudios.kashub.core.Environment.Variable var : varDefs
+                    .values()) {
                 String name = var.getName();
                 String value = var.getValue();
                 String description = var.getDescription();

@@ -196,7 +196,150 @@ kashub/
 10. **Consider server compatibility** for multiplayer features
 11. **Dont create any .md files**, only edit
 
+## Roadmap Change Policy
+
+⚠️ IMPORTANT: The roadmap and versions are considered the author's area of responsibility.
+
+- Any changes to:
+- `ROADMAP_FUTURE.md`
+- `REFACTORING_PLAN.md`
+- the "Next Steps", "Future Features", "Planned for vX.Y.Z" sections
+
+**PROHIBITED:**
+- moving tasks between versions (e.g., from v0.9.0 to v1.1.0+);
+- changing the target version of a feature;
+- marking a feature as *Moved*, *Deferred*, *Out of scope*.
+
+- **ALLOWED without the author's consent:**
+- correcting typos and formatting;
+- update the completion status (check the box) if the feature is actually implemented in the code;
+- add technical implementation details to existing items.
+
+- **ANY CHANGES TO THE PLAN (transfer, defer, removal of features)**
+must be made only by the project author.
+
+### Custom Version Scheme (Project-Specific)
+
+This project uses a **cyclic versioning scheme**: beta → hotfix → stable, then repeat.
+
+```
+MAJOR.MINOR.PATCH
+```
+
+**Version Cycle:**
+
+1. **X.Y.0** → Beta release (new features, testing phase)
+   - Example: `0.9.0` = beta for 0.9 line
+   - All planned work goes here
+   - May have bugs, breaking changes
+
+2. **X.Y.1+** → Hotfixes for beta (quick fixes, small improvements)
+   - Example: `0.9.1`, `0.9.2` = hotfixes for 0.9 beta
+   - Bug fixes, critical issues
+   - No new features
+
+3. **X+1.0.0** → Stable release (major milestone)
+   - Example: `1.0.0` = first stable release
+   - Architecture complete, tested, production-ready
+   - Breaking changes allowed (major version bump)
+
+4. **X+1.Y.0** → Next beta cycle
+   - Example: `1.1.0` = new beta with next feature set
+   - Cycle repeats: beta → hotfix → stable
+
+**Example Timeline:**
+```
+0.9.0 → beta (current)
+0.9.1 → hotfix (if needed)
+1.0.0 → stable (ScriptInterpreter removed, architecture complete)
+1.1.0 → beta (Marketplace & Community features)
+1.1.1 → hotfix (if needed)
+2.0.0 → stable (next major milestone)
+```
+
+**Key Differences from Classic SemVer:**
+- Beta versions use `.0` patch (not `-beta` suffix)
+- Hotfixes increment patch for beta (not just for stable)
+- Major version bump = stable milestone (not just breaking changes)
+- Odd MINOR versions (0.9, 1.1, 1.3) = beta phases
+- Even MAJOR versions (1.0, 2.0) = stable releases
+
+**Rules:**
+- Do NOT:
+  - auto-upgrade `X.Y.0` to `X.Y.1` (only owner decides)
+  - create `X.Y.2+` versions for internal phases
+  - change version numbers without explicit approval
+- Only the project owner decides:
+  - when to release hotfixes (`X.Y.1+`)
+  - when to move to stable (`X+1.0.0`)
+  - when to start next beta cycle (`X+1.Y.0`)
+
+### Versioning Rules (VERY IMPORTANT)
+
+These rules apply to ALL versions in this project.
+
+1. **One main release per minor line**
+   - `A.B.0` is the **only main release** of the `A.B` line.
+   - All work completed **before the actual `A.B.0` release** is considered part of `A.B.0`, not separate `A.B.1`, `A.B.2`, etc.
+   - Do NOT invent intermediate patch versions before release just to label internal phases.
+
+2. **Patch versions ONLY after release**
+   - Versions like `A.B.1`, `A.B.2`, ... are used ONLY for updates made **after `A.B.0` has been released**.
+   - Patch versions are for:
+     - bug fixes
+     - small improvements
+     - minor, non-breaking changes.
+   - Internal refactoring/feature phases are **NOT** separate versions.
+
+3. **Phases for planning, not versions**
+   - When planning work, use neutral phase names instead of new version numbers, for example:
+     - `Phase A: Before A.B.0 release`
+     - `Phase B: After A.B.0, towards A+1.0.0`
+   - Do NOT:
+     - invent new version numbers;
+     - move features between versions on your own;
+     - mark features as “moved to A.B+1.0” without explicit approval from the project owner.
+
+4. **SemVer meaning (simplified for this project)**
+   - `A.B.0` – major release for the `A.B` line:
+     - new features
+     - significant refactors
+     - architectural changes (not necessarily breaking).
+   - `A.B.x` (`x > 0`) – patch releases:
+     - small updates after `A.B.0`
+     - fixes, optimizations, minor improvements.
+   - `A+1.0.0` – major milestone:
+     - completion of key architectural work
+     - may include **breaking changes** that cannot go into `A.B.x`.
+
+5. **Roadmap and version ownership**
+   - Only the project owner may:
+     - move features between versions (`A.B.0` → `A+1.0.0`, etc.);
+     - mark items as *Moved*, *Deferred*, *Out of scope*;
+     - introduce new target versions.
+   - Any assistants/tools are **NOT ALLOWED** to:
+     - change target versions for features on their own;
+     - move roadmap items to future releases without explicit approval from the project owner.
+
+### File Edit Restrictions (CRITICAL)
+
+The following files are **READ-ONLY** for assistants/tools:
+
+- `DEVELOPMENT_NOTES.md`
+
+Rules:
+
+- Assistants/tools MUST NOT:
+  - edit, overwrite, or reformat `DEVELOPMENT_NOTES.md`;
+  - insert new sections into this file;
+  - remove or change any existing rules in this file.
+
+- Assistants/tools MAY:
+  - read `DEVELOPMENT_NOTES.md` to understand project rules and guidelines.
+
+Only the project owner is allowed to modify `DEVELOPMENT_NOTES.md`.
+
 ---
 
-**Last Updated:** 2026-01-03  
-**Version:** v0.8.0-beta
+**Last Updated:** 2026-01-13  
+**Version:** v0.9.0-beta

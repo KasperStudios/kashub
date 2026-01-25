@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.api.server.events.ScriptOutputEvent;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.*;
@@ -48,11 +48,11 @@ public class RunEndpoint {
                 return;
             }
 
-            CompletableFuture<ScriptTask> future = new CompletableFuture<>();
+            CompletableFuture<Task> future = new CompletableFuture<>();
 
             mc.execute(() -> {
                 try {
-                    ScriptTask task = ScriptTaskManager.getInstance().startScript(filename, code);
+                    Task task = TaskManager.getInstance().startScript(filename, code);
                     if (task != null) {
                         future.complete(task);
 
@@ -70,7 +70,7 @@ public class RunEndpoint {
             });
 
             try {
-                ScriptTask task = future.get(5, TimeUnit.SECONDS);
+                Task task = future.get(5, TimeUnit.SECONDS);
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);

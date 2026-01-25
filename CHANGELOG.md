@@ -2,6 +2,315 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v0.9.0-beta] - 2026-01-25
+
+### 🛡️ New Features
+
+#### CrashGuard Command
+- **Protection System** - New `crashguard { }` command to protect code from crashes and errors
+  - Exception handling (like try-catch)
+  - FPS monitoring and throttling
+  - Execution timeout protection
+  - Memory usage monitoring
+  - Automatic recovery
+- **Configurable Options**
+  - `crashguard(timeout=5000)` - Set custom timeout in milliseconds
+  - `crashguard(minFps=30)` - Set minimum FPS threshold
+  - `crashguard(timeout=10000, minFps=25)` - Combine options
+- **Use Cases**
+  - Protect scanner operations from crashes
+  - Monitor performance during heavy operations
+  - Prevent infinite loops with timeouts
+  - Safe entity interaction
+
+#### System Object
+- **New Global Object** - `System` object with essential utilities
+  - `System.print(message)` - Output to chat and console
+  - `System.log(message)` - Output to console only (no chat)
+  - `System.chat(message)` - Send chat message
+  - `System.wait(ms)` - Sleep for milliseconds
+  - `System.time()` - Get current timestamp
+  - `System.exit()` - Stop script execution
+  - `System.gc()` - Request garbage collection
+  - `System.memory()` - Get memory usage info (used, free, total, max)
+- **Migration Path** - Legacy functions (`print`, `wait`, `chat`) still work but deprecated
+- **Better Organization** - System-level functions now grouped in one object
+
+### 📚 Documentation
+
+- **CrashGuard Guide** - Complete guide with examples and best practices
+- **System Object Guide** - Full documentation for System object methods
+- **Updated README** - Added new features to main documentation
+- **Example Scripts** - New test scripts demonstrating crashguard and System object
+
+### 🎨 UI Improvements
+
+- **Auto-completion** - Added System object and crashguard to code completion
+- **Snippets** - New snippets for crashguard patterns
+  - `crashguard` - Basic protected block
+  - `crashguard_timeout` - Block with timeout
+  - `crashguard_fps` - Block with FPS monitoring
+
+### 🔧 Developer Experience
+
+- **Better Error Handling** - Errors inside crashguard are caught and logged without crashing
+- **Performance Monitoring** - Built-in FPS and memory tracking
+- **Safer Scripts** - Encourage use of crashguard for risky operations
+
+### 🚀 Scripting Engine 2.0 (Object-Oriented) ✅
+
+**Goal:** Modernize KHScript with object-oriented syntax, making it more powerful and intuitive (like JavaScript).
+
+#### Core Features
+- **Object-Oriented Syntax** - Use `object.method()` and `object.property`
+  - `player.health` instead of `$PLAYER_HEALTH`
+  - `player.jump()` instead of `jump`
+  - `scanner.scan()` instead of `scanner scan`
+  - `inventory.count("diamond")` instead of `inventory count diamond`
+- **System Objects** - New global objects for core functionality
+  - `System` - System utilities (print, log, wait, memory, time)
+  - `player` - Player state and control (pos, health, inventory, etc.)
+  - `vision` - Raycasting and entity targeting
+  - `scanner` - Block and entity scanning
+  - `inventory` - Inventory management
+  - And more...
+- **Data Structures**
+  - **List Literals** - Support for `[1, 2, 3]` syntax
+  - **Bracket Access** - Access lists/maps via `list[0]`
+- **Better Expressions** - Unified expression engine for all commands
+
+#### UI Improvements
+- **Icon-Based Tabs** - Editor tabs now use compact icons (`Map`, `Emerald`) instead of text, saving screen space.
+- **Modernized README** - Updated documentation style to match Modrinth.
+- **License Update** - Project is now under MIT License.
+
+### 🏗️ Architecture Refactoring (Phases 1-5) ✅
+
+**Goal:** Migrate from global `ScriptInterpreter` singleton to per-script `ScriptTask` architecture for better isolation, thread safety, and maintainability.
+
+#### Phase 1: New Core Classes ✅
+
+- **ScriptExecutionContext** - Per-script execution context 🆕
+  - Isolated variable storage per script (no more variable leaks!)
+  - Per-script function definitions
+  - Per-script command queue management
+  - Per-script event registration tracking
+  - Thread-safe with `ConcurrentHashMap` and `ConcurrentLinkedDeque`
+  - Variable processing with `$VAR` substitution
+  - Expression evaluation using `ExpressionParser`
+  - Condition evaluation for control flow
+  - Clean separation from global state
+
+- **EnvironmentVariableProvider** - Singleton for read-only environment variables 🆕
+  - Extracts environment variable logic from `ScriptInterpreter`
+  - Shared across all scripts (read-only)
+  - Updated globally from game state
+  - Throttled updates (max every 50ms) for performance
+  - **30+ environment variables** including:
+    - Player: position, health, food, XP, speed, air supply
+    - Player state: sneaking, sprinting, swimming, flying, riding, on_ground, in_water, in_lava, burning, dead
+    - World: time, day, weather, difficulty, is_day, is_night, moon_phase
+    - Game: mode, dimension, singleplayer/multiplayer, server_name
+    - Held item: name, count, slot
+    - Target: block, entity, distance
+
+#### Phase 2: Core Feature Migration ✅
+
+- **ScriptTask** - Now uses `ScriptExecutionContext` 🔄
+  - `setVariable()` now delegates to context
+  - `processVariables()` uses context for variable substitution
+  - `evaluateCondition()` uses context for condition evaluation
+  - `executeIncrement()` uses context for variable updates
+  - `getVariables()` returns variables from context
+  - `stop()` calls `context.cleanup()` for proper cleanup
+  - Added `getContext()` method for direct context access
+  - Legacy `variables` map kept for backward compatibility (will be removed in Phase 6)
+
+- **Variable System** - Migrated to context-based storage
+  - All variable operations now go through `ScriptExecutionContext`
+  - Variables are isolated per script
+  - No more variable leaks between scripts
+  - Thread-safe concurrent access
+
+#### Phase 3: Event System Update ✅
+
+- **EventManager** - Now supports event ownership tracking 🔄
+  - Added `eventOwners` map to track which script owns which event
+  - New `registerEventScript(eventName, scriptCode, ownerScriptName)` overload
+  - Creates temporary `ScriptExecutionContext` for each event execution
+  - Event variables are isolated and don't leak to other scripts
+  - `clear()` now also clears owner tracking
+
+- **ScriptTask** - Event registration with owner tracking
+  - Now passes script name when registering events
+  - Events are properly attributed to their owner script
+  - Better logging with owner information
+
+- **Event Isolation** - Events now execute in isolated contexts
+  - Each event creates a temporary execution context
+  - Event variables (`$event_*`) don't leak between events
+  - Backward compatibility maintained with ScriptInterpreter
+
+#### Integration Updates
+
+- **KashubClient** - Now uses `EnvironmentVariableProvider`
+  - Calls `EnvironmentVariableProvider.getInstance().update()` every tick
+  - Environment variables updated before event/task processing
+  - Better performance with throttled updates
+  - **v0.9.0**: Auto-initializes `ModpackScriptManager` when world loads
+
+#### Benefits of New Architecture
+
+- ✅ **Better Script Isolation** - Variables don't leak between scripts
+- ✅ **Thread Safety** - No race conditions with concurrent scripts
+- ✅ **Easier Testing** - Each context can be tested independently
+- ✅ **Cleaner Code** - Centralized variable/condition logic
+- ✅ **Foundation for Future** - Ready for multi-threaded execution
+
+### 🌐 Server & Modpack Scripts ✅
+
+**Goal:** Enable server-side script execution and modpack-level scripting capabilities.
+
+#### Modpack Script System
+- **ModpackScriptManager** - Manages server-side/modpack scripts 🆕
+  - Auto-discovers scripts from `config/kashub/modpack_scripts/`
+  - Auto-starts mandatory modpack scripts on world load
+  - Persistent data storage between server restarts
+  - Automatic cleanup on world unload
+
+- **ModpackScript** - Represents modpack-level scripts 🆕
+  - Mandatory flag for required scripts
+  - Priority system for execution order
+  - Isolated from user scripts
+
+- **GlobalEventHooks** - Global event hooks for modpack scripts 🆕
+  - Register global event handlers
+  - Priority-based execution
+  - Persistent across sessions
+  - Modpack-level event management
+
+#### Features
+- ✅ **Server-Side Execution** - Scripts run in server/modpack context
+- ✅ **Modpack Scripts** - Mandatory scripts for all players
+- ✅ **Event Hooks** - Global event handlers with priorities
+- ✅ **Persistent Data** - Data survives server restarts
+- ✅ **Auto-Initialization** - System starts automatically on world load
+
+### ⚙️ Flexible Configuration ✅
+
+**Goal:** Provide flexible configuration options for admins and modpack creators.
+
+#### Configuration System
+- **Enhanced KashubConfig** - New configuration options 🆕
+  - `restrictedMode` - Restrict mod usage to modpack scripts only
+  - `allowEditorAccess` - Control editor access
+  - `allowDebuggerAccess` - Control debugger access
+  - `disabledCommands` - List of disabled commands
+  - `clientEnforcement` - Enforce settings on client
+
+#### Features
+- ✅ **Feature Toggles** - Enable/disable editor, debugger, or specific commands
+- ✅ **Restricted Mode** - Limit mod usage to modpack scripts only
+- ✅ **Custom Functionality** - Configure unique server mechanics
+- ✅ **Runtime Configuration** - Change settings without restart
+- ✅ **Command Blacklisting** - Disable specific commands
+
+### 🔌 Universal Integration System ✅
+
+**Goal:** Enable integration with any mod through reflection and dynamic compatibility.
+
+#### Mod Bridge System
+- **ModBridgeManager** - Universal mod integration 🆕
+  - Auto-discovers all loaded mods
+  - Reflection-based API calls
+  - Field access (get/set)
+  - Method invocation with arguments
+  - Mod presence detection
+
+- **TagManager** - Item/Block tag system 🆕
+  - Check if items/blocks have specific tags
+  - Get all items/blocks with a tag
+  - Support for vanilla and modded tags
+  - Enable mod compatibility in scripts
+
+#### Features
+- ✅ **Mod Bridge API** - Integration with any mod via reflection
+- ✅ **Dynamic Compatibility** - Scripts adapt based on available mods
+- ✅ **Item/Block Tags** - Work with tags from vanilla and mods
+- ✅ **Mod Detection** - Check mod presence before using features
+- ✅ **API Access** - Call mod methods and access fields
+- ✅ **Safe Integration** - Graceful handling of missing mods
+
+### 👥 Player & Network Interaction ✅
+
+**Goal:** Enable player permissions, messaging, and network interactions.
+
+#### Player Interaction System
+- **PlayerInteractionManager** - Player management 🆕
+  - Permission system with wildcards
+  - Player data storage
+  - Message sending
+  - Current player detection
+
+#### New Events
+- **onPlayerJoin** - Fires when player joins world 🆕
+- **onPlayerLeave** - Fires when player leaves world 🆕
+
+#### Features
+- ✅ **Permissions System** - Control who can run scripts
+- ✅ **Player Messaging** - Send messages to specific players
+- ✅ **Player Data Storage** - Store per-player data
+- ✅ **Join/Leave Events** - React to player connections
+- ✅ **Wildcard Permissions** - Flexible permission patterns
+
+### 🎮 Discord Rich Presence (Bonus Feature) ✅
+
+**Goal:** Show Kashub activity in Discord automatically (like VSCode).
+
+#### Discord Integration
+- **DiscordRichPresence** - Automatic Discord Rich Presence 🆕
+  - Shows number of running scripts
+  - Displays current world/server name
+  - Shows mod version and session duration
+  - Auto-updates every 15 seconds
+  - Always enabled (no configuration needed)
+  - Graceful handling when Discord not running
+
+#### Features
+- ✅ **Activity Display** - Shows running scripts and world info
+- ✅ **Automatic** - Works like VSCode, no setup needed
+- ✅ **Auto-Update** - Updates every 15 seconds
+- ✅ **Safe** - Handles Discord not running gracefully
+- ✅ **Zero Configuration** - Just works out of the box
+
+### 🔄 Client Config Enforcement ✅
+
+**Goal:** Synchronize server config with clients for consistent behavior.
+
+#### Config Sync System
+- **ConfigSyncManager** - Client config enforcement 🆕
+  - Receives server config on join
+  - Applies server restrictions
+  - Resets to local on disconnect
+  - Transparent to user
+
+#### Features
+- ✅ **Server Override** - Server config overrides client
+- ✅ **Automatic Sync** - Syncs on player join
+- ✅ **Transparent** - Works automatically
+- ✅ **Safe** - Resets to local on disconnect
+
+### 📝 Notes
+
+- **Backward Compatible** - Existing scripts work without changes
+- **All v0.9.0 Features Complete** - Architecture refactoring, Server & Modpack Scripts, Flexible Configuration, Universal Integration, Player & Network Interaction, Discord Rich Presence
+- **Next Steps** (v1.0.0):
+  - Phase 6: Remove ScriptInterpreter singleton (breaking change)
+  - Client Enforcement for configuration sync
+  - Full multiplayer network packet handling
+
+---
+
 ## [v0.8.0-beta] - 2026-01-03
 
 ### 🔥 Sprint 1: Debug System Foundation

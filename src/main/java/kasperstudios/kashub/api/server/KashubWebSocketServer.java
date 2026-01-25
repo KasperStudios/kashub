@@ -1,6 +1,12 @@
 package kasperstudios.kashub.api.server;
 
 import kasperstudios.kashub.Kashub;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Interpreter;
+import kasperstudios.kashub.core.Type;
 
 import java.io.*;
 import java.net.*;
@@ -287,9 +293,9 @@ public class KashubWebSocketServer {
 
             if (code != null) {
 
-                kasperstudios.kashub.services.runtime.ScriptTask task = kasperstudios.kashub.services.runtime.ScriptTaskManager
+                kasperstudios.kashub.core.Task task = kasperstudios.kashub.core.TaskManager
                         .getInstance()
-                        .startScript(program, code, null, kasperstudios.kashub.services.runtime.ScriptType.USER);
+                        .startScript(program, code, null, kasperstudios.kashub.core.Type.USER);
                 int taskId = task != null ? task.getId() : -1;
 
                 JsonObject response = new JsonObject();
@@ -318,8 +324,9 @@ public class KashubWebSocketServer {
             response.addProperty("type", "stackTrace_response");
 
             if (scriptId != -1) {
-                kasperstudios.kashub.services.runtime.ScriptTask task = kasperstudios.kashub.services.runtime.ScriptTaskManager
-                        .getInstance().getTask(scriptId);
+                Task task = TaskManager
+                        .getInstance()
+                        .getTask(scriptId);
 
                 if (task != null) {
                     com.google.gson.JsonArray frames = new com.google.gson.JsonArray();

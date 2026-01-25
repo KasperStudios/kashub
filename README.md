@@ -1,45 +1,174 @@
-# Kashub - Minecraft Scripting Mod
+# 🎮 Kashub – In‑Game Scripting Engine for Minecraft
 
 <p align="center">
   <img src="src/main/resources/assets/kashub/icon.png" alt="Kashub Logo" width="128"/>
 </p>
 
-**Kashub** is a powerful scripting mod for Minecraft Fabric that allows players to automate in-game actions using a simple, Lua/JavaScript-inspired scripting language called **KHScript**.
+<p align="center">
+  <strong>Current Version: v0.9.0-beta</strong><br>
+  <em>Modern scripting engine with VSCode-style editor</em>
+</p>
 
-## 🎮 Features
+### In‑game scripting and automation framework with a built‑in VSCode‑style editor
+Tired of repetitive tasks? Want to automate farming, building, or grinding? **Kashub** adds a powerful scripting layer to Minecraft with a beautiful built‑in code editor inspired by VSCode.
 
-### Core Features
-- **Custom Scripting Language** - Easy-to-learn KHScript syntax similar to Lua/JavaScript
-- **Built-in Code Editor** - VSCode-like editor with syntax highlighting and autocomplete
-- **10+ Editor Themes** - Dracula, One Dark, Monokai, Nord, Tokyo Night, and more
-- **Event System** - React to game events (damage, chat, ticks, etc.) - 9 events working!
-- **Debug Tools** - Breakpoints, step-through debugging, variable watching, profiler
+---
 
-### v0.8.0 Features (Latest) 🔥
-- **�  Professional Debugging** - Click line numbers to set breakpoints, step through code
-- **📊 Variables Panel** - Real-time variable inspection in GUI
-- **⚡ Performance Profiler** - Track command execution times, export to Chrome Tracing
-- **� IConditional Breakpoints** - Break on conditions, logpoints, hit counts
-- **�  Full VSCode Debug Adapter** - Complete DAP implementation with variables/call stack
-- **📡 WebSocket Debug Events** - Real-time debugging from VSCode
-- **✅ Event System Fixed** - All 9 events work perfectly, even after stop/restart
-- **📦 Export/Import System** - Share variables between scripts
+## 🆕 What's New in v0.9.0-beta
+- **🛡️ CrashGuard Command** – Protect your scripts from crashes, errors, and FPS drops with `crashguard { }`
+- **🖥️ System Object** – New global object with `System.print()`, `System.log()`, `System.wait()`, `System.memory()`, and more
+- **🎨 Enhanced Syntax Highlighting** – Object methods now have distinct colors (orange for objects, purple for methods)
+- **✅ Improved Validation** – Object-oriented commands (player.attack, vision.nearest) are now properly recognized
+- **🛑 Fixed Loop Stopping** – Scripts with while loops now stop immediately when pressing Stop button
+- **🔧 Better Error Detection** – Real-time syntax validation with detailed error messages
+- **📚 Complete V2 API** – All core objects (player, scanner, vision, inventory) fully implemented
 
-### v0.7.0 Features
-- **� VSConde Integration** - Full IDE support with dedicated VSCode extension
-- **🌐 HTTP API Server** - REST API for external tool integration (port 25566)
-- **📡 WebSocket Server** - Real-time script output streaming (port 25567)
-- **💡 IntelliSense** - Autocomplete powered by actual Kashub parser
-- **🖥️ Kashub Console** - Live output panel in VSCode
-- **⚡ Run from VSCode** - Execute scripts with Ctrl+Shift+K
+---
 
-## 📦 Installation
+## ⚡ Why Kashub?
+Unlike other automation mods that require external tools or complex setups, Kashub gives you everything in‑game:
+- **No external editors needed** – Open the editor with `K`
+- **Easy to learn** – KHScript with Lua/JavaScript‑inspired syntax
+- **Beautiful UI** – 10+ professional editor themes
+- **Multiplayer‑proven** – Used on real servers in real scenarios
+- **Open source** – MIT License, fully transparent
 
-1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.1
-2. Download [Fabric API](https://www.curseforge.com/minecraft/mc-mods/fabric-api)
-3. Download the latest Kashub release
-4. Place both `.jar` files in your `mods` folder
-5. Launch Minecraft!
+---
+
+## 🔥 Key Features
+
+### 🖥️ Built‑in Code Editor
+- **Syntax highlighting** for KHScript
+- **Auto‑completion** (`Ctrl+Space`)
+- **10+ themes** – Dracula, One Dark Pro, Tokyo Night, Cyberpunk, and more
+- **Search & script browser** – Find and manage scripts quickly
+- **Keybind support** – Launch scripts with hotkeys
+
+### ⚙️ Scripting Engine (V2)
+- **Object-Oriented Syntax** – Modern API: `player.getHealth()`, `scanner.blocks()`, `inventory.check()`
+- **CrashGuard Protection** – Wrap risky code in `crashguard { }` to prevent crashes and monitor performance
+- **System Object** – Global utilities: `System.print()`, `System.log()`, `System.wait()`, `System.memory()`
+- **Functions & Loops** – Full support for `fn`, `if/else`, `for`, `while`, `break`, `continue`
+- **Variables** – Proper scoping with `let` and `const`
+- **Type Safety** – Null checks, proper return types, method chaining
+- **Rich Objects** – `player`, `scanner`, `vision`, `inventory` with 30+ methods
+
+### 🛠️ Developer Tools
+- **Deep Debugging** – Breakpoints, step-through, variable watching
+- **Performance Profiler** – Track execution times and export to Chrome Tracing
+- **Logging system** – Real-time debug output
+- **Task manager** – Run and manage multiple scripts simultaneously
+
+---
+
+## 🛡️ Fair‑Play & Server Control
+Kashub is designed to be server‑friendly:
+- **Server‑authoritative control**: Server-side config can override client settings.
+- **Editor Restrictions**: Admins can disable the editor on specific servers.
+- **Command Blacklisting**: Block specific commands or namespaces from running.
+- **Respectful Client**: The mod respects server decisions and does not bypass them.
+
+---
+
+## 📚 Quick Start
+1. Install **Fabric 1.21.1** and **Fabric API**.
+2. Drop **Kashub** into your `mods` folder.
+3. Launch Minecraft and press `K` to open the editor.
+4. Write your first script:
+   ```javascript
+   let health = player.getHealth()
+   let name = player.getName()
+   
+   print "Hello, " + name + "!"
+   print "Your health: " + health
+   
+   if (health < 10) {
+       print "Low health! Be careful!"
+   }
+   ```
+5. Press `F5` to run!
+
+---
+
+## 💡 Example Scripts
+
+### Safe Mining with CrashGuard
+```javascript
+// Protected mining operation
+crashguard(timeout=10000, minFps=25) {
+    System.print("Starting safe mining...")
+    
+    let ores = scanner.blocks("diamond_ore,iron_ore", 64)
+    
+    if (ores.count > 0) {
+        System.print("Found " + ores.count + " ores")
+        
+        let i = 0
+        while (i < ores.count) {
+            let ore = ores.blocks[i]
+            player.moveTo(ore.x, ore.y, ore.z)
+            System.wait(500)
+            i = i + 1
+        }
+    }
+    
+    System.print("Mining complete!")
+}
+```
+
+### Auto-Heal
+```javascript
+// Monitor health and auto-heal
+while (true) {
+    let health = player.getHealth()
+    
+    if (health < 10) {
+        System.print("Low health! Healing...")
+        inventory.use("golden_apple")
+        System.wait(5000)
+    }
+    
+    System.wait(1000)
+}
+```
+
+### Ore Finder
+```javascript
+// Find and mine nearest diamond
+let ores = scanner.blocks("diamond_ore", 64)
+
+if (ores.length > 0) {
+    let nearest = ores[0]
+    System.print("Found diamond ore at " + nearest.x + ", " + nearest.y + ", " + nearest.z)
+    
+    player.moveTo(nearest.x, nearest.y, nearest.z)
+    player.lookAt(nearest.x, nearest.y, nearest.z)
+    
+    System.print("Arrived at diamond ore!")
+} else {
+    System.print("No diamonds nearby")
+}
+```
+
+### Combat Bot
+```javascript
+// Auto-attack nearest hostile mob
+crashguard(minFps=30) {
+    while (true) {
+        let enemy = vision.nearest("hostile", 4, "head")
+        
+        if (enemy != null) {
+            player.lookAt(enemy.pos.x, enemy.pos.y, enemy.pos.z)
+            player.attack(enemy)
+            System.print("Attacking " + enemy.type + " (HP: " + enemy.health + ")")
+        }
+        
+        System.wait(100)
+    }
+}
+```
+
+---
 
 ## 🎹 Controls
 
@@ -53,440 +182,110 @@
 | `F10` | Step over (debug mode) |
 | `F11` | Step into (debug mode) |
 
-## 🔌 VSCode Integration (v0.7.0+)
+---
 
-Kashub now includes full VSCode integration for professional development experience!
+## 🔌 VSCode Integration
+Kashub includes a full VSCode Extension for a professional development experience!
+- **DAP Implementation**: Full debugger support from VSCode.
+- **IntelliSense**: Powered by the actual Kashub parser.
+- **Kashub Console**: Live output stream directly in your IDE.
 
-### Installation
+---
 
-1. Install the **Kashub VSCode Extension** from the `kashub-vscode` folder
-2. Start Minecraft with Kashub mod
-3. Open any `.kh` file in VSCode
-4. The extension will auto-connect to the mod
+## 🛠️ Technical Details & Links
+- **Loader**: Fabric 1.21.1
+- **GitHub**: [KasperStudios/Kashub](https://github.com/KasperStudios/Kashub)
+- **Discord**: [KasHub Community](https://discord.gg/gFeWtpEKN9)
+- **Modrinth**: [kashub](https://modrinth.com/mod/kashub)
+- **License**: MIT
 
-### Features
+---
 
-- **Syntax Highlighting** - Full KHScript language support
-- **IntelliSense** - Autocomplete powered by actual Kashub parser
-- **Real-time Validation** - Errors highlighted as you type
-- **Kashub Console** - Live script output in VSCode
-- **Run Scripts** - Press `Ctrl+Shift+K` to run current script
-- **Debug Adapter** - Full debugging support (v0.8.0+):
-  - Set breakpoints in VSCode
-  - Step through code (Over, Into, Out)
-  - View variables in real-time
-  - Inspect call stack
-  - Evaluate expressions
-- **Hover Provider** - Hover over commands/variables for documentation
+## 📝 Full Documentation
 
-### API Endpoints
+**See [KHScriptGuide.md](docs/KHScriptGuide.md) for complete V2 syntax documentation.**
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/status` | GET | Mod status, player info |
-| `/api/validate` | POST | Validate script code |
-| `/api/autocomplete` | POST | Get suggestions |
-| `/api/run` | POST | Execute script |
-| `/api/tasks` | GET | List running tasks |
-| `/api/variables` | GET | Get environment variables |
-| `/api/debug/*` | Various | Debug Adapter Protocol endpoints |
-| `/api/profiler/*` | Various | Performance profiler endpoints |
+<details>
+<summary><b>Quick Object Reference</b></summary>
 
-### Configuration
-
-```json
-{
-  "apiEnabled": true,
-  "apiPort": 25566,
-  "apiWebSocketPort": 25567
-}
-```
-
-## 📝 KHScript Syntax
-
-### Basic Commands
-
+### System Object
 ```javascript
-// Print message to chat
-print "Hello, World!"
-
-// Wait for milliseconds
-wait 1000
-
-// Make player jump
-jump 3
-
-// Move to coordinates
-moveTo 100 64 200
-
-// Run to coordinates
-run 100 64 200
-
-// Teleport (requires cheats)
-tp ~10 ~ ~10
+System.print("message")    // Output to chat and console
+System.log("message")      // Output to console only
+System.chat("message")     // Send chat message
+System.wait(ms)            // Sleep for milliseconds
+System.time()              // Get current timestamp
+System.exit()              // Stop script execution
+System.gc()                // Request garbage collection
+System.memory()            // Get memory usage info
 ```
 
-### Variables
-
+### Player Object
 ```javascript
-// User variables
-myVar = 10
-name = "Player"
-
-// Environment variables (read-only)
-print $PLAYER_X
-print $PLAYER_HEALTH
-print $WORLD_TIME
+player.getHealth()        // Get health (0-20)
+player.getHunger()        // Get hunger (0-20)
+player.getName()          // Get player name
+player.getPos()           // Get position {x, y, z}
+player.moveTo(x, y, z)    // Move to coordinates
+player.lookAt(x, y, z)    // Look at coordinates
+player.attack()           // Attack entity at crosshair
+player.attack(entity)     // Attack specific entity
+player.breakBlock()       // Break block at crosshair
+player.placeBlock(name)   // Place block by name
+player.sprint(true/false) // Enable/disable sprint
+player.chat("message")    // Send chat message
+player.animation("play", "name", duration)  // Play animation
 ```
 
-### Available Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `$PLAYER_X`, `$PLAYER_Y`, `$PLAYER_Z` | Player coordinates |
-| `$PLAYER_HEALTH` | Current health (0-20) |
-| `$PLAYER_FOOD` | Hunger level (0-20) |
-| `$PLAYER_XP` | Experience level |
-| `$PLAYER_NAME` | Player username |
-| `$IS_SNEAKING` | Is player sneaking |
-| `$IS_SPRINTING` | Is player sprinting |
-| `$WORLD_TIME` | World time in ticks |
-| `$GAME_MODE` | Current game mode |
-
-### Control Flow
-
+### Scanner Object
 ```javascript
-// If statement
-if ($PLAYER_HEALTH < 10) {
-    print "Low health!"
-    eat golden_apple
-}
-
-// While loop
-while ($PLAYER_FOOD < 20) {
-    eat
-    wait 2000
-}
-
-// For loop
-for (i = 0; i < 10; i = i + 1) {
-    jump
-    wait 500
-}
+scanner.blocks("diamond_ore", 32)  // Find blocks in radius
+scanner.entities("zombie", 50)     // Find entities in radius
+// Returns array of {x, y, z, id, dist, health}
 ```
 
-### Functions
-
+### Vision Object
 ```javascript
-// Define function
-function greet(name) {
-    print "Hello, $name!"
-}
-
-// Call function
-greet("Steve")
-
-// Function with multiple commands
-function attackAndHeal() {
-    attack 5 hostile
-    wait 500
-    if ($PLAYER_HEALTH < 15) {
-        eat
-    }
-}
+vision.getTarget()                 // Get crosshair target
+vision.getNearest("zombie", 30)    // Find nearest entity
+vision.nearest("hostile", 40)      // Alias for getNearest
+vision.count("zombie", 30)         // Count entities
+vision.canSee("zombie", 20)        // Check visibility
+vision.isLookingAt("zombie", 5)    // Check if looking at entity
+// Returns {type, id, pos, x, y, z, distance, health}
 ```
 
-### Events
-
+### Inventory Object
 ```javascript
-// React to damage
-onEvent onDamage {
-    print "Took $event_damage damage!"
-    if ($event_health < 5) {
-        eat golden_apple
-    }
-}
-
-// React to chat
-onEvent onChat {
-    log info "Message from $event_sender: $event_message"
-}
-
-// Periodic tick (every second)
-onEvent onTick {
-    // Check conditions periodically
-    if ($PLAYER_HEALTH < 10) {
-        print "Low health warning!"
-    }
-}
-
-// React to block breaking
-onEvent onBlockBreak {
-    print "Broke block at $event_x $event_y $event_z"
-}
-
-// React to attacks
-onEvent onAttack {
-    print "Attacked $event_target_name"
-}
+inventory.check()                  // Get inventory status
+inventory.count("diamond")         // Count items
+inventory.find("diamond_sword")    // Find item slot
+inventory.getItems()               // Get all items
+inventory.getEmptySlots()          // Count empty slots
+inventory.drop(slot, dropAll)      // Drop item
+inventory.swap(slot1, slot2)       // Swap items
+inventory.equip(slot)              // Equip armor/shield
+inventory.use("golden_apple")      // Use item by name
+inventory.craft("diamond_sword", 1) // Craft item
 ```
 
-### Available Events (v0.8.0)
+**Full API documentation:** [KHScriptGuide.md](docs/KHScriptGuide.md)
+</details>
 
-| Event | Description | Variables |
-|-------|-------------|-----------|
-| `onTick` | Fires every second | `$event_tick`, `$event_time` |
-| `onDamage` | Player takes damage | `$event_damage`, `$event_health` |
-| `onHeal` | Player heals | `$event_healed`, `$event_health` |
-| `onHunger` | Hunger changes | `$event_food`, `$event_previousFood` |
-| `onDeath` | Player dies | `$event_position_x/y/z` |
-| `onChat` | Chat message received | `$event_message`, `$event_sender` |
-| `onBlockBreak` | Block broken | `$event_x/y/z`, `$event_block` |
-| `onBlockPlace` | Block placed | `$event_x/y/z`, `$event_block` |
-| `onAttack` | Entity attacked | `$event_target_name`, `$event_target_type` |
+<details>
+<summary><b>Click to expand Configuration</b></summary>
 
-### Export/Import System (v0.8.0)
-
-Share variables between scripts:
-
-```javascript
-// script1.kh
-export myVar 100
-export playerName "Kasper"
-
-// script2.kh
-import myVar from script1
-import playerName from script1
-print $myVar  // Outputs: 100
-print $playerName  // Outputs: Kasper
-```
-
-## 🔧 Commands Reference
-
-### Player Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `jump` | `[count]` | Make player jump |
-| `run` | `<x> <y> <z>` | Run to coordinates |
-| `moveTo` | `<x> <y> <z> [speed]` | Move smoothly to position |
-| `tp` | `<x> <y> <z>` | Teleport (requires cheats) |
-| `lookAt` | `<x> <y> <z>` or `entity [type]` | Look at position/entity |
-| `sneak` | `[duration_ms]` or `toggle` | Sneak |
-| `sprint` | `[duration_ms]` or `toggle` | Sprint |
-
-### Combat Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `attack` | `[range] [type] [count]` | Attack nearby entities |
-
-### Inventory Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `useItem` | `[itemName]` or `slot [n]` | Use item |
-| `eat` | `[itemName]` | Eat food |
-| `equipArmor` | `[type]` or `best` | Equip armor |
-| `selectSlot` | `<slot>` or `item <name>` | Select hotbar slot |
-| `drop` | `[itemName] [count]` or `all` | Drop items |
-
-### World Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `breakBlock` | `[x y z]` | Break block |
-| `placeBlock` | `<x> <y> <z> [blockName]` | Place block |
-| `getBlock` | `<x> <y> <z>` | Get block info |
-
-### Utility Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `print` | `<message>` | Print to chat |
-| `chat` | `<message>` | Send chat message |
-| `wait` | `<milliseconds>` | Pause execution |
-| `log` | `[level] <message>` | Log message |
-
-## ⚙️ Configuration
-
-Configuration file: `config/kashub/config.json`
-
+Config file: `config/kashub/config.json`
 ```json
 {
   "editorTheme": "dracula",
   "editorFontSize": 12,
-  "maxScriptsPerTick": 10,
   "sandboxMode": true,
   "allowCheats": false,
-  "maxLoopIterations": 10000,
-  "enableLogging": true
+  "maxLoopIterations": 10000
 }
 ```
-
-## 🎨 Editor Themes
-
-Available themes:
-- **Dracula** (default)
-- **One Dark**
-- **Monokai**
-- **Solarized Dark/Light**
-- **GitHub Dark**
-- **Nord**
-- **Gruvbox**
-- **Tokyo Night**
-- **Catppuccin**
-
-Press the "Theme" button in the editor to cycle through themes.
-
-## 📂 Script Files
-
-Scripts are saved in: `config/kashub/scripts/`
-
-File extension: `.kh`
-
-## 🔄 Autorun Scripts
-
-You can configure scripts to automatically start when the game launches:
-
-1. Open **Task Manager** (accessible from the editor or via `/script tasks`)
-2. Click on the **Autorun** tab
-3. Use the arrow buttons (→/←) to add or remove scripts from autorun
-4. Changes are saved automatically
-
-**Note:** Make sure `autorunEnabled` is set to `true` in your config file for autorun to work. (or in settings gui)
-
-## 🔒 Security
-
-Kashub includes a sandbox mode that restricts potentially dangerous commands:
-
-- **Whitelisted commands**: Safe commands that work in sandbox mode
-- **Blacklisted commands**: Commands requiring `allowCheats: true`
-- **Loop limits**: Prevents infinite loops
-- **Tick limits**: Limits commands per game tick
-
-## 🐛 Debugging
-
-### In-Game Editor
-
-1. Open the editor with `K`
-2. **Click on line numbers** to set breakpoints (red dots appear)
-3. Press "Debug" or `F5` to start debug mode
-4. Use `F10` to step over, `F11` to step into
-5. Watch variables in the **Debug Panel** (right side):
-    - **Variables**: All script and environment variables
-    - Real-time updates as you step through code
-
-### VSCode Debugging (v0.8.0+)
-
-1. Open your `.kh` file in VSCode
-2. Click in the gutter to set breakpoints
-3. Press `F5` to start debugging
-4. Use VSCode's debug controls:
-    - **Continue** (F5)
-    - **Step Over** (F10)
-    - **Step Into** (F11)
-    - **Step Out** (Shift+F11)
-5. View variables, call stack, and more in VSCode's debug panels
-
-### Conditional Breakpoints
-
-Set breakpoints that only trigger when a condition is true:
-
-```javascript
-// Via API or VSCode
-// Break only when health is low
-if ($PLAYER_HEALTH < 5) {
-    // Breakpoint here will only trigger when health < 5
-}
-```
-
-### Performance Profiler (v0.8.0)
-
-Track command execution times:
-
-1. Start profiler via API: `POST /api/profiler/start`
-2. Run your scripts
-3. Get report: `GET /api/profiler/report`
-4. Export to Chrome Tracing: `GET /api/profiler/chrome-tracing`
-5. Open in `chrome://tracing` for visual analysis
-
-## 📋 Chat Commands
-
-| Command | Description |
-|---------|-------------|
-| `/script load <name>` | Load a script |
-| `/script run <name>` | Run a script |
-| `/script stop` | Stop all scripts |
-| `/script list` | List saved scripts |
-| `/script tasks` | List running tasks |
-| `/script pause <id>` | Pause a task |
-| `/script resume <id>` | Resume a task |
-| `/script kill <id>` | Kill a task |
-| `/script stopall` | Stop all tasks |
-| `/script reload` | Reload configuration |
-| `/script debug <name>` | Show script info |
-
-## 🔌 API Reference (v2.0)
-
-### Vision API
-```javascript
-vision target [distance]        // Get what player looks at
-vision block [distance]         // Get target block
-vision entity [distance]        // Get target entity
-vision nearest <type> <dist>    // Find nearest mob
-vision count <type> <dist>      // Count mobs
-vision scan <angle> <dist>      // Scan cone for entities
-vision isLookingAt <type> <id>  // Check if looking at specific thing
-```
-
-### Input API
-```javascript
-input jump                      // Make player jump
-input sneak <true/false/toggle> // Sneak control
-input sprint <true/false>       // Sprint control
-input attack                    // Attack once
-input use                       // Use item
-input hotbar <0-8>              // Select hotbar slot
-input look <yaw> <pitch>        // Set camera angle
-input lookAt <x> <y> <z>        // Look at position
-input move <direction> <bool>   // Movement control
-input stop                      // Stop all movement
-```
-
-### Scripts API
-```javascript
-scripts list                    // List running tasks
-scripts stop <id>               // Stop task
-scripts pause <id>              // Pause task
-scripts resume <id>             // Resume task
-scripts stopAll                 // Stop all tasks
-scripts stopByTag <tag>         // Stop by tag
-scripts info <id>               // Task details
-```
-
-### Animations API
-```javascript
-animations play <id> [params]   // Play animation
-animations stop <id>            // Stop animation
-animations stopAll              // Stop all animations
-animations list                 // List available animations
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## 📄 License
-
-This project is licensed under CC0-1.0 - see the [LICENSE](LICENSE) file for details.
-
-## 👤 Author
-
-**KasperStudios** - [GitHub](https://github.com/KasperStudios)
+</details>
 
 ---
-
-<p align="center">
-  Made with ❤️ for the Minecraft community
-</p>
+<p align="center">Made with ❤️ by KasperStudios</p>

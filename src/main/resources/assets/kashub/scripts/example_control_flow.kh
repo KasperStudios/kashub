@@ -1,0 +1,77 @@
+// Kashub Control Flow Example - V2 Syntax
+// Demonstrates control structures, loops, and functions
+
+print("=== Control Flow Demo ===")
+
+// ============ Functions ============
+fn greet(name) {
+    print("Hello, " + name + "!")
+    return "Greeted " + name
+}
+
+fn fibonacci(n) {
+    if (n <= 1) {
+        return n
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// Test functions
+let result = greet("Player")
+print("Result: " + result)
+
+print("Fibonacci sequence:")
+let i = 0
+while (i < 8) {
+    print("fib(" + i + ") = " + fibonacci(i))
+    i = i + 1
+}
+
+// ============ Loops ============
+print("\n--- For Loop ---")
+for (let j = 0; j < 5; j = j + 1) {
+    print("Loop iteration: " + j)
+}
+
+print("\n--- While Loop with Break ---")
+let counter = 0
+while (counter < 10) {
+    print("Counter: " + counter)
+    counter = counter + 1
+    
+    if (counter == 5) {
+        print("Breaking at 5")
+        break
+    }
+}
+
+// ============ Conditionals ============
+let health = player.getHealth()
+print("\n--- Health Check ---")
+
+if (health > 15) {
+    print("Status: Excellent")
+} else if (health > 10) {
+    print("Status: Good")
+} else if (health > 5) {
+    print("Status: Caution")
+} else {
+    print("Status: DANGER!")
+}
+
+// ============ Object Methods ============
+print("\n--- Player Info ---")
+let pos = player.getPos()
+let name = player.getName()
+let gamemode = player.getGameMode()
+
+print("Name: " + name)
+print("Position: " + pos.x + ", " + pos.y + ", " + pos.z)
+print("Gamemode: " + gamemode)
+print("Health: " + health + "/20")
+
+// ============ Ternary Operator ============
+let status = health > 10 ? "Healthy" : "Injured"
+print("Quick status: " + status)
+
+print("\n=== Demo Complete ===")

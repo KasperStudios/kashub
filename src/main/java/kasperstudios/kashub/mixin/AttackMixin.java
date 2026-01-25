@@ -1,6 +1,6 @@
 package kasperstudios.kashub.mixin;
 
-import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.core.events.EventManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.hit.EntityHitResult;

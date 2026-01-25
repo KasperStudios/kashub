@@ -1,31 +1,101 @@
-// ===================================
-// Kashub Script - Auto Farming
-// ===================================
-// Automated farming script
+// Kashub Farming Automation - V2 Syntax
+// Automated crop farming with replanting
 
-// Define farming function
-function farm() {
-    // Break block in front
-    break ~ ~-1 ~1
-    wait 500
+print("=== Auto Farmer Starting ===")
+
+// Configuration
+let farmRadius = 16
+let harvestHeight = -1  // Relative to player
+let replantItem = "wheat_seeds"
+let maxCycles = 10
+
+print("Radius: " + farmRadius + " blocks")
+print("Cycles: " + maxCycles)
+
+fn harvestAndReplant() {
+    // Scan for fully grown crops
+    let crops = scanner.blocks("wheat[age=7]", farmRadius)
     
-    // Place seeds
-    selectSlot item wheat_seeds
-    place ~ ~-1 ~1
-    wait 200
+    if (crops.length() == 0) {
+        print("No mature crops found")
+        return 0
+    }
     
-    // Move forward
-    run ~0 ~ ~1
-    wait 300
+    print("Found " + crops.length() + " mature crops")
+    let harvested = 0
+    
+    // Harvest each crop
+    for (let i = 0; i < crops.length(); i = i + 1) {
+        let crop = crops[i]
+        let pos = crop.pos
+        
+        // Move to crop
+        player.moveTo(pos.x, pos.y, pos.z)
+        wait(200)
+        
+        // Look down and break
+        player.lookAt(pos.x, pos.y - 1, pos.z)
+        player.breakBlock()
+        wait(100)
+        
+        // Replant
+        let seeds = inventory.count(replantItem)
+        if (seeds.has) {
+            player.placeBlock(replantItem)
+            wait(100)
+        } else {
+            print("⚠ Out of seeds!")
+            break
+        }
+        
+        harvested = harvested + 1
+    }
+    
+    return harvested
+}
+
+fn collectDrops() {
+    // Move around to collect dropped items
+    let pos = player.getPos()
+    player.moveTo(pos.x + 2, pos.y, pos.z)
+    wait(500)
+    player.moveTo(pos.x - 2, pos.y, pos.z)
+    wait(500)
+    player.moveTo(pos.x, pos.y, pos.z + 2)
+    wait(500)
+    player.moveTo(pos.x, pos.y, pos.z - 2)
+    wait(500)
+    player.moveTo(pos.x, pos.y, pos.z)
 }
 
 // Main farming loop
-print "Starting auto-farm..."
-
-// Farm 10 blocks
-for (i = 0; i < 10; i++) {
-    farm()
-    print "Farmed block $i"
+let totalHarvested = 0
+for (let cycle = 0; cycle < maxCycles; cycle = cycle + 1) {
+    print("\n--- Cycle " + (cycle + 1) + "/" + maxCycles + " ---")
+    
+    let count = harvestAndReplant()
+    totalHarvested = totalHarvested + count
+    
+    if (count > 0) {
+        print("Harvested " + count + " crops")
+        collectDrops()
+    }
+    
+    // Check inventory
+    let invCheck = inventory.check()
+    if (invCheck.full) {
+        print("⚠ Inventory full! Stopping.")
+        break
+    }
+    
+    print("Waiting for crops to grow...")
+    wait(60000)  // Wait 60 seconds
 }
 
-print "Farming complete!"
+print("\n=== Farming Complete ===")
+print("Total harvested: " + totalHarvested + " crops")
+
+let wheatCount = inventory.count("wheat")
+let seedCount = inventory.count(replantItem)
+print("Wheat: " + wheatCount.amount)
+print("Seeds: " + seedCount.amount)

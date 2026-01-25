@@ -10,11 +10,15 @@ import kasperstudios.kashub.gui.theme.ThemeManager;
 import kasperstudios.kashub.gui.widgets.ModernButton;
 import kasperstudios.kashub.gui.widgets.ModernTextArea;
 import kasperstudios.kashub.gui.widgets.FilePanel;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
-import kasperstudios.kashub.services.runtime.ScriptType;
+import kasperstudios.kashub.gui.widgets.TabMenuWidget;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.Interpreter;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Type;
+import kasperstudios.kashub.core.State;
 import kasperstudios.kashub.util.ScriptManager;
-import kasperstudios.kashub.util.ScriptLogger;
 import kasperstudios.kashub.debug.*;
 import net.minecraft.client.MinecraftClient;
 import java.util.Map;
@@ -39,17 +43,24 @@ public class ModernEditorScreen extends Screen {
     private boolean isResizingRight = false;
     private static final int RESIZE_HANDLE_WIDTH = 4;
 
+    // Static tracking for Discord RPC
+    private static String activeEditorFile = null;
+    private static boolean editorOpen = false;
+
     private ModernTextArea codeArea;
     private FilePanel filePanel;
+    private TabMenuWidget tabMenu;
 
     private String currentFile = null;
     private boolean hasUnsavedChanges = false;
     private EditorTheme theme;
     private int animationTick = 0;
+    private int debugPollTimer = 0;
 
     private boolean showDebugPanel = true;
-    private int debugPollTimer = 0;
-    private final List<ModernButton> debugButtons = new ArrayList<>();
+    private final List<ModernButton> leftButtons = new ArrayList<>();
+    private final List<ModernButton> rightButtons = new ArrayList<>();
+    private final List<ModernButton> debugControlButtons = new ArrayList<>();
 
     public ModernEditorScreen() {
         super(Text.literal("Kashub Editor"));
@@ -64,14 +75,47 @@ public class ModernEditorScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        leftButtons.clear();
+        rightButtons.clear();
+        debugControlButtons.clear();
+
+        // Refresh completions to ensure new objects are detected
+        kasperstudios.kashub.gui.CodeCompletionManager.refreshCompletions();
+        kasperstudios.kashub.gui.widgets.ModernTextArea.refreshKnownObjects();
+
+        editorOpen = true;
+        activeEditorFile = currentFile;
+
+        // Tab menu above file panel
+        int tabMenuY = TOOLBAR_HEIGHT;
+        int tabMenuHeight = 28;
+
+        List<TabMenuWidget.Tab> tabs = new java.util.ArrayList<>();
+        tabs.add(new TabMenuWidget.Tab(new net.minecraft.item.ItemStack(net.minecraft.item.Items.FILLED_MAP),
+                Text.literal("Files")));
+        tabs.add(new TabMenuWidget.Tab(new net.minecraft.item.ItemStack(net.minecraft.item.Items.EMERALD),
+                Text.literal("Marketplace 😈")));
+
+        tabMenu = new TabMenuWidget(
+                0, tabMenuY, leftPanelWidth, tabMenuHeight,
+                tabs,
+                (newTab) -> {
+                    // Future: switch between Files and Marketplace views
+                });
+        tabMenu.setActiveTab(0); // Files active
+        tabMenu.setTabEnabled(1, false); // Marketplace disabled
+        tabMenu.setTabTooltip(1, Text.literal("Coming soon...😈"));
+        addDrawableChild(tabMenu);
 
         int editorX = leftPanelWidth;
         int editorY = TOOLBAR_HEIGHT;
         int editorWidth = this.width - leftPanelWidth - (showDebugPanel ? rightPanelWidth : 0);
         int editorHeight = this.height - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT;
 
-        filePanel = new FilePanel(0, TOOLBAR_HEIGHT, leftPanelWidth,
-                this.height - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT, this::loadFile);
+        // File panel below tab menu
+        int filePanelY = tabMenuY + tabMenuHeight;
+        int filePanelHeight = this.height - filePanelY - STATUS_BAR_HEIGHT;
+        filePanel = new FilePanel(0, filePanelY, leftPanelWidth, filePanelHeight, this::loadFile);
 
         if (codeArea == null) {
             codeArea = new ModernTextArea(
@@ -85,86 +129,150 @@ public class ModernEditorScreen extends Screen {
 
         int buttonY = 10;
         int buttonSize = 28;
+
+        // Left Buttons
+        leftButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("▶"),
+                button -> runScript(), theme.accentColor, "Run Script (F5)"));
+        leftButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("⏹"),
+                button -> stopScript(), 0xFFE74C3C, "Stop Script (F6)"));
+        leftButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("💾"),
+                button -> saveScript(), theme.buttonColor, "Save (Ctrl+S)"));
+        leftButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("⌨"),
+                button -> openKeybindDialog(), theme.buttonColor, "Keybindings"));
+        leftButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("🐞"),
+                button -> toggleDebugPanel(), showDebugPanel ? theme.accentColor : theme.buttonColor,
+                "Toggle Debug Panel"));
+
+        // Right Buttons
+        rightButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("✕"),
+                button -> this.close(), 0xFF666666, "Close Editor"));
+        rightButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("🎨"),
+                button -> cycleTheme(), theme.buttonColor, "Cycle Theme"));
+        rightButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("⚙"),
+                button -> openSettings(), theme.buttonColor, "Settings"));
+        rightButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("📊"),
+                button -> openTaskManager(), theme.buttonColor, "Task Manager"));
+        rightButtons.add(addToolbarButton(0, buttonY, buttonSize, 24, Text.literal("📚"),
+                button -> openDocs(), theme.buttonColor, "Documentation"));
+
+        kasperstudios.kashub.util.RemoteScriptManager.getInstance().fetchMetadata(
+                commands -> kasperstudios.kashub.gui.CodeCompletionManager.setServerCommands(commands));
+
+        // Debug Control Buttons
+        int btnSize = 20;
+        debugControlButtons.add(addToolbarButton(0, 0, btnSize, 20, Text.literal("⤴"),
+                button -> debugStepOut(), 0xFFE67E22, "Step Out (Shift+F11)"));
+        debugControlButtons.add(addToolbarButton(0, 0, btnSize, 20, Text.literal("↘"),
+                button -> debugStepInto(), 0xFF9B59B6, "Step Into (F11)"));
+        debugControlButtons.add(addToolbarButton(0, 0, btnSize, 20, Text.literal("⤵"),
+                button -> debugStepOver(), 0xFF3498DB, "Step Over (F10)"));
+        debugControlButtons.add(addToolbarButton(0, 0, btnSize, 20, Text.literal("⏯"),
+                button -> debugResume(), 0xFF2ECC71, "Resume (F8)"));
+
+        updateLayout();
+        updateDebugButtonsVisibility();
+
+        filePanel.refreshFiles();
+
+        if (codeArea.getText().isEmpty() && currentFile == null) {
+            String lastFile = KashubConfig.getInstance().lastOpenedScript;
+            if (lastFile != null && !lastFile.isEmpty()) {
+                loadFile(lastFile);
+            }
+        }
+    }
+
+    private void updateLayout() {
+        int buttonY = 10;
+        int buttonSize = 28;
         int buttonSpacing = 4;
 
-        int buttonX = Math.max(220, leftPanelWidth + 20);
-
-        addToolbarButton(buttonX, buttonY, buttonSize, 24, Text.literal("▶"),
-                button -> runScript(), theme.accentColor, "Run Script (F5)");
-        buttonX += buttonSize + buttonSpacing;
-
-        addToolbarButton(buttonX, buttonY, buttonSize, 24, Text.literal("⏹"),
-                button -> stopScript(), 0xFFE74C3C, "Stop Script (F6)");
-        buttonX += buttonSize + buttonSpacing;
-
-        buttonX += 10;
-
-        addToolbarButton(buttonX, buttonY, buttonSize, 24, Text.literal("💾"),
-                button -> saveScript(), theme.buttonColor, "Save (Ctrl+S)");
-        buttonX += buttonSize + buttonSpacing;
-
-        addToolbarButton(buttonX, buttonY, buttonSize, 24, Text.literal("⌨"),
-                button -> openKeybindDialog(), theme.buttonColor, "Keybindings");
-        buttonX += buttonSize + buttonSpacing;
-
-        buttonX += 10;
-
-        addToolbarButton(buttonX, buttonY, buttonSize, 24, Text.literal("🐞"),
-                button -> toggleDebugPanel(), showDebugPanel ? theme.accentColor : theme.buttonColor,
-                "Toggle Debug Panel");
-        buttonX += buttonSize + buttonSpacing;
-
-        int maxLeftButtonX = buttonX;
-
-        int rightButtonX = this.width - 20;
-
-        rightButtonX -= buttonSize;
-        addToolbarButton(rightButtonX, buttonY, buttonSize, 24, Text.literal("✕"),
-                button -> this.close(), 0xFF666666, "Close Editor");
-
-        rightButtonX -= (buttonSize + buttonSpacing);
-        addToolbarButton(rightButtonX, buttonY, buttonSize, 24, Text.literal("🎨"),
-                button -> cycleTheme(), theme.buttonColor, "Cycle Theme");
-
-        rightButtonX -= (buttonSize + buttonSpacing);
-        addToolbarButton(rightButtonX, buttonY, buttonSize, 24, Text.literal("⚙"),
-                button -> openSettings(), theme.buttonColor, "Settings");
-
-        rightButtonX -= 10;
-
-        if (rightButtonX - (buttonSize + buttonSpacing) > maxLeftButtonX + 20) {
-            rightButtonX -= (buttonSize + buttonSpacing);
-            addToolbarButton(rightButtonX, buttonY, buttonSize, 24, Text.literal("📊"),
-                    button -> openTaskManager(), theme.buttonColor, "Task Manager");
+        // Left Buttons
+        int leftX = Math.max(220, leftPanelWidth + 20);
+        for (ModernButton btn : leftButtons) {
+            btn.setX(leftX);
+            leftX += buttonSize + buttonSpacing;
+            if (leftButtons.indexOf(btn) == 2 || leftButtons.indexOf(btn) == 3)
+                leftX += 10; // Extra spacing
         }
 
-        if (rightButtonX - (buttonSize + buttonSpacing) > maxLeftButtonX + 20) {
-            rightButtonX -= (buttonSize + buttonSpacing);
-            addToolbarButton(rightButtonX, buttonY, buttonSize, 24, Text.literal("📚"),
-                    button -> openDocs(), theme.buttonColor, "Documentation");
+        // Right Buttons
+        // Order: Close, Theme, Settings, Task, Docs
+        int rightX = this.width - 20;
+
+        // Close
+        if (rightButtons.size() > 0) {
+            rightX -= buttonSize;
+            rightButtons.get(0).setX(rightX);
+            rightX -= (buttonSize + buttonSpacing);
         }
 
-        debugButtons.clear();
-        int btnSize = 20;
-        int dBtnX = this.width - 6 - btnSize;
-        int dBtnY = TOOLBAR_HEIGHT + 2;
+        // Theme
+        if (rightButtons.size() > 1) {
+            rightButtons.get(1).setX(rightX);
+            rightX -= (buttonSize + buttonSpacing);
+        }
 
-        addToolbarButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⤴"),
-                button -> debugStepOut(), 0xFFE67E22, "Step Out (Shift+F11)");
-        dBtnX -= (btnSize + 2);
+        // Settings
+        if (rightButtons.size() > 2) {
+            rightButtons.get(2).setX(rightX);
+            rightX -= 10; // Extra spacer
+        }
 
-        addToolbarButton(dBtnX, dBtnY, btnSize, 20, Text.literal("↘"),
-                button -> debugStepInto(), 0xFF9B59B6, "Step Into (F11)");
-        dBtnX -= (btnSize + 2);
+        // Task & Docs (Conditional fit)
+        int maxLeftButtonX = leftX;
 
-        addToolbarButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⤵"),
-                button -> debugStepOver(), 0xFF3498DB, "Step Over (F10)");
-        dBtnX -= (btnSize + 2);
+        if (rightButtons.size() > 3) { // Task
+            if (rightX - (buttonSize + buttonSpacing) > maxLeftButtonX + 20) {
+                rightX -= (buttonSize + buttonSpacing);
+                rightButtons.get(3).visible = true;
+                rightButtons.get(3).setX(rightX);
+            } else {
+                rightButtons.get(3).visible = false;
+            }
+        }
 
-        addToolbarButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⏯"),
-                button -> debugResume(), 0xFF2ECC71, "Resume (F8)");
+        if (rightButtons.size() > 4) { // Docs
+            if (rightX - (buttonSize + buttonSpacing) > maxLeftButtonX + 20) {
+                rightX -= (buttonSize + buttonSpacing);
+                rightButtons.get(4).visible = true;
+                rightButtons.get(4).setX(rightX);
+            } else {
+                rightButtons.get(4).visible = false;
+            }
+        }
 
-        updateDebugButtonsVisibility();
+        // Debug Controls
+        if (showDebugPanel) {
+            int dBtnSize = 20;
+            int dBtnX = this.width - 6 - dBtnSize;
+            int dBtnY = TOOLBAR_HEIGHT + 2;
+            int pad = 2;
+
+            // Resume (Last added, first from right)
+            // List order: StepOut, StepInto, StepOver, Resume
+            // Wanted visual order Right to Left: Resume, StepOver, StepInto, StepOut
+
+            // Index 3: Resume
+            if (debugControlButtons.size() > 3) {
+                debugControlButtons.get(3).setX(dBtnX);
+                dBtnX -= (dBtnSize + pad);
+            }
+            // Index 2: StepOver
+            if (debugControlButtons.size() > 2) {
+                debugControlButtons.get(2).setX(dBtnX);
+                dBtnX -= (dBtnSize + pad);
+            }
+            // Index 1: StepInto
+            if (debugControlButtons.size() > 1) {
+                debugControlButtons.get(1).setX(dBtnX);
+                dBtnX -= (dBtnSize + pad);
+            }
+            // Index 0: StepOut
+            if (debugControlButtons.size() > 0) {
+                debugControlButtons.get(0).setX(dBtnX);
+            }
+        }
     }
 
     private ModernButton addToolbarButton(int x, int y, int w, int h, Text message, ButtonWidget.PressAction action,
@@ -178,48 +286,24 @@ public class ModernEditorScreen extends Screen {
     }
 
     private void updateDebugButtonsVisibility() {
-        for (ModernButton btn : debugButtons) {
+        for (ModernButton btn : debugControlButtons) {
             btn.visible = showDebugPanel;
         }
-
-        if (showDebugPanel) {
-            int btnSize = 20;
-            int pad = 2;
-
-            int dBtnX = this.width - 6 - btnSize;
-            int dBtnY = TOOLBAR_HEIGHT + 2;
-
-            addDrawableChild(new ModernButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⤴"),
-                    button -> debugStepOut(), 0xFFE67E22));
-            dBtnX -= (btnSize + pad);
-
-            addDrawableChild(new ModernButton(dBtnX, dBtnY, btnSize, 20, Text.literal("↘"),
-                    button -> debugStepInto(), 0xFF9B59B6));
-            dBtnX -= (btnSize + pad);
-
-            addDrawableChild(new ModernButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⤵"),
-                    button -> debugStepOver(), 0xFF3498DB));
-            dBtnX -= (btnSize + pad);
-
-            addDrawableChild(new ModernButton(dBtnX, dBtnY, btnSize, 20, Text.literal("⏯"),
-                    button -> debugResume(), 0xFF2ECC71));
-        }
-
-        filePanel.refreshFiles();
-
-        if (codeArea.getText().isEmpty() && currentFile == null) {
-            String lastFile = KashubConfig.getInstance().lastOpenedScript;
-            if (lastFile != null && !lastFile.isEmpty()) {
-                loadFile(lastFile);
-            }
-        }
-
-        ScriptLogger.getInstance().info("Kashub Editor " + kasperstudios.kashub.Kashub.VERSION + " ready");
+        // No duplication logic anymore
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         animationTick++;
+        updateLayout(); // Dynamic layout update
+
+        // Handle tab menu tooltip
+        if (tabMenu != null) {
+            Text tooltip = tabMenu.getHoveredTooltip(mouseX, mouseY);
+            if (tooltip != null) {
+                this.setTooltip(tooltip);
+            }
+        }
 
         int editorX = leftPanelWidth;
         int editorWidth = this.width - leftPanelWidth - (showDebugPanel ? rightPanelWidth : 0);
@@ -375,11 +459,17 @@ public class ModernEditorScreen extends Screen {
         int y = this.height - STATUS_BAR_HEIGHT;
         context.fill(0, y, this.width, this.height, theme.statusBarColor);
 
-        String fileInfo = currentFile != null ? "📄 " + currentFile : "📄 No file";
-        if (hasUnsavedChanges)
-            fileInfo += " ●";
-        context.drawText(this.textRenderer, fileInfo, 12, y + 8,
-                hasUnsavedChanges ? theme.consoleWarnColor : theme.textDimColor, false);
+        // Server Mode Indicator
+        if (kasperstudios.kashub.network.ServerModeManager.getInstance().isServerControlled()) {
+            String modeInfo = "Mode: Server config (Managed by Server)";
+            context.drawText(this.textRenderer, modeInfo, 12, y + 8, theme.consoleWarnColor, false);
+        } else {
+            String fileInfo = currentFile != null ? "📄 " + currentFile : "📄 No file";
+            if (hasUnsavedChanges)
+                fileInfo += " ●";
+            context.drawText(this.textRenderer, fileInfo, 12, y + 8,
+                    hasUnsavedChanges ? theme.consoleWarnColor : theme.textDimColor, false);
+        }
 
         String cursorInfo = String.format("Ln %d, Col %d", codeArea.getCurrentLine(), codeArea.getCurrentColumn());
         int cursorInfoWidth = this.textRenderer.getWidth(cursorInfo);
@@ -414,7 +504,7 @@ public class ModernEditorScreen extends Screen {
                     theme.consoleSuccessColor, false);
         }
 
-        int runningCount = ScriptTaskManager.getInstance().getActiveCount();
+        int runningCount = TaskManager.getInstance().getActiveCount();
         if (runningCount > 0) {
             String runningInfo = "▶ " + runningCount + " running";
             context.drawText(this.textRenderer, runningInfo, leftPanelWidth + 12, y + 8, theme.consoleSuccessColor,
@@ -434,26 +524,109 @@ public class ModernEditorScreen extends Screen {
             sendChatMessage("§e[KH] Warning: Discarding unsaved changes");
         }
 
-        String content = ScriptManager.loadScript(filename);
-        if (content != null) {
+        String content = null;
+        boolean isRemoteScript = filename.startsWith("[REMOTE] ");
+        boolean isModpackScript = filename.startsWith("[MODPACK] ") || filename.startsWith("[SERVER] "); // Backwards
+                                                                                                         // compat
+
+        if (isRemoteScript) {
+            String scriptName = filename.substring(9);
+            sendChatMessage("§e[KH] Loading remote script...");
+            kasperstudios.kashub.util.RemoteScriptManager.getInstance().fetchContent(scriptName, (loadedContent) -> {
+                if (loadedContent != null) {
+                    currentFile = filename;
+                    activeEditorFile = currentFile;
+                    codeArea.setText(loadedContent);
+                    codeArea.setCurrentFile(currentFile);
+                    hasUnsavedChanges = false;
+
+                    // Enforce server rules on editability
+                    boolean isOperator = kasperstudios.kashub.util.ScriptManager.isOperator();
+                    codeArea.setEditable(isOperator);
+
+                    sendChatMessage("§a[KH] Loaded remote: " + scriptName);
+                } else {
+                    sendChatMessage("§c[KH] Failed to fetch remote script: " + scriptName);
+                }
+            });
+            return; // Async return
+        }
+
+        if (isModpackScript) {
+            String prefix = filename.startsWith("[MODPACK] ") ? "[MODPACK] " : "[SERVER] ";
+            String scriptName = filename.substring(prefix.length());
+            content = ScriptManager.loadServerScript(scriptName);
+            currentFile = "[MODPACK] " + scriptName;
+        } else {
+            content = ScriptManager.loadScript(filename);
             currentFile = filename;
+        }
+
+        if (content != null) {
+            activeEditorFile = currentFile;
             codeArea.setText(content);
-            codeArea.setCurrentFile(filename);
+            codeArea.setCurrentFile(currentFile);
             hasUnsavedChanges = false;
-            sendChatMessage("§a[KH] Loaded: " + filename);
+
+            // Modpack scripts are editable only by operators
+            if (isModpackScript) {
+                codeArea.setEditable(kasperstudios.kashub.util.ScriptManager.isOperator());
+            } else {
+                codeArea.setEditable(true); // User scripts always editable
+            }
+
+            sendChatMessage("§a[KH] Loaded: " + currentFile);
         } else {
             sendChatMessage("§c[KH] Failed to load: " + filename);
         }
     }
 
     private void saveScript() {
+        if (!kasperstudios.kashub.network.ServerModeManager.getInstance().isEditorAllowed()) {
+            sendChatMessage("§c[KH] Saving scripts is disabled by server");
+            return;
+        }
+
         if (currentFile == null) {
             currentFile = "untitled.kh";
             codeArea.setCurrentFile(currentFile);
         }
 
         String content = codeArea.getText();
-        if (ScriptManager.saveScript(currentFile, content)) {
+        boolean success = false;
+
+        boolean isRemoteScript = currentFile.startsWith("[REMOTE] ");
+        boolean isModpackScript = currentFile.startsWith("[MODPACK] ") || currentFile.startsWith("[SERVER] ");
+
+        if (isRemoteScript) {
+            String scriptName = currentFile.substring(9);
+            sendChatMessage("§e[KH] Saving remote script...");
+            kasperstudios.kashub.util.RemoteScriptManager.getInstance().saveScript(scriptName, content, (response) -> {
+                boolean ok = response != null && !response.startsWith("Error");
+                if (ok) {
+                    hasUnsavedChanges = false;
+                    sendChatMessage("§a[KH] Saved remote: " + scriptName);
+                    filePanel.refreshFiles();
+                } else {
+                    sendChatMessage("§c[KH] Failed to save remote script: " + response);
+                }
+            });
+            return;
+        }
+
+        if (isModpackScript) {
+            String prefix = currentFile.startsWith("[MODPACK] ") ? "[MODPACK] " : "[SERVER] ";
+            String scriptName = currentFile.substring(prefix.length());
+            if (!ScriptManager.isOperator()) {
+                sendChatMessage("§c[KH] Only operators can save modpack scripts!");
+                return;
+            }
+            success = ScriptManager.saveServerScript(scriptName, content);
+        } else {
+            success = ScriptManager.saveScript(currentFile, content);
+        }
+
+        if (success) {
             hasUnsavedChanges = false;
             sendChatMessage("§a[KH] Saved: " + currentFile);
             filePanel.refreshFiles();
@@ -463,6 +636,11 @@ public class ModernEditorScreen extends Screen {
     }
 
     private void runScript() {
+        if (!kasperstudios.kashub.network.ServerModeManager.getInstance().isEditorAllowed()) {
+            sendChatMessage("§c[KH] Running scripts is disabled by server");
+            return;
+        }
+
         String code = codeArea.getText();
         if (code.isEmpty()) {
             sendChatMessage("§e[KH] No code to run");
@@ -471,7 +649,7 @@ public class ModernEditorScreen extends Screen {
 
         try {
             String name = currentFile != null ? currentFile : "untitled";
-            ScriptTaskManager.getInstance().startScript(name, code, null, ScriptType.USER);
+            TaskManager.getInstance().startScript(name, code, null, Type.USER);
             sendChatMessage("§a[KH] Script started: " + name);
         } catch (Exception e) {
             sendChatMessage("§c[KH] Error: " + e.getMessage());
@@ -479,7 +657,7 @@ public class ModernEditorScreen extends Screen {
     }
 
     private void stopScript() {
-        ScriptTaskManager.getInstance().stopAll();
+        TaskManager.getInstance().stopAll();
         sendChatMessage("§e[KH] All scripts stopped");
     }
 
@@ -500,6 +678,11 @@ public class ModernEditorScreen extends Screen {
     }
 
     private void openSettings() {
+        if (kasperstudios.kashub.network.ServerModeManager.getInstance().isServerControlled()) {
+            sendChatMessage("§c[KH] Settings are managed by server (Read-only)");
+            return;
+        }
+
         SettingsDialog dialog = new SettingsDialog(this);
         dialog.setOnThemeChange(this::applyThemeChange);
         dialog.setOnClose(() -> {
@@ -677,6 +860,8 @@ public class ModernEditorScreen extends Screen {
 
     @Override
     public void close() {
+        editorOpen = false;
+        activeEditorFile = null;
         if (currentFile != null) {
             KashubConfig.getInstance().lastOpenedScript = currentFile;
             KashubConfig.getInstance().save();
@@ -704,8 +889,8 @@ public class ModernEditorScreen extends Screen {
 
     private void debugStepOver() {
         System.err.println("DEBUG SCREEN: debugStepOver() called");
-        ScriptTaskManager manager = ScriptTaskManager.getInstance();
-        for (ScriptTask task : manager.getAllTasks()) {
+        TaskManager manager = TaskManager.getInstance();
+        for (Task task : manager.getAllTasks()) {
             if (DebugManager.getInstance().isPaused(task.getId())) {
                 System.err.println("DEBUG SCREEN: Found paused task " + task.getId() + ", calling stepOver");
                 DebugManager.getInstance().stepOver(task.getId());
@@ -717,8 +902,8 @@ public class ModernEditorScreen extends Screen {
 
     private void debugStepInto() {
         System.err.println("DEBUG SCREEN: debugStepInto() called");
-        ScriptTaskManager manager = ScriptTaskManager.getInstance();
-        for (ScriptTask task : manager.getAllTasks()) {
+        TaskManager manager = TaskManager.getInstance();
+        for (Task task : manager.getAllTasks()) {
             if (DebugManager.getInstance().isPaused(task.getId())) {
                 System.err.println("DEBUG SCREEN: Found paused task " + task.getId() + ", calling stepInto");
                 DebugManager.getInstance().stepInto(task.getId());
@@ -732,6 +917,15 @@ public class ModernEditorScreen extends Screen {
         System.err.println("DEBUG SCREEN: debugStepOut() called");
 
         debugResume();
+    }
+
+    // Static getters for Discord RPC
+    public static boolean isEditorOpen() {
+        return editorOpen;
+    }
+
+    public static String getActiveFile() {
+        return activeEditorFile;
     }
 
 }

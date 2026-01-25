@@ -12,6 +12,7 @@ base {
 
 repositories {
 	mavenCentral()
+	maven { url 'https://jitpack.io' }
 }
 
 loom {
@@ -31,6 +32,9 @@ dependencies {
 	include implementation('com.squareup.okhttp3:okhttp:4.12.0')
 	include implementation('com.squareup.okio:okio:3.6.0')
 	include implementation('org.jetbrains.kotlin:kotlin-stdlib:1.9.21')
+	
+	// Discord Rich Presence (v0.9.0)
+	include implementation('io.github.CDAGaming:DiscordIPC:0.9.1')
 
 	// Testing
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'

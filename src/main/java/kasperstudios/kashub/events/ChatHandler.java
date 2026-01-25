@@ -1,6 +1,10 @@
 package kasperstudios.kashub.events;
 
-import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.events.EventManager;
+import kasperstudios.kashub.core.Interpreter;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Value;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.text.Text;
 

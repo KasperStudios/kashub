@@ -1,6 +1,8 @@
 package kasperstudios.kashub.debug;
 
-import kasperstudios.kashub.algorithm.ExpressionParser;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Parser;
+import kasperstudios.kashub.core.Value;
 import kasperstudios.kashub.util.ScriptLogger;
 
 import java.util.Map;
@@ -37,7 +39,7 @@ public class ConditionEvaluator {
 
                 if (!validateComplexity(condition)) {
                     ScriptLogger.getInstance().warn("Condition too complex (max {} operators): {}",
-                        MAX_COMPLEXITY, condition);
+                            MAX_COMPLEXITY, condition);
                     return false;
                 }
 
@@ -61,7 +63,7 @@ public class ConditionEvaluator {
 
     private boolean validateComplexity(String condition) {
         int operatorCount = 0;
-        String[] operators = {"&&", "||", "==", "!=", "<=", ">=", "<", ">", "+", "-", "*", "/", "%"};
+        String[] operators = { "&&", "||", "==", "!=", "<=", ">=", "<", ">", "+", "-", "*", "/", "%" };
 
         for (String op : operators) {
             int index = 0;
@@ -101,33 +103,21 @@ public class ConditionEvaluator {
         }
 
         public boolean evaluate(Map<String, String> variables) {
+            // Create a temporary Context with the variables
+            Context ctx = new Context();
 
-            ExpressionParser parser = new ExpressionParser(condition, varName -> {
-
-                String cleanName = varName.startsWith("$") ? varName.substring(1) : varName;
-
-                String value = variables.get(cleanName);
-                if (value != null) {
-                    return value;
+            for (Map.Entry<String, String> entry : variables.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                ctx.setVariable(key, Value.of(value));
+                // Also set without $ prefix
+                if (key.startsWith("$")) {
+                    ctx.setVariable(key.substring(1), Value.of(value));
                 }
+            }
 
-                value = variables.get("$" + cleanName);
-                if (value != null) {
-                    return value;
-                }
-
-                if (cleanName.startsWith("event_")) {
-                    value = variables.get(cleanName.substring(6));
-                    if (value != null) {
-                        return value;
-                    }
-                }
-
-                return null;
-            });
-
-            ExpressionParser.Value result = parser.parse();
-            return result.toBoolean();
+            Value result = Parser.evaluate(condition, ctx);
+            return result.asBoolean();
         }
     }
 }

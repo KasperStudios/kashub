@@ -3,7 +3,7 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.algorithm.CommandRegistry;
+import kasperstudios.kashub.core.Registry;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -24,6 +24,11 @@ public class ValidateEndpoint {
     private static final Pattern COMMENT_PATTERN = Pattern.compile("^\\s*//.*$");
     private static final Pattern BLOCK_COMMENT_START = Pattern.compile("/\\*");
     private static final Pattern BLOCK_COMMENT_END = Pattern.compile("\\*/");
+    
+    // Known object names from V2 API
+    private static final Set<String> KNOWN_OBJECTS = new HashSet<>(Arrays.asList(
+        "player", "inventory", "world", "scanner", "vision", "game", "w2p"
+    ));
 
     public static void handle(HttpExchange exchange, Gson gson) {
         try {
@@ -135,7 +140,8 @@ public class ValidateEndpoint {
                 continue;
             }
 
-            if (trimmed.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\s*=\\s*.+$")) {
+            // Variable assignment (including object method results)
+            if (trimmed.matches("^[a-zA-Z_$][a-zA-Z0-9_]*\\s*=\\s*.+$")) {
                 continue;
             }
 
@@ -146,7 +152,26 @@ public class ValidateEndpoint {
                 continue;
             }
 
-            if (!CommandRegistry.hasCommand(commandName)) {
+            if (Registry.findMatch(commandName) == null) {
+
+                // Check if it's an object method call (e.g., player.lookAt(...))
+                if (trimmed.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z_][a-zA-Z0-9_]*.*$")) {
+                    // Extract object name and validate it
+                    String objectName = trimmed.split("\\.")[0];
+                    if (KNOWN_OBJECTS.contains(objectName.toLowerCase()) || declaredVariables.contains(objectName)) {
+                        // Valid object method call, skip validation
+                        continue;
+                    } else {
+                        errors.add(new ValidationError(lineNum, 0, "Unknown object: " + objectName, "warning"));
+                        continue;
+                    }
+                }
+
+                // Check if it's a variable access (e.g., let x = player.getHealth())
+                if (trimmed.contains(".") && !trimmed.startsWith(".")) {
+                    // Likely an object member access, skip validation
+                    continue;
+                }
 
                 if (trimmed.matches("^[a-zA-Z_][a-zA-Z0-9_]*\\s*\\(.*\\)\\s*$")) {
                     String funcName = trimmed.split("\\(")[0].trim();

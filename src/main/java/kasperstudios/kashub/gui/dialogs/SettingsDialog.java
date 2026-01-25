@@ -101,6 +101,30 @@ public class SettingsDialog extends Screen {
                 config.autorunEnabled = v;
                 config.save();
             }));
+        
+        settings.add(new SettingEntry("DISCORD", null, null, true));
+        settings.add(new SettingEntry("Discord Rich Presence", "Show game status in Discord profile",
+            () -> config.discordRpcEnabled, v -> {
+                config.discordRpcEnabled = v;
+                config.save();
+                kasperstudios.kashub.services.discord.DiscordRichPresence discord = 
+                    kasperstudios.kashub.services.discord.DiscordRichPresence.getInstance();
+                if (v) {
+                    discord.reconnect();
+                } else {
+                    discord.clearPresence();
+                }
+            }));
+        settings.add(new SettingEntry("Show Dimension", "Display current dimension in Discord",
+            () -> config.discordShowDimension, v -> {
+                config.discordShowDimension = v;
+                config.save();
+            }));
+        settings.add(new SettingEntry("Show Server Name", "Display server name in Discord",
+            () -> config.discordShowServerName, v -> {
+                config.discordShowServerName = v;
+                config.save();
+            }));
     }
 
     @Override

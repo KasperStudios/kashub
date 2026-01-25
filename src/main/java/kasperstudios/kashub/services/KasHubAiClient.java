@@ -3,12 +3,14 @@ package kasperstudios.kashub.services;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.Command;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.util.ScriptLogger;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
-import kasperstudios.kashub.services.runtime.ScriptTask;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -189,23 +191,21 @@ public class KasHubAiClient {
         prompt.append("═══════════════════════════════════════════════════════════════\n");
         prompt.append("## AVAILABLE COMMANDS\n\n");
 
-        for (Command cmd : CommandRegistry.getAllCommands()) {
-            prompt.append("◆ ").append(cmd.getName());
+        for (Command cmd : Registry.getCommands()) {
+            kasperstudios.kashub.core.Metadata meta = cmd.getMetadata();
+            prompt.append("◆ ").append(meta.name);
 
-            String params = cmd.getParameters();
-            if (params != null && !params.isEmpty()) {
-                prompt.append(" ").append(params);
+            if (meta.syntax != null && !meta.syntax.isEmpty()) {
+                prompt.append(" ").append(meta.syntax);
             }
             prompt.append("\n");
 
-            String desc = cmd.getDescription();
-            if (desc != null && !desc.isEmpty()) {
-                prompt.append("  └─ ").append(desc).append("\n");
+            if (meta.description != null && !meta.description.isEmpty()) {
+                prompt.append("  └─ ").append(meta.description).append("\n");
             }
 
-            String detailed = cmd.getDetailedHelp();
-            if (detailed != null && !detailed.isEmpty()) {
-                prompt.append("  ").append(detailed.replace("\n", "\n  ")).append("\n");
+            if (meta.examples != null && !meta.examples.isEmpty()) {
+                prompt.append("  Examples: ").append(String.join(", ", meta.examples)).append("\n");
             }
             prompt.append("\n");
         }
@@ -661,9 +661,9 @@ public class KasHubAiClient {
 
     private String toolRunScript(String scriptName) {
         try {
-            ScriptTaskManager taskManager = ScriptTaskManager.getInstance();
+            TaskManager taskManager = TaskManager.getInstance();
 
-            ScriptTask task = taskManager.startScriptFromFile(scriptName);
+            Task task = taskManager.startScriptFromFile(scriptName);
 
             if (task == null) {
                 return "Failed to start script: " + scriptName + " (script execution may be disabled)";

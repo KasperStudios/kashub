@@ -1,10 +1,9 @@
 package kasperstudios.kashub.gui.widgets;
 
 import kasperstudios.kashub.gui.theme.EditorTheme;
-import kasperstudios.kashub.gui.theme.ThemeManager;
-import kasperstudios.kashub.services.runtime.ScriptState;
-import kasperstudios.kashub.services.runtime.ScriptTask;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.core.State;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.TaskManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -19,12 +18,12 @@ public class TaskManagerPanel {
     private EditorTheme theme;
     private final TextRenderer textRenderer;
 
-    private List<ScriptTask> tasks = new ArrayList<>();
+    private List<Task> tasks = new ArrayList<>();
     private int scrollY = 0;
     private int selectedTaskId = -1;
     private int hoveredTaskId = -1;
 
-    private Consumer<ScriptTask> onTaskSelect;
+    private Consumer<Task> onTaskSelect;
 
     private static final int HEADER_HEIGHT = 32;
     private static final int ROW_HEIGHT = 36;
@@ -43,12 +42,12 @@ public class TaskManagerPanel {
         this.textRenderer = MinecraftClient.getInstance().textRenderer;
     }
 
-    public void setOnTaskSelect(Consumer<ScriptTask> onTaskSelect) {
+    public void setOnTaskSelect(Consumer<Task> onTaskSelect) {
         this.onTaskSelect = onTaskSelect;
     }
 
     public void refreshTasks() {
-        Collection<ScriptTask> allTasks = ScriptTaskManager.getInstance().getAllTasks();
+        Collection<Task> allTasks = TaskManager.getInstance().getAllTasks();
         tasks = new ArrayList<>(allTasks);
     }
 
@@ -80,7 +79,7 @@ public class TaskManagerPanel {
         context.fill(x, y, x + width, y + HEADER_HEIGHT, adjustBrightness(theme.consoleBackground, 10));
         context.drawText(textRenderer, "📋 TASK MANAGER", x + 10, y + 10, theme.textColor, true);
 
-        int runningCount = (int) tasks.stream().filter(t -> t.getState() == ScriptState.RUNNING).count();
+        int runningCount = (int) tasks.stream().filter(t -> t.getState() == State.RUNNING).count();
         String countText = runningCount + " running";
         int countColor = runningCount > 0 ? theme.consoleSuccessColor : theme.textDimColor;
         context.drawText(textRenderer, countText, x + width - textRenderer.getWidth(countText) - 10, y + 10, countColor,
@@ -113,7 +112,7 @@ public class TaskManagerPanel {
         int endIndex = Math.min(startIndex + visibleRows + 1, tasks.size());
 
         for (int i = startIndex; i < endIndex; i++) {
-            ScriptTask task = tasks.get(i);
+            Task task = tasks.get(i);
             int rowY = listY + (i * ROW_HEIGHT) - scrollY;
 
             if (rowY + ROW_HEIGHT < listY || rowY > y + height - 50)
@@ -137,7 +136,7 @@ public class TaskManagerPanel {
         }
     }
 
-    private void renderTaskRow(DrawContext context, ScriptTask task, int rowY, int mouseX, int mouseY, float delta) {
+    private void renderTaskRow(DrawContext context, Task task, int rowY, int mouseX, int mouseY, float delta) {
         boolean isSelected = task.getId() == selectedTaskId;
         boolean isHovered = task.getId() == hoveredTaskId;
 
@@ -158,7 +157,7 @@ public class TaskManagerPanel {
         int dotX = x + 12;
         int dotY = rowY + ROW_HEIGHT / 2;
 
-        if (task.getState() == ScriptState.RUNNING) {
+        if (task.getState() == State.RUNNING) {
             float pulse = (float) (Math.sin(pulseAnimation) * 0.3 + 0.7);
             int alpha = (int) (255 * pulse);
             int pulseColor = (alpha << 24) | (statusColor & 0x00FFFFFF);
@@ -183,7 +182,7 @@ public class TaskManagerPanel {
         int uptimeX = x + width - 80;
         context.drawText(textRenderer, uptime, uptimeX, rowY + 12, theme.textDimColor, false);
 
-        if (task.getLastError() != null && task.getState() == ScriptState.ERROR) {
+        if (task.getLastError() != null && task.getState() == State.ERROR) {
             String error = task.getLastError();
             if (error.length() > 30) {
                 error = error.substring(0, 27) + "...";
@@ -250,26 +249,26 @@ public class TaskManagerPanel {
         int buttonX = x + 10;
 
         if (isButtonHovered(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT, (int) mouseX, (int) mouseY)) {
-            ScriptTaskManager.getInstance().pauseAll();
+            TaskManager.getInstance().pauseAll();
             return true;
         }
 
         buttonX += BUTTON_WIDTH + BUTTON_SPACING;
         if (isButtonHovered(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT, (int) mouseX, (int) mouseY)) {
-            ScriptTaskManager.getInstance().resumeAll();
+            TaskManager.getInstance().resumeAll();
             return true;
         }
 
         buttonX += BUTTON_WIDTH + BUTTON_SPACING;
         if (isButtonHovered(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT, (int) mouseX, (int) mouseY)) {
-            ScriptTaskManager.getInstance().stopAll();
+            TaskManager.getInstance().stopAll();
             return true;
         }
 
         if (selectedTaskId >= 0) {
             buttonX = x + width - BUTTON_WIDTH - 10;
             if (isButtonHovered(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT, (int) mouseX, (int) mouseY)) {
-                ScriptTaskManager.getInstance().restart(selectedTaskId);
+                TaskManager.getInstance().restart(selectedTaskId);
                 return true;
             }
         }
@@ -280,7 +279,7 @@ public class TaskManagerPanel {
             int index = relativeY / ROW_HEIGHT;
 
             if (index >= 0 && index < tasks.size()) {
-                ScriptTask task = tasks.get(index);
+                Task task = tasks.get(index);
                 selectedTaskId = task.getId();
 
                 if (onTaskSelect != null) {

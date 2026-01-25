@@ -1,0 +1,6 @@
+// Test using command-style syntax only
+print "Step 1: Test started"
+print "Step 2: This is command-style print"
+wait 1000
+print "Step 3: After wait"
+print "Done!"

@@ -1,18 +1,28 @@
 package kasperstudios.kashub.client;
 
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.algorithm.CommandRegistry;
-import kasperstudios.kashub.algorithm.commands.PathfindCommand;
-import kasperstudios.kashub.algorithm.events.EventManager;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.events.EventManager;
 import kasperstudios.kashub.api.server.KashubAPIServer;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.editor.ModernEditorScreen;
 import kasperstudios.kashub.network.AnimationManager;
-import kasperstudios.kashub.services.runtime.ScriptTaskManager;
+import kasperstudios.kashub.network.NetworkingManager;
+import kasperstudios.kashub.services.network.PacketManager;
+import kasperstudios.kashub.services.network.ConfigSyncManager;
+import kasperstudios.kashub.services.modpack.ModpackScriptManager;
+import kasperstudios.kashub.services.discord.DiscordRichPresence;
+import kasperstudios.kashub.core.Environment;
+import kasperstudios.kashub.core.TaskManager;
+import kasperstudios.kashub.core.Task;
+import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Interpreter;
 import kasperstudios.kashub.util.ScriptFileWatcher;
 import kasperstudios.kashub.util.ScriptLogger;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
@@ -28,11 +38,15 @@ public class KashubClient implements ClientModInitializer {
     private static final long KEY_COOLDOWN = 200;
     private static boolean autorunExecuted = false;
 
+    // v0.9.0 - Discord Rich Presence update timer
+    private static long lastDiscordUpdate = 0;
+    private static final long DISCORD_UPDATE_INTERVAL = 15000; // 15 seconds
+
     @Override
     public void onInitializeClient() {
         Kashub.LOGGER.info("Kashub Client initializing...");
 
-        CommandRegistry.initialize();
+        Registry.initialize();
 
         KashubConfig config = KashubConfig.getInstance();
         ScriptLogger.getInstance().info("Kashub Client v3.0 starting...");
@@ -43,11 +57,37 @@ public class KashubClient implements ClientModInitializer {
             KashubAPIServer.getInstance().start();
         }
 
+        // v0.9.0 - Discord Rich Presence
+        DiscordRichPresence.getInstance().initialize();
+
+        // v0.9.0 - Network packet handling
+        PacketManager.getInstance().initialize();
+        NetworkingManager.getInstance().initialize(); // Server-Authoritative integration
+
+        // v0.9.0 - Client config enforcement
+        ConfigSyncManager.getInstance().initialize();
+
+        // v0.9.0 - Shutdown modpack scripts when disconnecting from world
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            ModpackScriptManager modpackManager = ModpackScriptManager.getInstance();
+            if (modpackManager.isInitialized()) {
+                modpackManager.shutdown();
+            }
+        });
+
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
             if (!autorunExecuted && client.player != null && config.autorunEnabled
                     && !config.autorunScripts.isEmpty()) {
                 autorunExecuted = true;
                 runAutorunScripts();
+            }
+
+            // v0.9.0 - Initialize modpack scripts when world loads
+            if (client.player != null && client.world != null) {
+                ModpackScriptManager modpackManager = ModpackScriptManager.getInstance();
+                if (!modpackManager.isInitialized()) {
+                    modpackManager.initialize();
+                }
             }
         });
 
@@ -76,18 +116,38 @@ public class KashubClient implements ClientModInitializer {
             long currentTime = System.currentTimeMillis();
 
             try {
+                // Update environment variables (new v0.9.0 provider)
+                Environment.getInstance().update();
 
                 EventManager.getInstance().tick();
 
-                ScriptTaskManager.getInstance().tick();
+                TaskManager.getInstance().tick();
 
                 AnimationManager.getInstance().tick();
 
-                PathfindCommand.tick();
+                // v0.9.0-beta - Pathfinding service tick
+                kasperstudios.kashub.services.PathfindingService.getInstance().tick();
+
+                // v0.9.0 - Update Discord Rich Presence every 15 seconds
+                if (currentTime - lastDiscordUpdate > DISCORD_UPDATE_INTERVAL) {
+                    lastDiscordUpdate = currentTime;
+                    DiscordRichPresence.getInstance().updatePresence();
+                }
 
                 if (openEditorKey.wasPressed() && currentTime - lastKeyPress > KEY_COOLDOWN) {
                     lastKeyPress = currentTime;
-                    client.setScreen(new ModernEditorScreen());
+
+                    if (kasperstudios.kashub.network.ServerModeManager.getInstance().isEditorAllowed()) {
+                        client.setScreen(new ModernEditorScreen());
+                    } else {
+                        kasperstudios.kashub.util.ScriptLogger.getInstance().error("Editor is disabled by server.");
+                        kasperstudios.kashub.network.dto.ServerConfig serverConfig = kasperstudios.kashub.network.ServerModeManager
+                                .getInstance().getServerConfig();
+                        if (serverConfig != null) {
+                            kasperstudios.kashub.util.ScriptLogger.getInstance()
+                                    .error(serverConfig.getMessageOnDisabled());
+                        }
+                    }
                 }
 
                 if (openAiAgentKey.wasPressed() && currentTime - lastKeyPress > KEY_COOLDOWN) {
@@ -96,7 +156,7 @@ public class KashubClient implements ClientModInitializer {
                 }
 
                 if (stopScriptsKey.wasPressed()) {
-                    ScriptTaskManager.getInstance().stopAll();
+                    TaskManager.getInstance().stopAll();
                     ScriptLogger.getInstance().warn("All scripts stopped by hotkey");
                 }
 
@@ -121,7 +181,7 @@ public class KashubClient implements ClientModInitializer {
 
         for (String scriptName : config.autorunScripts) {
             try {
-                ScriptTaskManager.getInstance().startScriptFromFile(scriptName);
+                TaskManager.getInstance().startScriptFromFile(scriptName);
                 ScriptLogger.getInstance().info("Autorun: Started " + scriptName);
             } catch (Exception e) {
                 ScriptLogger.getInstance().error("Autorun: Failed to start " + scriptName + ": " + e.getMessage());
@@ -144,7 +204,7 @@ public class KashubClient implements ClientModInitializer {
             if (isPressed && !pressedKeys.contains(keyCode)) {
 
                 pressedKeys.add(keyCode);
-                ScriptTaskManager.getInstance().startScriptFromFile(scriptName);
+                TaskManager.getInstance().startScriptFromFile(scriptName);
             } else if (!isPressed && pressedKeys.contains(keyCode)) {
 
                 pressedKeys.remove(keyCode);
