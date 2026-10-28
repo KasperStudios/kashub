@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "order": 10,
+  "size": 1,
+  "icon": "kashub:gui/implant_slot_bg",
+  "entities": [
+    "minecraft:player"
+  ]
+}

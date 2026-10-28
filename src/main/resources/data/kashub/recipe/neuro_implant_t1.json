@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IRI",
+    "CGC",
+    "IRI"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "G": { "item": "minecraft:glass_pane" }
+  },
+  "result": {
+    "id": "kashub:neuro_implant_t1",
+    "count": 1
+  }
+}

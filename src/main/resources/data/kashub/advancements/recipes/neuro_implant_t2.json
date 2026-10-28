@@ -1,0 +1,40 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "computercraft"
+      ]
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_neuro_implant_t1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "kashub:neuro_implant_t1"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "kashub:neuro_implant_t2"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_neuro_implant_t1"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "kashub:neuro_implant_t2"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "computercraft"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GRG",
+    "MTM",
+    "GRG"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "R": { "item": "minecraft:redstone_block" },
+    "M": { "item": "computercraft:wired_modem" },
+    "T": { "item": "kashub:neuro_implant_t1" }
+  },
+  "result": {
+    "id": "kashub:neuro_implant_t2",
+    "count": 1
+  }
+}
