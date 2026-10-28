@@ -2,43 +2,29 @@
 
 All notable changes to Kashub will be documented in this file.
 
-## [v1.0.0-FSR] - 2026-09-19
+## [v1.0.0-FSR] - 2026-10-28
 
-### 🎉 First Stable Release (FSR)
+### 🧪 Pre-Release Snapshot / FSR Preview
+> **Note:** This is an experimental preview build of the **First Stable Release (FSR)** pipeline, syncing the multi-loader codebase, Virtual File System, and ComputerCraft bridges. Active development and fine-tuning are still ongoing.
 
-**Goal:** Production-ready stable release with cleaned-up codebase and multiloader support.
+### 🧹 Codebase Cleanup & Architecture
+- **Multi-Loader Core** — Full Fabric + NeoForge baseline abstraction via `KHWrapper` and `Architectury`.
+- **Decoupled GUI Engine** — UI subsystem fully extracted and modernized via standalone `KHGui`.
+- **Dead Code Purge** — Legacy unused subsystems (`W2PObject`, `AutoCraftService`, `BugReporter`) moved out of core engine.
+- **Concepts Reorganization** — Architecture proposals and roadmaps organized into `docs/concepts/`.
 
-### 🧹 Codebase Cleanup
-- **Removed dead code** — W2PObject (macro recording), AutoCraftService, BugReporter removed from 1.0.0 scope
-- **Fixed debug mode** — Stabilized debug tooling, removed stale debug artifacts
-- **Cleaned up logging** — Removed leftover System.err.println, consolidated to ScriptLogger
-- **Stabilized core systems** — All core engine components verified and locked for FSR
+### 🖥️ ComputerCraft Bridge & VFS (FSR Preview)
+- **Virtual File System (VFS)** — In-memory and disk-backed virtual hierarchy for scripts and data.
+- **CC Mounting** — Automatic peripheral detection, mounting CC computer filesystems to `/mnt/cc/<id>/`.
+- **Khinux In-Game Terminal** — Interactive shell environment for in-game execution and inspection.
 
-### 🔀 Multiloader Support
-- **NeoForge port** — Full parity with Fabric via KHWrapper abstraction layer
-- **Mojang Mappings** — Migrated to official mappings for cross-loader compatibility
-- **KHGui abstraction** — All UI code platform-independent through KHGui layer
+### 🧠 Neuro-Implant & Progression
+- **Implant Slots** — Native support for **Curios** and **Trinkets** neural implant slots.
+- **Access Policy** — Tier-based capability checks (Survival, Casual, Creative) and sandbox permission gating.
 
-### 🖥️ ComputerCraft Bridge (FSR Milestone)
-- **CC File System mounting** — CC computers mounted to `/mnt/cc/<id>/`
-- **Dual runtime** — CC capabilities exposed to both Lua and KHScript
-- **Discovery & VFS integration** — Automatic computer detection and virtual filesystem
-
-### 🔒 Access Policy & Sandbox (FSR Milestone)
-- **Access Policy Manager** — Survival/Casual/Creative mode gating
-- **Sandbox Hardening** — Permission-gated API methods, eval restriction
-- **Neuro-Implant concept** — Survival access gating via inventory slot
-
-### 📦 Deferred to v1.1+
-- Package System (import/export, kashub.json, `kh install`)
-- W2PObject macro recording/playback
-- AutoCraft automated crafting system
-- AI Integration (moved to standalone KasAgent mod)
-
-### 📝 Notes
-- **No breaking changes** from v0.9.0 scripts — all existing scripts work as-is
-- **Package System concept** preserved in `PACKAGE_SYSTEM_CONCEPT.md` for v1.1+ implementation
-- **BUGS_FOUND.md archived** — all listed bugs were fixed in v0.9.0 refactoring
+### 🤖 Tooling & MCP Bridge
+- **MCP Server** — Native Model Context Protocol bridge for external automation and IDE agent pairing.
+- **VSCode Extension** — Refreshed syntax definitions, snippets, and diagnostics.
 
 ---
 
