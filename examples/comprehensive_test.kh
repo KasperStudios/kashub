@@ -1,0 +1,67 @@
+// Comprehensive Stability Test v2.4
+print("§b[SCS] Starting Comprehensive Stability Test v2.4...")
+
+fails = 0
+fn assert(name, condition) {
+    if (condition) {
+        print("§a[PASS] " + name)
+    } else {
+        print("§c[FAIL] " + name)
+        fails = fails + 1
+    }
+}
+
+print("§e[1/4] Type System")
+assert("Typeof 42", typeof 42 == "number")
+assert("Typeof string", typeof "test" == "string")
+assert("Typeof null", typeof null == "object")
+assert("Typeof undefined", typeof nonExistent == "undefined")
+
+print("§e[2/4] If-Else Branching (Critical)")
+testVal = 1
+if (testVal == 1) {
+    assert("Simple If", true)
+} else {
+    assert("Simple Else (SHOULD NOT RUN)", false)
+}
+
+if (testVal == 2) {
+    assert("Incorrect If", false)
+} else {
+    assert("Simple Else", true)
+}
+
+// Nested test
+if (true) {
+    if (false) {
+        assert("Nested If (FAIL)", false)
+    } else {
+        assert("Nested Else (PASS)", true)
+    }
+}
+
+print("§e[3/4] Scoping & Functions")
+globalVar = 10
+fn scopeTest() {
+    globalVar = 20
+    let localVar = 5
+}
+scopeTest()
+assert("Global Bubbling", globalVar == 20)
+
+fn fib(n) {
+    if (n <= 1) return n
+    return fib(n-1) + fib(n-2)
+}
+assert("Recursion (fib 6)", fib(6) == 8)
+
+print("§e[4/4] Built-in Objects")
+assert("Player object", typeof player == "object")
+assert("System time", typeof time() == "number")
+
+print("§b[SCS] Test Finished. Total Fails: " + fails)
+if (fails == 0) {
+    print("§a§l[STABLE] ALL CORE SYSTEMS VERIFIED.")
+} else {
+    print("§c§l[UNSTABLE] CORE SYSTEMS HAVE ISSUES.")
+}

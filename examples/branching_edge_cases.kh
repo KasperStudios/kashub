@@ -1,0 +1,50 @@
+// Branching Edge Cases Test
+print("§b[SCS] Starting Branching Edge Cases Test...")
+
+fails = 0
+fn assert(name, condition) {
+    if (condition) {
+        print("§a[PASS] " + name)
+    } else {
+        print("§c[FAIL] " + name)
+        fails = fails + 1
+    }
+}
+
+// 1. Brace in string
+print("§e[1/3] Brace in string test")
+if (true) {
+    s = "This string has a brace: }"
+    assert("Brace in string doesn't break extraction", true)
+} else {
+    assert("Else branch skipped (BUG: Over-extraction)", false)
+}
+
+// 2. Brace in comment
+print("§e[2/3] Brace in comment test")
+if (true) {
+    // This is a comment with a brace: }
+    assert("Brace in comment doesn't break extraction", true)
+} else {
+    assert("Else branch skipped (BUG: Over-extraction)", false)
+}
+
+// 3. Nested If-Else stability
+print("§e[3/3] Nested If-Else stability")
+if (true) {
+    if (false) {
+        assert("Inner If skipped", false)
+    } else {
+        assert("Inner Else executed", true)
+    }
+    assert("Still inside Outer If", true)
+} else {
+    assert("Outer Else skipped", false)
+}
+
+print("§b[SCS] Test Finished. Total Fails: " + fails)
+if (fails == 0) {
+    print("§a§l[STABLE] ALL BRANCHING EDGE CASES VERIFIED.")
+} else {
+    print("§c§l[UNSTABLE] BRANCHING ISSUES DETECTED.")
+}

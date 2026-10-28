@@ -1,28 +1,29 @@
 # KASHUB FUTURE ROADMAP 🗺️
 
-Планы развития мода Kashub на будущие версии.
+Development plans for future versions of the Kashub mod.
 
-## 📋 v1.0.0 - "Stable Release"
+## 📋 v1.0.0 - "First Stable Release"
 
-**Цель:** Первый стабильный релиз с полной документацией
+**Goal:** First stable release with full documentation
 
 ### 📚 Documentation
-- [ ] Полная документация на русском и английском
+- [ ] Full documentation in English and Russian
 - [ ] Video tutorials
-- [ ] Interactive examples
-- [ ] API reference
+- [x] Interactive examples
+- [x] API reference
 - [ ] Best practices guide
 
 ### 🧪 Testing
-- [ ] Unit tests для всех команд
+- [ ] Unit tests for all commands
 - [ ] Integration tests
 - [ ] Performance benchmarks
-- [ ] Compatibility tests (разные версии MC)
+- [ ] Compatibility tests (different MC versions)
 - [ ] Stress tests
+- [x] Automated Regression Testing Suite (`comprehensive_test.kh`)
 
 ### 🎨 UI/UX Polish
-- [ ] Redesigned editor
-- [ ] Better error messages
+- [x] Redesigned editor
+- [x] Better error messages ✅ (CrashGuard system)
 - [ ] Improved autocomplete
 - [ ] Keyboard shortcuts customization
 - [ ] Accessibility improvements
@@ -34,14 +35,20 @@
 - [ ] Permission system review
 - [ ] Vulnerability fixes
 
-### 📦 Package System
-- [ ] [Package system concept](https://github.com/KasperStudios/kashub/blob/v0.8.0-beta/PACKAGE_SYSTEM_CONCEPT.md)
+### 📦 Terminal System
+- [x] [Terminal system concept](https://github.com/KasperStudios/kashub/blob/v1.0.0-FSR/KASHUB_OS_LAYER_CONCEPT.md)
+- [x] **Core Milestone: Mojang Mappings & Multiloader Baseline** (Fabric + NeoForge compile)
+- [x] **FSR: ComputerCraft Bridge** (Optional integration: Discovery, Mounting, VFS Integration)
+- [x] **FSR: Neural Link & Deep Scan** (Tier 2 Peripheral Scanner & Compendium)
+- [x] **FSR: Access Policy Manager** (Survival/Casual/Creative gating)
+- [x] **FSR: Sandbox Hardening** (Permission-gated API methods, eval restriction)
+- [x] NeoForge port with KHWrapper (Full Parity achieved)
 
 ---
 
 ## 📋 v1.1.0 - "Marketplace & Community"
 
-**Цель:** Экосистема для обмена скриптами и пакетами
+**Goal:** Ecosystem for sharing scripts and packages
 
 ### 🏪 Script Marketplace
 - [ ] GitHub-based script repository
@@ -52,14 +59,24 @@
 - [ ] Verified authors
 
 ### 📦 Package Manager (Basic)
-- [ ] `kashub install <package>` - Установка пакета
-- [ ] `kashub update <package>` - Обновление
-- [ ] `kashub remove <package>` - Удаление
-- [ ] `kashub list` - Список установленных
-- [ ] `kashub search <query>` - Поиск пакетов
+- [ ] `kashub install <package>` - Install package
+- [ ] `kashub update <package>` - Update package
+- [ ] `kashub remove <package>` - Remove package
+- [ ] `kashub list` - List installed
+- [ ] `kashub search <query>` - Search packages
 - [ ] Dependency resolution (basic)
 - [ ] Version pinning
 - [ ] Local packages support
+
+### 📦 Package System (Deferred from v1.0.0)
+- [ ] Import/Export system (`export fn`, `use "package"`)
+- [ ] Package manifest (`kashub.json`)
+- [ ] `kh install` CLI command
+- [ ] See `PACKAGE_SYSTEM_CONCEPT.md` for full design
+
+### 🎯 Bonus Features (Deferred from v1.0.0)
+- [ ] **W2PObject** - Macro recording/playback system (record player actions, replay with speed control)
+- [ ] **AutoCraft System** - Automated crafting service with recipe resolution
 
 ### 👤 User Profiles
 - [ ] Author profiles
@@ -79,19 +96,19 @@
 
 ## 📋 v1.2.0 - "Package System & Libraries"
 
-**Цель:** Превратить Kashub в экосистему библиотек (как npm для KHScript)
+**Goal:** Transform Kashub into a library ecosystem (like npm for KHScript)
 
 ### 📦 Package Types
-- [ ] **Library** - Набор функций/команд для скриптов
-- [ ] **Command** - CLI-подобные утилиты
-- [ ] **Preset** - Наборы конфигов/скриптов
-- [ ] **Extension** - Java-расширения с новыми командами
+- [ ] **Library** - Set of functions/commands for scripts
+- [ ] **Command** - CLI-like utilities
+- [ ] **Preset** - Configurations/Scripts bundles
+- [ ] **Extension** - Java extensions with new commands
 
 ### 🔧 Import/Export System
-- [ ] `export fn name() { }` - Экспорт функций
-- [ ] `use "package.name"` - Импорт библиотеки
-- [ ] `use "package" { func1, func2 }` - Выборочный импорт
-- [ ] `use "package" as alias` - Импорт с алиасом
+- [ ] `export fn name() { }` - Function export
+- [ ] `use "package.name"` - Library import
+- [ ] `use "package" { func1, func2 }` - Selective import
+- [ ] `use "package" as alias` - Import with alias
 - [ ] Namespace support (`package.function()`)
 - [ ] Private vs Public functions
 
@@ -107,18 +124,18 @@
 ### 🔄 Advanced Package Manager
 - [ ] Semver version resolution
 - [ ] Dependency tree
-- [ ] `package-lock.json` для фиксации версий
+- [ ] `package-lock.json` for version locking
 - [ ] Conflict resolution
 - [ ] Dev dependencies
 - [ ] Peer dependencies
 - [ ] Optional dependencies
 
 ### 🛠️ Developer Tools
-- [ ] `kashub init` - Создание пакета
-- [ ] `kashub pack` - Сборка пакета
-- [ ] `kashub publish` - Публикация
-- [ ] `kashub test` - Тестирование
-- [ ] `kashub lint` - Проверка кода
+- [ ] `kashub init` - Create package
+- [ ] `kashub pack` - Build package
+- [ ] `kashub publish` - Publish package
+- [ ] `kashub test` - Testing
+- [ ] `kashub lint` - Code linting
 - [ ] Package templates
 
 ### 🔒 Security
@@ -134,36 +151,37 @@
 - [ ] Usage analytics
 - [ ] Health scores
 
-**См. PACKAGE_SYSTEM_CONCEPT.md для деталей**
+**See PACKAGE_SYSTEM_CONCEPT.md for details**
 
 ---
 
-## 📋 v1.3.0 - "AI Integration"
+## 📋 ~~v1.3.0~~ - "AI Integration" → **Moved to standalone [KasAgent](https://github.com/KasperStudios/KasAgent) mod**
 
-**Цель:** Интеграция с AI для умных скриптов
+> **Note:** AI integration features have been extracted into the standalone KasAgent mod.
+> KasHub will provide hooks for KasAgent but will not bundle AI features directly.
 
-### 🤖 AI Assistant
+### 🤖 AI Assistant (→ KasAgent)
 - [ ] Natural language to script conversion
 - [ ] "Explain this code" feature
 - [ ] Bug fix suggestions
 - [ ] Code optimization suggestions
 - [ ] Documentation generation
 
-### 🧠 Smart Commands
-- [ ] `ai.analyze(situation)` - анализ ситуации
-- [ ] `ai.decide(options)` - принятие решений
-- [ ] `ai.pathfind(goal)` - умный pathfinding
-- [ ] `ai.combat(strategy)` - боевые стратегии
-- [ ] `ai.farm(crop)` - оптимальное фермерство
+### 🧠 Smart Commands (→ KasAgent)
+- [ ] `ai.analyze(situation)` - Situation analysis
+- [ ] `ai.decide(options)` - Decision making
+- [ ] `ai.pathfind(goal)` - Smart pathfinding
+- [ ] `ai.combat(strategy)` - Combat strategies
+- [ ] `ai.farm(crop)` - Optimal farming
 
-### 📊 Machine Learning
+### 📊 Machine Learning (→ KasAgent)
 - [ ] Learn from player behavior
 - [ ] Adaptive difficulty
 - [ ] Pattern recognition
 - [ ] Anomaly detection
 - [ ] Predictive actions
 
-### 🎮 Game AI
+### 🎮 Game AI (→ KasAgent)
 - [ ] NPC behavior scripts
 - [ ] Enemy AI patterns
 - [ ] Companion AI
@@ -174,7 +192,7 @@
 
 ## 📋 v1.3.0 - "Visual Scripting"
 
-**Цель:** Визуальный редактор для новичков
+**Goal:** Visual editor for beginners
 
 ### 🎨 Node-Based Editor
 - [ ] Drag-and-drop nodes
@@ -208,14 +226,14 @@
 
 ## 📋 v1.4.0 - "World Manipulation"
 
-**Цель:** Расширенные возможности изменения мира
+**Goal:** Advanced world manipulation features
 
 ### 🏗️ Building Commands
-- [ ] `fill(x1,y1,z1, x2,y2,z2, block)` - заполнение области
-- [ ] `replace(area, from, to)` - замена блоков
-- [ ] `clone(src, dst)` - копирование структур
-- [ ] `rotate(area, angle)` - поворот
-- [ ] `mirror(area, axis)` - отражение
+- [ ] `fill(x1,y1,z1, x2,y2,z2, block)` - Fill area
+- [ ] `replace(area, from, to)` - Replace blocks
+- [ ] `clone(src, dst)` - Copy structures
+- [ ] `rotate(area, angle)` - Rotation
+- [ ] `mirror(area, axis)` - Mirroring
 
 ### 📐 Schematic Support
 - [ ] Load .schematic files
@@ -242,10 +260,10 @@
 
 ## 📋 v1.5.0 - "Automation Hub"
 
-**Цель:** Центр управления автоматизацией
+**Goal:** Automation management center
 
 ### 📊 Dashboard
-- [ ] Overview всех скриптов
+- [ ] Overview of all scripts
 - [ ] Resource monitoring
 - [ ] Activity graphs
 - [ ] Alerts and notifications
@@ -276,7 +294,7 @@
 
 ## 📋 v2.0.0 - "Next Generation"
 
-**Цель:** Полная переработка архитектуры
+**Goal:** Complete architecture overhaul
 
 ### 🏗️ New Architecture
 - [ ] Modular plugin system
@@ -287,7 +305,7 @@
 
 ### 🌐 Cross-Platform
 - [ ] Forge support
-- [ ] NeoForge support
+- [x] NeoForge support ✅ (Achieved in v1.0.0-FSR via KHWrapper)
 - [ ] Quilt support
 - [ ] Bedrock Edition (?)
 - [ ] Standalone tool
@@ -310,29 +328,36 @@
 
 ## 🎯 PRIORITY MATRIX
 
-### High Priority (Next 3 months)
-1. v0.8.0-beta - Debugging tools
+### ✅ Completed
+1. v1.0.0-FSR - First Stable Release (Fabric + NeoForge)
 2. VSCode extension debug integration
-3. Documentation
+3. CrashGuard & error handling system
+4. Context/Task architecture refactoring
+5. ComputerCraft Bridge & Access Policy Manager
+
+### High Priority (Next 3 months)
+1. v1.1.0 - Package System & Marketplace foundation
+2. W2PObject (macro recording/playback)
+3. AutoCraft system
 
 ### Medium Priority (6 months)
-1. v0.9.0 - Multiplayer
-2. v1.0.0 - Stable release
-3. Marketplace foundation
+1. v1.2.0 - Full package ecosystem (import/export, kashub.json)
+2. Community features & user profiles
 
 ### Low Priority (1 year+)
-1. AI Integration
+1. AI Integration (via KasAgent mod)
 2. Visual Scripting
-3. Cross-platform
+3. Cross-platform (Quilt, Bedrock)
+4. Advanced Progression / Skills (**Proposed**)
 
 ---
 
 ## 💡 COMMUNITY SUGGESTIONS
 
-Место для идей от сообщества:
+Space for community ideas:
 
 ### Requested Features
-- [ ] Macro recording (запись действий игрока)
+- [x] Macro recording (recording player actions) ✅ (W2PObject concept, deferred to v1.1+)
 - [ ] Script templates wizard
 - [ ] Dark/Light theme toggle
 - [ ] Custom keybinds per script
@@ -344,8 +369,8 @@
 - [ ] Replay mod integration
 
 ### Quality of Life
-- [ ] Better error messages
-- [ ] Undo in editor
+- [x] Better error messages ✅ (CrashGuard system)
+- [x] Undo in editor ✅ (UndoManager.java)
 - [ ] Find and replace
 - [ ] Code folding
 - [ ] Multiple cursors
@@ -364,11 +389,11 @@
 
 ## 📝 NOTES
 
-- Версии могут меняться в зависимости от приоритетов
-- Некоторые фичи могут быть объединены или разделены
-- Feedback от пользователей влияет на roadmap
-- Совместимость с новыми версиями Minecraft - приоритет
+- Versions may change based on priorities
+- Some features might be merged or split
+- User feedback influences the roadmap
+- Compatibility with new Minecraft versions is a priority
 
 ---
 
-**Последнее обновление:** 2025-12-21
+**Last Updated:** 2026-09-19

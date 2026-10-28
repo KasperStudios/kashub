@@ -1,0 +1,87 @@
+// Smart Hunter Script v1.9 - Final Stability & Blind Movement
+print("§6[SmartHunter] Initializing Hunter Protocol v1.9...")
+radius = 32
+
+lastTargetPos = null
+lastMoveTime = 0
+currentTargetId = -1
+
+while (true) {
+    hp = player.getHealth()
+    targets = scanner.entities("living", radius)
+    
+    if (targets.isEmpty()) {
+        currentTargetId = -1
+        lastTargetPos = null
+        wait(500)
+        continue
+    }
+
+    // Find our current target in the new list to see if it's still there
+    target = null
+    if (currentTargetId != -1) {
+        for (t : targets) {
+            // Use subtraction to bypass object equality bug
+            if ((t.id - currentTargetId) == 0) {
+                target = t
+                break
+            }
+        }
+    }
+
+    // If current target is gone or we don't have one, pick the closest
+    if (target == null) {
+        target = targets.get(0)
+        if ((target.id - currentTargetId) != 0) {
+            print("§e[SmartHunter] Target Locked: " + target.type + " (ID: " + target.id + ")")
+            currentTargetId = target.id
+            lastTargetPos = null 
+        }
+    }
+
+    tx = target.x
+    ty = target.y
+    tz = target.z
+    dist = player.distanceTo(tx, ty, tz)
+    currentTime = time()
+    
+    // Calculate movement
+    moveDist = 0
+    shouldMove = false
+    if (lastTargetPos == null) {
+        lastTargetPos = {x: tx, y: ty, z: tz}
+        lastMoveTime = currentTime
+        shouldMove = true // First time seeing this target - MOVE!
+    } else {
+        dx = tx - lastTargetPos.x
+        dz = tz - lastTargetPos.z
+        moveDist = Math.sqrt(dx*dx + dz*dz)
+        if (moveDist > 3.0) {
+            shouldMove = true
+        }
+    }
+
+    if (hp < 10) {
+        // Simple retreat
+        px = player.getX()
+        pz = player.getZ()
+        player.moveTo(px + (px - tx) * 2, ty, pz + (pz - tz) * 2)
+        wait(500)
+    }
+    else {
+        if (dist > 3.5) {
+            if (shouldMove) {
+                print("§b[SmartHunter] Pursuit: Target at " + Math.round(tx) + ", " + Math.round(tz))
+                player.moveTo(tx, ty, tz)
+                lastTargetPos = {x: tx, y: ty, z: tz}
+                lastMoveTime = currentTime
+            }
+        }
+        else {
+            // KillAura attack
+            player.attack(target)
+        }
+    }
+
+    wait(200)
+}

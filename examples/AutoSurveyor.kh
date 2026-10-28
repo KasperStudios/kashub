@@ -1,0 +1,81 @@
+// AutoSurveyor.kh - Base & Inventory Intelligence Script
+// Demonstrating KasHub Core Stability and API Integration
+
+print("§b[AutoSurveyor] Starting Base Intelligence System...")
+
+fn checkEnvironment() {
+    let time = world.getTime()
+    let weather = world.getWeather()
+    
+    print("§7[ENV] Time: " + time + " | Weather: " + weather)
+    
+    if (time > 13000) {
+        print("§e[WARN] Night is falling. Hostile mobs may spawn!")
+    } else if (weather == "rain" || weather == "thunder") {
+        print("§9[WARN] Stormy weather. Dark areas are dangerous!")
+    } else {
+        print("§a[INFO] Environment is currently clear.")
+    }
+}
+
+fn surveyValuables() {
+    print("§7[SCAN] Scanning 10-block radius for valuables...")
+    let blocks = scanner.blocks("*", 10)
+    
+    if (typeof blocks != "object") {
+        print("§c[ERROR] Scanner failed to return data.")
+        return
+    }
+    
+    let count = 0
+    let i = 0
+    let listSize = blocks.size()
+    
+    while (i < listSize) {
+        let b = blocks.get(i)
+        let id = b.id
+        
+        // Identify interesting blocks using complex branching
+        if (id.contains("ore")) {
+            print("§6[FOUND] Resource: " + id + " at [" + b.x + ", " + b.y + ", " + b.z + "]")
+            count = count + 1
+        } else if (id == "minecraft:chest") {
+            print("§e[FOUND] Storage: Chest at [" + b.x + ", " + b.y + ", " + b.z + "]")
+            count = count + 1
+        } else if (id == "minecraft:crafting_table") {
+            print("§d[FOUND] Utility: Crafting Table nearby.")
+        }
+        
+        i = i + 1
+    }
+    
+    if (count == 0) {
+        print("§7[INFO] No immediate valuables found in scan radius.")
+    } else {
+        print("§a[SUCCESS] Found " + count + " points of interest.")
+    }
+}
+
+fn monitorInventory() {
+    let status = inventory.check()
+    let empty = status.emptySlots
+    let total = status.usedSlots
+    
+    print("§7[INV] Used Slots: " + total + " | Empty Slots: " + empty)
+    
+    if (empty < 5) {
+        print("§c[ALERT] Inventory is nearly full! Consider clearing space.")
+    } else if (inventory.has("minecraft:cooked_beef") == false && inventory.has("minecraft:bread") == false) {
+        print("§6[WARN] Low on primary food sources (Steak/Bread)!")
+    } else {
+        print("§a[INFO] Inventory status is healthy.")
+    }
+}
+
+// Main Routine
+print("§d--- Base Intelligence Cycle ---")
+checkEnvironment()
+monitorInventory()
+surveyValuables()
+
+print("§b[AutoSurveyor] Performance Demo Complete. System Stable.")

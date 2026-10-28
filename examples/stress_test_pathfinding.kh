@@ -1,0 +1,37 @@
+// Pathfinding Stress Test
+// This script will move you to 10 random locations in a 50-block radius.
+// It tests A* performance, obstacle avoidance, and stuck detection.
+
+print "§b[Stress Test] Starting Pathfinding Stress Test..."
+print "§7Radius: 50 blocks | Targets: 10"
+
+for i = 1 to 10
+    // Generate random target within 50 blocks
+    dx = random(100) - 50
+    dz = random(100) - 50
+    
+    print "§e[Stress Test] Point " + i + "/10: Navigating to relative offset " + dx + ", " + dz
+    
+    // player.moveTo(x, y, z, radius, isRelative)
+    // We use y=0 and isRelative=true
+    player.moveTo(dx, 0, dz, 1.5, true)
+    
+    // Wait until reached or stuck
+    timeout = 0
+    while player.isMoveActive() and timeout < 300 // ~15 seconds timeout (50ms per wait)
+        wait 50
+        timeout = timeout + 1
+    end
+    
+    if player.isMoveActive()
+        print "§c[Stress Test] Point " + i + " TIMED OUT or STUCK. Skipping..."
+        player.stopMove()
+    else
+        print "§a[Stress Test] Point " + i + " REACHED!"
+    end
+    
+    // Small pause between targets
+    wait 500
+end
+
+print "§b[Stress Test] ALL POINTS COMPLETED!"

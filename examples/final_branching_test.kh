@@ -1,0 +1,41 @@
+// Final Branching Stability Test
+print("§b[SCS] Final Core Stabilization Test...")
+
+fails = 0
+fn assert(name, condition) {
+    if (condition) {
+        print("§a[PASS] " + name)
+    } else {
+        print("§c[FAIL] " + name)
+        fails = fails + 1
+    }
+}
+
+print("§e[1/2] Complex Sibling Chains (Else-If)")
+val = 2
+if (val == 1) {
+    assert("Branch 1 (False)", false)
+} else if (val == 2) {
+    assert("Branch 2 (True - MATCH)", true)
+} else if (val == 2) {
+    assert("Branch 3 (True - SHOULD SKIP)", false)
+} else {
+    assert("Branch 4 (Else)", false)
+}
+
+print("§e[2/2] Lexical Awareness & Nesting")
+if (true) {
+    s = "String with brace: }"
+    if (false) {
+        // Comment with brace: }
+    } else {
+        assert("Nested Else with lexical noise", true)
+    }
+}
+
+print("§b[SCS] Stability Check: " + (fails == 0))
+if (fails == 0) {
+    print("§a§l[SYSTEM STABLE]")
+} else {
+    print("§c§l[SYSTEM UNSTABLE]")
+}

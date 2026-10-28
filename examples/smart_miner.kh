@@ -1,0 +1,73 @@
+// Smart Miner Script v3.7 - The OSHA Certified Miner
+print("§6[SmartMiner] Booting v3.7 (Safety First)...")
+
+// Force initialization
+state = "DESCENDING"
+targetY = -58
+baseX = Math.floor(player.getX())
+baseZ = Math.floor(player.getZ())
+unreachable = []
+
+print("§e[SmartMiner] Target: " + targetY + " Base: " + baseX + "," + baseZ)
+
+while (true) {
+    if (player.getHunger() < 18) {
+        player.eat()
+    }
+    
+    if (!player.getMainHandItem().getName().includes("pickaxe")) {
+        player.equip("pickaxe", "mainhand")
+    }
+
+    if (state == "DESCENDING") {
+        currentY = Math.floor(player.getY())
+        
+        if (currentY > targetY) {
+            print("§7[SmartMiner] Descending safely... Y: " + currentY)
+            
+            // 1. Opportunistic ore search
+            shiny = world.findBlocks(["diamond_ore", "deepslate_diamond_ore", "gold_ore", "iron_ore"], 4)
+            if (shiny.length > 0) {
+                target = shiny[0]
+                if (player.moveTo(target.x, target.y, target.z, 2.0)) {
+                    player.mine(target.x, target.y, target.z)
+                    continue
+                }
+            }
+
+            // 2. Safe 1x2 Shaft Digging
+            // We dig the block in front of us and the one below it
+            // Assuming we face North (Z-) for the second hole
+            player.mine(baseX, currentY, baseZ + 1)
+            player.mine(baseX, currentY - 1, baseZ + 1)
+            
+            // Move to the second hole
+            player.moveTo(baseX, currentY, baseZ + 1, 0.2)
+            
+            // Now mine the first hole
+            player.mine(baseX, currentY, baseZ)
+            player.mine(baseX, currentY - 1, baseZ)
+            
+            // Step down
+            player.moveTo(baseX, currentY - 1, baseZ, 0.2)
+        } else {
+            print("§a[SmartMiner] Depth reached. Starting strip mine.")
+            state = "MINING"
+        }
+    }
+
+    if (state == "MINING") {
+        ores = world.findBlocks(["diamond_ore", "deepslate_diamond_ore"], 16)
+        if (ores.length > 0) {
+            target = ores[0]
+            if (player.moveTo(target.x, target.y, target.z, 2.0)) {
+                player.mine(target.x, target.y, target.z)
+            }
+        } else {
+            // Forward branching
+            player.moveTo(player.getX() + 4, targetY, player.getZ(), 1.0)
+        }
+    }
+
+    wait(500)
+}

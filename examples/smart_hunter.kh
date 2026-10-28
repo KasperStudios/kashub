@@ -1,0 +1,36 @@
+// Smart Hunter v2.0 - Ultra Minimalist
+print("§6[SmartHunter] Simple Hunter Mode Active")
+
+while (true) {
+    targets = scanner.entities("living", 32)
+    
+    if (targets.isEmpty()) {
+        wait(500)
+        continue
+    }
+
+    // Always take the closest target (first in list)
+    target = targets.get(0)
+    tx = target.x
+    ty = target.y
+    tz = target.z
+    dist = player.distanceTo(tx, ty, tz)
+
+    // Only recalculate path if target moved significantly (> 2 blocks)
+    // or if we don't have a last known position
+    if (dist > 3.0) {
+        if (lasttx == null || Math.abs(tx - lasttx) > 2.0 || Math.abs(tz - lasttz) > 2.0) {
+            print("§b[SmartHunter] New Pursuit Path: " + Math.round(tx) + ", " + Math.round(tz))
+            player.moveTo(Math.floor(tx), Math.floor(ty), Math.floor(tz))
+            lasttx = tx
+            lastty = ty
+            lasttz = tz
+        }
+    }
+    else {
+        player.attack(target)
+        lasttx = null // Reset so we move immediately after it runs away
+    }
+
+    wait(200)
+}
