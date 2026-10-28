@@ -2,6 +2,46 @@
 
 All notable changes to Kashub will be documented in this file.
 
+## [v1.0.0-FSR] - 2026-09-19
+
+### 🎉 First Stable Release (FSR)
+
+**Goal:** Production-ready stable release with cleaned-up codebase and multiloader support.
+
+### 🧹 Codebase Cleanup
+- **Removed dead code** — W2PObject (macro recording), AutoCraftService, BugReporter removed from 1.0.0 scope
+- **Fixed debug mode** — Stabilized debug tooling, removed stale debug artifacts
+- **Cleaned up logging** — Removed leftover System.err.println, consolidated to ScriptLogger
+- **Stabilized core systems** — All core engine components verified and locked for FSR
+
+### 🔀 Multiloader Support
+- **NeoForge port** — Full parity with Fabric via KHWrapper abstraction layer
+- **Mojang Mappings** — Migrated to official mappings for cross-loader compatibility
+- **KHGui abstraction** — All UI code platform-independent through KHGui layer
+
+### 🖥️ ComputerCraft Bridge (FSR Milestone)
+- **CC File System mounting** — CC computers mounted to `/mnt/cc/<id>/`
+- **Dual runtime** — CC capabilities exposed to both Lua and KHScript
+- **Discovery & VFS integration** — Automatic computer detection and virtual filesystem
+
+### 🔒 Access Policy & Sandbox (FSR Milestone)
+- **Access Policy Manager** — Survival/Casual/Creative mode gating
+- **Sandbox Hardening** — Permission-gated API methods, eval restriction
+- **Neuro-Implant concept** — Survival access gating via inventory slot
+
+### 📦 Deferred to v1.1+
+- Package System (import/export, kashub.json, `kh install`)
+- W2PObject macro recording/playback
+- AutoCraft automated crafting system
+- AI Integration (moved to standalone KasAgent mod)
+
+### 📝 Notes
+- **No breaking changes** from v0.9.0 scripts — all existing scripts work as-is
+- **Package System concept** preserved in `PACKAGE_SYSTEM_CONCEPT.md` for v1.1+ implementation
+- **BUGS_FOUND.md archived** — all listed bugs were fixed in v0.9.0 refactoring
+
+---
+
 ## [v0.9.0-beta] - 2026-01-25
 
 ### 🛡️ New Features

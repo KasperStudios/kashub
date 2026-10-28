@@ -1,12 +1,11 @@
-# 🎮 Kashub – In‑Game Scripting Engine for Minecraft
+# KasHub
 
 <p align="center">
-  <img src="src/main/resources/assets/kashub/icon.png" alt="Kashub Logo" width="128"/>
+  <img src="src/main/resources/assets/kashub/banner.png" alt="KasHub Banner" width="800"/>
 </p>
 
 <p align="center">
-  <strong>Current Version: v0.9.0-beta</strong><br>
-  <em>Modern scripting engine with VSCode-style editor</em>
+  <strong>v1.0.0-FSR</strong> &nbsp;•&nbsp; <em>Modern in-game scripting engine with a built-in VSCode-style editor</em>
 </p>
 
 ### In‑game scripting and automation framework with a built‑in VSCode‑style editor
@@ -14,13 +13,14 @@ Tired of repetitive tasks? Want to automate farming, building, or grinding? **Ka
 
 ---
 
-## 🆕 What's New in v0.9.0-beta
-- **🛡️ CrashGuard Command** – Protect your scripts from crashes, errors, and FPS drops with `crashguard { }`
-- **🖥️ System Object** – New global object with `System.print()`, `System.log()`, `System.wait()`, `System.memory()`, and more
-- **🎨 Enhanced Syntax Highlighting** – Object methods now have distinct colors (orange for objects, purple for methods)
-- **✅ Improved Validation** – Object-oriented commands (player.attack, vision.nearest) are now properly recognized
-- **🛑 Fixed Loop Stopping** – Scripts with while loops now stop immediately when pressing Stop button
-- **🔧 Better Error Detection** – Real-time syntax validation with detailed error messages
+## 🆕 What's New in v1.0.0-FSR (First Stable Release)
+- **🎉 First Stable Release** – Production-ready core with cleaned-up codebase
+- **🔀 NeoForge Support** – Full multiloader support via KHWrapper (Fabric + NeoForge parity)
+- **🖥️ ComputerCraft Bridge** – Optional CC integration with VFS mounting, discovery, and dual runtime
+- **🔒 Access Policy Manager** – Survival/Casual/Creative gating with sandbox hardening
+- **🧹 Dead Code Removal** – Removed W2PObject, AutoCraftService, BugReporter for cleaner codebase
+- **🐛 Debug Mode Fixed** – Stabilized debug tooling and cleaned up logging
+- **🛡️ CrashGuard System** – Protect scripts from crashes with `crashguard { }`
 - **📚 Complete V2 API** – All core objects (player, scanner, vision, inventory) fully implemented
 
 ---

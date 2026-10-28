@@ -1,345 +1,322 @@
-# Development Notes for Kashub Mod
+# Kashub DevNotes
 
-**IMPORTANT:** This file contains critical guidelines for AI assistants working on this project.
-
----
-
-## 🌍 LANGUAGE REQUIREMENTS
-
-### Code & User-Facing Text
-**ALL user-facing text MUST be in ENGLISH:**
-- Command descriptions
-- Error messages
-- Log messages
-- Help text
-- Documentation strings
-- Chat messages
-- UI text
-- Comments in code (preferred English, but Russian acceptable)
-
-**Reason:** The mod will be promoted internationally and must be accessible to global audience.
-
-### Documentation
-- **README.md** - English (primary)
-- **CHANGELOG.md** - English
-- **Guides (docs/)** - English
-- **Code comments** - English preferred, Russian acceptable
-- **Internal notes** - Any language
+> IMPORTANT: This file contains critical project rules, implementation context, and constraints for the author and AI assistants.
+> Treat this file as the operational contract of the project.
+> If something is unclear, prefer existing code/project patterns over invention.
 
 ---
 
-## 📝 CODE STYLE
+## 0. DevNotes Writing Rules
 
-### Logging
-- Use `ScriptLogger.getInstance()` for user-facing messages
-- Use `LOGGER` (Log4j) for internal debug/error logging
-- Never use `System.out.println()` or `System.err.println()`
-- **In KHScript**: Use `print` for chat messages, `log` for console/file only
+**DevNotes is an internal operational document, not a marketing page.
+Do not add hype, “wow-effect”, promotional language, or exaggerated claims.
+Write only what is useful for implementation, review, maintenance, and AI execution.**
 
-### Error Messages
-```java
-// ✅ GOOD
-ScriptLogger.getInstance().error("Invalid argument: " + arg);
+This file is operational, not promotional. No marketing language, hype, or “wow-effect” wording. Do not beautify the project or exaggerate maturity/stability. Prefer precise facts over impressive wording.
 
-// ❌ BAD
-System.out.println("Неверный аргумент: " + arg);
-```
+If a sentence does not change how the project is implemented, reviewed, or maintained — it does not belong in this file.
 
-### Command Help Text
-```java
-@Override
-public String getDetailedHelp() {
-    return "Command description in English.\n\n" +
-           "Usage:\n" +
-           "  command <arg> - Description\n\n" +
-           "Examples:\n" +
-           "  command example\n\n" +
-           "Notes:\n" +
-           "  - Important note";
-}
-```
+## 1. Project Overview
 
----
+### What this project is
+Kashub is a scriptable automation and modding framework for Minecraft, designed to provide advanced debugging, profiling, and event-based scripting capabilities within the game.
 
-## 🔧 TECHNICAL GUIDELINES
+### Core goal
+To create a robust, extensible environment for Minecraft modding and automation that is accessible to a global audience through English-first interfaces.
 
-### Threading
-- Use `ExecutorService` with fixed thread pool, NOT `CompletableFuture.runAsync()` without executor
-- Always add timeouts to async operations
-- Add rate limiting for external API calls
+### Success criteria
+- Functional command system with English help text.
+- Stable event system for script triggers.
+- Reliable cross-platform execution (Windows/Linux).
+- High performance with minimal impact on game TPS.
 
-### Minecraft Version
-- Target: Minecraft 1.21.1
-- Mod Loader: Fabric
-- Use `Registries` API, not deprecated `Registry`
-- Use `RegistryEntry<T>.value()` to get actual value from registry entries
-
-### Command Registration
-- Register all commands in `CommandRegistry.java`
-- Use `safeRegister()` wrapper for graceful failure handling
-- Commands must implement `Command` interface
-
-### Performance
-- Cache expensive operations
-- Limit search radius (max 64 blocks)
-- Add cooldowns to prevent spam
-- Use `CompletableFuture` for async operations
+### Project type
+- [ ] Web app
+- [ ] Website / landing
+- [ ] Desktop app
+- [ ] Library / framework
+- [ ] Bot / automation
+- [x] Game / mod
+- [ ] API / backend
+- [ ] Other: 
 
 ---
 
-## 🐛 COMMON PITFALLS
+## 2. Current Status
 
-### 1. Registry API Changes (Minecraft 1.21+)
-```java
-// ❌ OLD (doesn't work in 1.21+)
-StatusEffect type = effect.getEffectType();
-String name = Registries.STATUS_EFFECT.getId(type).getPath();
+### Status summary
+v1.0.0-FSR (First Stable Release) achieved.
 
-// ✅ NEW (correct for 1.21+)
-String name = Registries.STATUS_EFFECT.getId(effect.getEffectType().value()).getPath();
-```
+### Implemented
+- [x] **Stabilized Core Engine (v1.0.0-FSR)**.
+- [x] Unified Value system with prototype method support.
+- [x] Event system for game events (mixin-based).
+- [x] Debug system (breakpoints, profiler).
+- [x] Fabric mixins for core game hooks (1.21.1).
+- [x] Scripting engine core (KHScript) with recursion protection.
+- [x] REST API & DTOs for external integration.
 
-### 2. Chat Message Mixin (Minecraft 1.21.1)
-```java
-// ❌ OLD (Minecraft 1.20.x and earlier)
-@Inject(method = "onGameMessage", at = @At("HEAD"))
-private void onChatMessage(GameMessageS2CPacket packet, boolean overlay, CallbackInfo ci) {
-    if (overlay) return;
-    // ...
-}
+### In progress
+- [x] **Core Milestone: Mojang Mappings & Multiloader Baseline** (Fabric + NeoForge compile) ✅
+- [x] **FSR Milestone: ComputerCraft Bridge & VFS Integration** ✅
+- [x] **FSR Milestone: Access Policy Manager & Sandbox Hardening** ✅
+- [x] Stabilizing KHGui integrations (NeoForge parity achieved). ✅
 
-// ✅ NEW (Minecraft 1.21.1+)
-@Inject(method = "onGameMessage", at = @At("HEAD"))
-private void onChatMessage(GameMessageS2CPacket packet, CallbackInfo ci) {
-    // overlay parameter removed in 1.21.1
-    // ...
-}
-```
+### Removed from v1.0.0-FSR scope
+- ~~W2PObject (macro recording/playback)~~ → Deferred to v1.1+
+- ~~AutoCraftService~~ → Deferred to v1.1+
+- ~~BugReporter~~ → Removed (dead code)
+- ~~Package System (import/export, kashub.json, kh install)~~ → Deferred to v1.1+
 
-### 3. Thread Safety
-```java
-// ❌ BAD - unlimited threads
-CompletableFuture.runAsync(() -> { ... });
+### Research & Proposals (Not yet canonical)
+- [ ] **Dynamic Documentation** (Under discussion) - Advanced implant functionality.
 
-// ✅ GOOD - fixed thread pool
-private static final ExecutorService executor = Executors.newFixedThreadPool(2);
-CompletableFuture.runAsync(() -> { ... }, executor)
-    .orTimeout(30, TimeUnit.SECONDS);
-```
+### Planned / TODO
+- [ ] **Neuro-Implant** (Phase 1) - Survival access gating via inventory slot.
+- [ ] **Advanced Interaction Reach** - Hand-reach based detection (max 10-15 blocks).
+- [ ] **ComputerCraft Integrated Documentation** - KHScript tutorials inside CC terminal.
+- [ ] Marketplace & Community features (v1.1.0).
+- [x] Full stable release (v1.0.0-FSR). ✅
 
-### 3. Server vs Client
-```java
-// Check if on server
-boolean isMultiplayer = !MinecraftClient.getInstance().isInSingleplayer();
-
-// Adjust behavior accordingly
-double maxAllowed = isMultiplayer ? MAX_SERVER : MAX_SINGLEPLAYER;
-```
+### Not in scope right now
+- Major UI overhauls not related to core functionality.
+- Support for Minecraft versions older than 1.21.1.
+- Skill trees/RPG mechanics for KasHub (planned for later versions).
 
 ---
 
-## 📦 PROJECT STRUCTURE
+## 3. Tech Stack
 
+### Core stack
+- Runtime: Minecraft 1.21.1 (Fabric)
+- Language(s): Java 21
+- Framework(s): Fabric API, NeoForge API, Architectury API, KHGui, KHWrapper
+- Build tools: Gradle
+- Storage / DB: Local files (VFS) / Configs
+- External services: REST API support
+
+### Versions
+- Minecraft: 1.21.1
+- Fabric Loader: >=0.18.4 (Crucial for KHGui/Architectury compatibility)
+- Architectury API: 13.0.8+
+- Java: 21
+
+### Versioning Scheme (v1.1+)
+- **`vX.Y.Z-N`** — build N of version X.Y.Z, released as GitHub **pre-release** (e.g. `v1.1.0-1`, `v1.1.0-2`)
+- **`vX.Y.Z`** — final release without build number, published to all distribution channels
+- Commits are frequent and incremental (no single mega-commit). Successful builds are tagged and pre-released.
+- v1.0.0-FSR is a special case: first stable release, no build numbers applied retroactively.
+
+---
+
+## 4. Architecture Notes
+
+### High-level architecture
+Fabric mod with a custom internal engine for commands, events, and scripting. Uses Mixins for deep integration with Minecraft internals.
+
+### Main modules / layers
+1. `core/` - Engine core (Parser, Registry, Context, Value).
+2. `core/commands/` - Script command implementations.
+3. `core/objects/` - Script-exposed OO wrappers (Player, System, etc.).
+4. `api/` - REST API and data transfer objects.
+5. `mixin/` - Fabric mixins for bytecode manipulation.
+6. `debug/` - Debugger and profiler logic.
+
+### Platform Abstraction Layer (KHWrapper / KHGui)
+
+Kashub core **MUST NOT** depend directly on Fabric, NeoForge or any loader‑specific APIs.
+
+All platform‑specific code is isolated behind `KHWrapper` and UI is isolated behind `KHGui`. Architectury's `ExpectPlatform` implementations must reside in platform-specific subpackages (e.g., `.neoforge` or `.fabric`) for correct runtime discovery.
+
+#### Platform boundaries
+
+- Core code (`kasperstudios.kashub.core`, `debug`, `services`):
+  - NO direct imports of `net.fabricmc.*`, `net.neoforge.*` or other loader‑specific classes.
+  - All platform operations (paths, lifecycle, input, networking, commands) go through `KHWrapper`.
+
+- Platform adapters:
+  - `khwrapper` provides `IPlatformWrapper` interface plus concrete implementations per loader.
+  - Fabric and NeoForge specific bootstraps live **outside** `kashub` core module.
+
+#### KHWrapper responsibilities (stable contract)
+
+`IPlatformWrapper` is the only allowed entry point for:
+
+1. Loader & lifecycle:
+   - `onModInit(Runnable callback)`
+   - `onClientInit(Runnable callback)`
+   - `onClientTick(Runnable callback)`
+   - `onClientStopping(Runnable callback)`
+
+2. Paths & filesystem:
+   - `Path getConfigDir()`
+   - `Path getGameDir()`
+   - `Path getModsDir()`
+   - `Collection<ModInfo> getAllMods()`
+   - `boolean isModLoaded(String modId)`
+
+3. Input / keybindings:
+   - Keybinding registration via wrapper (no direct `KeyBindingHelper` / `KeyMapping` in core).
+   - Key state checks via wrapper (no direct GLFW / InputUtil calls).
+
+4. Networking:
+   - Packet registration, send/receive and client join events through wrapper abstraction only.
+   - `playBidirectional` is the standard for high-performance cross-platform packet handling.
+   - No direct `ClientPlayNetworking` / `PayloadTypeRegistry` / NeoForge equivalents in core.
+
+5. Commands / client commands:
+   - Client command registration via wrapper‑level abstraction (no direct Brigadier / Fabric client command APIs in core).
+
+#### KHGui responsibilities
+
+- All editor/UI code must go through `KHGui` abstractions.
+- Core logic must not depend on concrete rendering or widget implementations.
+- Any GUI behaviour that requires platform APIs must be implemented inside KHGui, not inside Kashub.
+
+#### Platform review rule
+
+Any new usage of loader APIs (`Fabric`, `NeoForge`, `MinecraftClient` client hooks) MUST be checked:
+- if it belongs to core logic → it must be moved behind `KHWrapper` or `KHGui`.
+- direct imports are allowed only in platform bootstrap or adapter modules.
+
+### Access Philosophy & ComputerCraft Integration
+The access model is based on three main modes:
+- **Survival**: Gated by **Neuro-Implant** (required to see the UI). Interaction radius is based on player's effective hand reach (`min(reach, 10-15 blocks)`).
+- **Casual**: Configurable toggle to skip progression gates (immediate UI access, hand reach radius).
+- **Creative**: Remote access to all computers in loaded chunks via a dropdown selection list.
+
+#### ComputerCraft Bridge
+- **KHinux Integration**: CC File System is mounted to `/mnt/cc/<id>/`.
+- **Dual Runtime**: CC capabilities exposed to both Lua and KHScript.
+- **Connection UX**: Contextual "Connect/Exit" button instead of magic overlays.
+- **Built-in Docs**: Integrated documentation for KHScript inside the CC environment.
+
+### Dependency direction
+```txt
+[core/commands] -> [core]
+[core/objects] -> [core]
+[core] -> [util/VirtualFileSystem]
+[Mixin] -> [core/Minecraft internals]
 ```
+
+### Important boundaries
+- `ScriptLogger` must be used for ALL user-facing messages.
+- Async operations must be confined to managed thread pools (executor in `TerminalManager`).
+- Value objects must be immutable or handle mutability explicitly (List/Map).
+
+---
+
+## 5. Project Structure
+
+```txt
 kashub/
 ├── src/main/java/kasperstudios/kashub/
-│   ├── algorithm/
-│   │   ├── commands/          # All commands here
-│   │   ├── events/            # Event system
-│   │   └── CommandRegistry.java
-│   ├── debug/                 # Debug system
+│   ├── core/                  # Core Engine
+│   │   ├── commands/          # Script commands (if, while, let...)
+│   │   ├── objects/           # Script API objects (Player, System...)
+│   │   ├── Parser.java        # Expression & Script parser
+│   │   ├── Registry.java      # Command registry
+│   │   └── Value.java         # Unified type system
+│   ├── debug/                 # Debug system (profiler, breakpoints)
 │   ├── api/                   # REST API & DTOs
 │   ├── mixin/                 # Fabric mixins
-│   └── util/                  # Utilities
+│   ├── util/                  # Utilities (VFS, Logger)
+│   └── services/              # High-level services (Pathfinding, Integration)
 ├── docs/                      # User documentation (English)
 └── config/kashub/             # Config files
 ```
 
----
-
-## 📚 USEFUL REFERENCES
-
-- [Fabric Wiki](https://fabricmc.net/wiki/)
-- [Minecraft Wiki](https://minecraft.wiki/)
-- [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/)
-- [ROADMAP_FUTURE.md](./ROADMAP_FUTURE.md) - Full roadmap
+### Structure rules
+- New script commands must be registered in `Registry.java`.
+- API objects should inherit from `Value` and implement `getMember`.
 
 ---
 
-## 🔍 TESTING
+## 6. Language & Text Rules
 
-### Before Committing
-1. Run `./gradlew build -x test`
-2. Check diagnostics with IDE
-3. Test in-game if possible
-4. Update CHANGELOG.md
-5. Update documentation if needed
-
-### Test Scripts
-- `test_events.kh` - Event system
-- `test_conditional_breakpoints.kh` - Breakpoints
-- `test_profiler.kh` - Profiler
+### User-facing language
+- **ALL user-facing text MUST be in ENGLISH.**
 
 ---
 
-## 💡 TIPS FOR AI ASSISTANTS
+## 7. Code Rules
 
-1. **Always check existing code** before creating new files
-2. **Use `getDiagnostics`** before finalizing changes
-3. **Keep code minimal** - avoid verbose implementations
-4. **Follow existing patterns** in the codebase
-5. **Test critical changes** with build command
-6. **Update documentation** when adding features
-7. **Use English** for all user-facing text
-8. **Add null checks** for Minecraft client/player
-9. **Handle async operations** properly with timeouts
-10. **Consider server compatibility** for multiplayer features
-11. **Dont create any .md files**, only edit
+### General style
+- Follow the `Command` interface for interpreter extensions.
+- Add null checks for `MinecraftClient.getInstance().player`.
 
-## Roadmap Change Policy
+### Logging
+- In KHScript: `print` (System.print) for chat, `log` (System.log) for console only.
 
-⚠️ IMPORTANT: The roadmap and versions are considered the author's area of responsibility.
+### Async / threading / concurrency
+- Use `CompletableFuture.runAsync()` ONLY with the mod's specific executor or `client.execute()` for main thread tasks.
 
-- Any changes to:
-- `ROADMAP_FUTURE.md`
-- `REFACTORING_PLAN.md`
-- the "Next Steps", "Future Features", "Planned for vX.Y.Z" sections
+---
 
-**PROHIBITED:**
-- moving tasks between versions (e.g., from v0.9.0 to v1.1.0+);
-- changing the target version of a feature;
-- marking a feature as *Moved*, *Deferred*, *Out of scope*.
+## 8. Critical Rules
 
-- **ALLOWED without the author's consent:**
-- correcting typos and formatting;
-- update the completion status (check the box) if the feature is actually implemented in the code;
-- add technical implementation details to existing items.
+1. **Language:** All user-facing text must be English.
+2. **Registry:** Use `Registry.java` for script commands.
+3. **Files:** Do not create any new `.md` files; only edit existing ones.
 
-- **ANY CHANGES TO THE PLAN (transfer, defer, removal of features)**
-must be made only by the project author.
+---
 
-### Custom Version Scheme (Project-Specific)
+## 9. AI Assistant Context (Local Repositories)
 
-This project uses a **cyclic versioning scheme**: beta → hotfix → stable, then repeat.
+These paths describe the **local layout on the author’s machine** and are provided
+for AI assistants as context only. They MUST NOT be used as hardcoded paths in code
+or build scripts.
 
-```
-MAJOR.MINOR.PATCH
-```
+### 9.1 Related local projects
 
-**Version Cycle:**
+The following directories contain adjacent projects used by Kashub:
 
-1. **X.Y.0** → Beta release (new features, testing phase)
-   - Example: `0.9.0` = beta for 0.9 line
-   - All planned work goes here
-   - May have bugs, breaking changes
+- `C:\Users\kasperenok\Desktop\projects\experiments\khwrapper`
+  - Local working copy of **KHWrapper** (platform abstraction / loader bridge).
+  - Used as the source for the `khwrapper` library consumed by Kashub.
 
-2. **X.Y.1+** → Hotfixes for beta (quick fixes, small improvements)
-   - Example: `0.9.1`, `0.9.2` = hotfixes for 0.9 beta
-   - Bug fixes, critical issues
-   - No new features
+- `C:\Users\kasperenok\Desktop\projects\KHGui`
+  - Local working copy of **KHGui** (UI abstraction and editor components).
+  - Used as the source for the `khgui` library consumed by Kashub.
 
-3. **X+1.0.0** → Stable release (major milestone)
-   - Example: `1.0.0` = first stable release
-   - Architecture complete, tested, production-ready
-   - Breaking changes allowed (major version bump)
+### 9.2 Rules for AI assistants
 
-4. **X+1.Y.0** → Next beta cycle
-   - Example: `1.1.0` = new beta with next feature set
-   - Cycle repeats: beta → hotfix → stable
-
-**Example Timeline:**
-```
-0.9.0 → beta (current)
-0.9.1 → hotfix (if needed)
-1.0.0 → stable (ScriptInterpreter removed, architecture complete)
-1.1.0 → beta (Marketplace & Community features)
-1.1.1 → hotfix (if needed)
-2.0.0 → stable (next major milestone)
-```
-
-**Key Differences from Classic SemVer:**
-- Beta versions use `.0` patch (not `-beta` suffix)
-- Hotfixes increment patch for beta (not just for stable)
-- Major version bump = stable milestone (not just breaking changes)
-- Odd MINOR versions (0.9, 1.1, 1.3) = beta phases
-- Even MAJOR versions (1.0, 2.0) = stable releases
-
-**Rules:**
+- These paths are **hints only** for reading/editing code during local sessions.
 - Do NOT:
-  - auto-upgrade `X.Y.0` to `X.Y.1` (only owner decides)
-  - create `X.Y.2+` versions for internal phases
-  - change version numbers without explicit approval
-- Only the project owner decides:
-  - when to release hotfixes (`X.Y.1+`)
-  - when to move to stable (`X+1.0.0`)
-  - when to start next beta cycle (`X+1.Y.0`)
-
-### Versioning Rules (VERY IMPORTANT)
-
-These rules apply to ALL versions in this project.
-
-1. **One main release per minor line**
-   - `A.B.0` is the **only main release** of the `A.B` line.
-   - All work completed **before the actual `A.B.0` release** is considered part of `A.B.0`, not separate `A.B.1`, `A.B.2`, etc.
-   - Do NOT invent intermediate patch versions before release just to label internal phases.
-
-2. **Patch versions ONLY after release**
-   - Versions like `A.B.1`, `A.B.2`, ... are used ONLY for updates made **after `A.B.0` has been released**.
-   - Patch versions are for:
-     - bug fixes
-     - small improvements
-     - minor, non-breaking changes.
-   - Internal refactoring/feature phases are **NOT** separate versions.
-
-3. **Phases for planning, not versions**
-   - When planning work, use neutral phase names instead of new version numbers, for example:
-     - `Phase A: Before A.B.0 release`
-     - `Phase B: After A.B.0, towards A+1.0.0`
-   - Do NOT:
-     - invent new version numbers;
-     - move features between versions on your own;
-     - mark features as “moved to A.B+1.0” without explicit approval from the project owner.
-
-4. **SemVer meaning (simplified for this project)**
-   - `A.B.0` – major release for the `A.B` line:
-     - new features
-     - significant refactors
-     - architectural changes (not necessarily breaking).
-   - `A.B.x` (`x > 0`) – patch releases:
-     - small updates after `A.B.0`
-     - fixes, optimizations, minor improvements.
-   - `A+1.0.0` – major milestone:
-     - completion of key architectural work
-     - may include **breaking changes** that cannot go into `A.B.x`.
-
-5. **Roadmap and version ownership**
-   - Only the project owner may:
-     - move features between versions (`A.B.0` → `A+1.0.0`, etc.);
-     - mark items as *Moved*, *Deferred*, *Out of scope*;
-     - introduce new target versions.
-   - Any assistants/tools are **NOT ALLOWED** to:
-     - change target versions for features on their own;
-     - move roadmap items to future releases without explicit approval from the project owner.
-
-### File Edit Restrictions (CRITICAL)
-
-The following files are **READ-ONLY** for assistants/tools:
-
-- `DEVELOPMENT_NOTES.md`
-
-Rules:
-
-- Assistants/tools MUST NOT:
-  - edit, overwrite, or reformat `DEVELOPMENT_NOTES.md`;
-  - insert new sections into this file;
-  - remove or change any existing rules in this file.
-
-- Assistants/tools MAY:
-  - read `DEVELOPMENT_NOTES.md` to understand project rules and guidelines.
-
-Only the project owner is allowed to modify `DEVELOPMENT_NOTES.md`.
+  - hardcode these paths into Java code, configs, or Gradle scripts;
+  - assume they exist on other machines or CI.
+- When referring to KHWrapper or KHGui in code:
+  - use Gradle dependencies and module names,
+  - treat the local folders as implementation detail, not part of the public contract.
 
 ---
 
-**Last Updated:** 2026-01-13  
-**Version:** v0.9.0-beta
+## 23. Stable Runtime Surface (v1.0.0-FSR)
+
+The following API surface is considered stable and normalized as of Phase 0.5 stabilization.
+
+### Core Commands
+- `let`, `var` : Declaration. Supports `let x = 5` or `let x`.
+- `if (condition) { block }` : Conditional block. Requires braces.
+- `while (condition) { block }` : Loop. Safe against infinite spinning (Thread interrupt check).
+- `fn name(args) { block }` : Function declaration.
+- `assignment` : Supports deep updates: `obj.prop = value`.
+
+### Verified Global Objects
+- **System** : `print`, `log`, `wait(ms)`, `time()`, `exit()`, `openFile(path)`, `memory()`, `gc()`, `console(cmd)`.
+- **player** : `getPos()`, `getHealth()`, `getHunger()`, `getName()`, `moveTo(x,y,z)`, `input(action, type)`, `attack(entity?)`, `breakBlock()`, `placeBlock(name)`, `sprint(bool)`, `lookAt(x,y,z)`, `chat(msg)`.
+- **VFS** : `read(path)`, `write(path, data)`, `list(path)`, `exists(path)`, `delete(path)`, `mkdir(path)`.
+
+### Variable Scoping
+- Variables starting with `$` are redirected to the `Environment` singleton (read-only for scripts unless set via specific commands).
+- Local variables (let/var) take precedence over parent scope.
+
+### Dynamic Documentation (Not yet canonical)
+- **Proposed**: Advanced Neuro-Implant feature to display block methods and code examples in real-time.
+- **Toggle**: Keybind-based overlay to prevent UI clutter.
+
+---
+
+**Last Updated:** 2026-09-19
+**Project Status:** v1.0.0-FSR released (First Stable Release — Fabric + NeoForge 1.21.1)
+**DevNotes Version:** v1.0.0-FSR

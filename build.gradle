@@ -11,8 +11,20 @@ base {
 }
 
 repositories {
+	mavenLocal()
 	mavenCentral()
 	maven { url 'https://jitpack.io' }
+	maven { url "https://maven.architectury.dev/" }
+	// Trinkets (Fabric accessory mod)
+	maven { url "https://maven.ladysnake.org/releases" }
+	// EMI (recipe viewer)
+	maven { 
+		name = "TerraformersMC"
+		url = "https://maven.terraformersmc.com/"
+	}
+	flatDir {
+		dirs 'libs'
+	}
 }
 
 loom {
@@ -22,11 +34,28 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "net.minecraft:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	
+	
+	// KHGui Library (fabric JAR already includes all common classes via shadow bundle)
+	modImplementation("kasperstudios.khgui:khgui-fabric:1.0.10") {
+		exclude group: 'org.spongepowered', module: 'mixin'
+	}
+	include "kasperstudios.khgui:khgui-fabric:1.0.10"
+
+	// KHWrapper Bridge (using dev jars for Mojang mappings sync)
+	modImplementation("com.kasperstudios.khwrapper:khwrapper-common:1.0.17:dev") {
+		exclude group: 'org.spongepowered', module: 'mixin'
+	}
+	include "com.kasperstudios.khwrapper:khwrapper-common:1.0.17"
+	modImplementation("com.kasperstudios.khwrapper:khwrapper-fabric:1.0.17:dev") {
+		exclude group: 'org.spongepowered', module: 'mixin'
+	}
+	include "com.kasperstudios.khwrapper:khwrapper-fabric:1.0.17"
 	
 	// HTTP client
 	include implementation('com.squareup.okhttp3:okhttp:4.12.0')
@@ -36,9 +65,24 @@ dependencies {
 	// Discord Rich Presence (v0.9.0)
 	include implementation('io.github.CDAGaming:DiscordIPC:0.9.1')
 
+	// Trinkets API (optional - for Fabric accessory slots)
+	modCompileOnly "dev.emi:trinkets:${project.trinkets_version}"
+	// Runtime check via KHWrapper.isModLoaded("trinkets")
+
+	// EMI (optional - recipe viewer integration)
+	// modCompileOnly "dev.emi:emi-fabric:${project.emi_version}:api"
+	// modLocalRuntime "dev.emi:emi-fabric:${project.emi_version}"
+	// Runtime check via KHWrapper.isModLoaded("emi")
+
 	// Testing
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+configurations.all {
+	resolutionStrategy {
+		force 'net.fabricmc:sponge-mixin:0.17.2+mixin.0.8.7'
+	}
 }
 
 test {
@@ -62,6 +106,10 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 }
 
+sourceSets.main.java {
+	exclude 'kasperstudios/kashub/neoforge/**'
+}
+
 java {
 	withSourcesJar()
 
@@ -70,6 +118,7 @@ java {
 }
 
 jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	inputs.property "archivesName", project.base.archivesName
 
 	from("LICENSE") {
@@ -94,3 +143,33 @@ publishing {
 		// retrieving dependencies.
 	}
 }
+
+sourceSets {
+	unaiBridge {
+		java {
+			srcDir "/home/kasperenok/Desktop/projects/UnAI/wsrepos/unai-minecraft-workspace/server-bridge/fabric-mod/src/main/java"
+		}
+		resources {
+			srcDir "/home/kasperenok/Desktop/projects/UnAI/wsrepos/unai-minecraft-workspace/server-bridge/fabric-mod/src/main/resources"
+		}
+		compileClasspath += sourceSets.main.compileClasspath
+		runtimeClasspath += sourceSets.main.runtimeClasspath
+	}
+}
+
+task buildUnaiBridgeJar(type: Jar) {
+	from sourceSets.unaiBridge.output
+	archiveFileName = "unai-bridge-fabric-1.21.1-1.0.0.jar"
+	destinationDirectory = file("run/mods")
+	doLast {
+		copy {
+			from archiveFile
+			into "/home/kasperenok/Desktop/projects/UnAI/wsrepos/unai-minecraft-workspace/build-artifacts"
+		}
+	}
+}
+
+tasks.named('compileUnaiBridgeJava', JavaCompile) {
+	options.release.set(17)
+}
+

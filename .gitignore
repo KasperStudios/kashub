@@ -8,12 +8,10 @@ build
 .gradle
 .gradlew
 .gradlew.bat
-.gradlew.bat
 *\node_modules
 
 .cursorrules
 kashub_tree.txt
-.github
 
 # OS
 .DS_Store
@@ -35,6 +33,3 @@ kashub-vscode/.vscode-test/
 
 # Server Plugin
 kashub-server-plugin/build
-
-# Keep roadmap for now
-# ROADMAP_FUTURE.md
