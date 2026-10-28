@@ -8,6 +8,7 @@ Welcome to the complete Kashub documentation! This guide will help you master th
 - [Installation Guide](installation.md) - How to install and set up Kashub
 - [Quick Start](quick-start.md) - Your first script in 5 minutes
 - [Editor Guide](editor-guide.md) - Using the built-in code editor
+- [Neural Implant & Scanning](neural-implant.md) - Using the physical implant slot
 
 ### Language Reference
 - [KHScript Syntax](khscript-syntax.md) - Complete language reference
@@ -23,8 +24,13 @@ Welcome to the complete Kashub documentation! This guide will help you master th
 - [Inventory Object](api/inventory-object.md) - Inventory management
 - [World Object](api/world-object.md) - World information
 - [Game Object](api/game-object.md) - Game settings
+- [Terminal Object](api/terminal-object.md) - Khinux Terminal DSL
+- [VFS Object](api/vfs-object.md) - Virtual File System
+- [CC Object](api/cct-object.md) - CC:T Integration
 
 ### Guides & Tutorials
+- [Khinux Terminal Guide](khinux-terminal.md) - Understanding the OS layer
+- [CC:T Integration](cct-integration.md) - Connecting to ComputerCraft
 - [Automation Basics](guides/automation-basics.md) - Core automation concepts
 - [Combat Scripts](guides/combat-scripts.md) - Building combat bots
 - [Mining Scripts](guides/mining-scripts.md) - Automated mining
@@ -56,7 +62,9 @@ Kashub is a powerful in-game scripting mod for Minecraft that lets you automate 
 
 - **Built-in Code Editor** - Professional editor with syntax highlighting, auto-completion, and 10+ themes
 - **Modern Scripting Language** - KHScript with object-oriented syntax inspired by JavaScript and Lua
-- **Rich API** - 30+ methods across 7 core objects for complete game control
+- **Dual-Mode Terminal** - Proxy local commands or remote CC:T terminal sessions
+- **Khinux OS Layer** - Background processes, VFS, and advanced system management
+- **Rich API** - 50+ methods across 11 core objects for complete game control
 - **Safety Features** - CrashGuard protection, FPS monitoring, and timeout handling
 - **Developer Tools** - Full debugger with breakpoints, step-through, and variable watching
 - **Server-Friendly** - Fair play system with server-authoritative control
@@ -70,7 +78,7 @@ Kashub is a powerful in-game scripting mod for Minecraft that lets you automate 
 
 ## 📝 Version Information
 
-This documentation is for **Kashub v0.9.0-beta** (Minecraft 1.21.1, Fabric)
+This documentation is for **Kashub v1.0.0-FSR** (Minecraft 1.21.1, Fabric/NeoForge)
 
 ---
 

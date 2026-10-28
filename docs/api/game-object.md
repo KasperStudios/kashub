@@ -1,49 +1,31 @@
-# Game Object API
+# 🎮 Game Object
 
-The `game` object provides control over client-side game settings.
+The `game` object allows scripts to modify client-side settings and rendering parameters.
 
 ## Methods
 
-### game.setGamma(value)
+### `game.setGamma(value)`
+Directly sets the game's brightness (gamma) level. This can exceed the normal 100% range in some implementations.
+- **Parameters:** `value` (number)
+- **Returns:** `null`
 
-Sets the client brightness (gamma) level.
+### `game.fullBright()`
+Immediately sets the gamma to a high value (100.0) for maximum visibility in dark areas.
+- **Returns:** `null`
 
-**Parameters:**
-- `value` (number): Gamma value (e.g., `1.0`, `100.0`).
+### `game.setFov(value)`
+Changes the player's Field of View (FOV).
+- **Parameters:** `value` (number, typical range 30-110)
+- **Returns:** `null`
 
-**Returns:** `true`
+---
 
-**Example:**
+## Example: Night Vision Toggle
 ```javascript
-game.setGamma(5.0)
+let time = world.getTime();
+if (time > 13000 || world.getWeather() == "thunder") {
+    game.fullBright();
+} else {
+    game.setGamma(1.0);
+}
 ```
-
-### game.fullBright()
-
-Sets the brightness to maximum (100.0).
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-game.fullBright()
-```
-
-### game.setFov(value)
-
-Sets the client Field of View (FOV).
-
-**Parameters:**
-- `value` (number): FOV value (e.g., `70`, `110`).
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-game.setFov(90)
-```
-
-## See Also
-
-- [System Object](system-object.md)
-- [World Object](world-object.md)

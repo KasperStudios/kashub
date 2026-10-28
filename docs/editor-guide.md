@@ -47,13 +47,29 @@ The editor consists of three main areas:
 - Line numbers
 - Auto-completion
 
-### Console (Bottom)
+### Console & Terminal (Bottom)
 
-- Shows script output
-- Displays errors
-- Real-time logging
+- **Console Tab**: Shows real-time script output and errors.
+- **Terminal Tab**: Provides access to the Khinux Shell.
+- **Toggle**: Press `Ctrl + \` to quickly switch between the editor and the terminal.
 
-## Keyboard Shortcuts
+## 🔗 Neural Link (CC:T)
+
+The top-right toolbar features the **Neural Link** status icon.
+
+1. **Discovery**: Clicking the icon opens a list of scanned ComputerCraft computers.
+2. **Connection**: Selecting a computer establishes a Neural Link.
+3. **Remote Mode**: When linked, the editor and terminal proxy all actions to the remote device.
+4. **Disconnect**: Click the green link icon to return to Local Mode.
+
+## 🛡️ Fair Play System (FPS)
+
+The editor includes indicators for the Fair Play System:
+- **Green**: All actions permitted.
+- **Yellow**: Certain aggressive actions (e.g., auto-attack) are limited by the server.
+- **Red**: Script execution is restricted to safe-only methods.
+
+## Themes
 
 ### File Operations
 

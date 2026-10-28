@@ -1,110 +1,83 @@
-# Inventory Object API
+# 🎒 Inventory Object
 
-The `inventory` object provides methods to manage the player inventory and equipment.
+The `inventory` object manages the player's items, armor, crafting, and interactions with external containers like chests.
 
 ## Methods
 
-### inventory.count(searchString)
+### `inventory.count(itemName)`
+Returns the total number of items matching the name in the player's inventory.
+- **Returns:** `number`
 
-Counts items in the inventory whose identifier contains the specified search string.
+### `inventory.getItems()`
+Returns a list of all item stacks currently in the inventory.
+- **Returns:** List of `{slot: int, id: string, count: int, name: string, data: map}`
 
-**Parameters:**
-- `searchString` (string): Part of item ID to count (e.g., `"diamond"`, `"ore"`, `"sword"`).
+### `inventory.getEmptySlots()`
+Returns the count of empty slots in the main inventory (0-35).
+- **Returns:** `number`
 
-**Returns:** Number (total count of all matching items).
+### `inventory.drop(slot, [dropAll])`
+Drops items from a specific slot.
+- **Parameters:** `slot` (int), `dropAll` (optional boolean, default: false)
+- **Returns:** `boolean`
 
-**Example:**
+### `inventory.swap(slot1, slot2)`
+Swaps the contents of two inventory slots.
+- **Returns:** `boolean`
+
+### `inventory.equip(slot)`
+Quickly moves an item from the specified slot to an appropriate armor or offhand slot.
+- **Returns:** `boolean`
+
+### `inventory.use(itemName)`
+Finds an item by name, selects it in the hotbar, and simulates a right-click.
+- **Returns:** `boolean`
+
+### `inventory.craft(itemName, count)`
+Attempts to craft the specified amount of an item using the AutoCraft service.
+- **Returns:** `boolean`
+
+### `inventory.check()`
+Returns a summary of the inventory status.
+- **Returns:** `{totalItems: int, emptySlots: int, usedSlots: int}`
+
+### `inventory.find(itemName)`
+Finds the first slot containing an item matching the search string.
+- **Returns:** `int` (slot index or -1 if not found)
+
+### `inventory.isContainerOpen()`
+Checks if the player currently has an external container (e.g., chest) open.
+- **Returns:** `boolean`
+
+### `inventory.containerTransferAll()`
+Quickly moves all items from an open container into the player's inventory.
+- **Returns:** `boolean`
+
+### `inventory.closeContainer()`
+Closes the currently open container GUI.
+- **Returns:** `boolean`
+
+### `inventory.has(itemName)`
+Checks if the player has at least one of the specified items.
+- **Returns:** `boolean`
+
+### `inventory.offhand(itemName)`
+Finds the item and moves it to the offhand (shield) slot.
+- **Returns:** `boolean`
+
+### `inventory.select(itemName)`
+Selects the specified item in the hotbar, swapping it from the main inventory if necessary.
+- **Returns:** `boolean`
+
+---
+
+## Example: Auto-Eating
 ```javascript
-let totalDiamonds = inventory.count("diamond")
-System.print("Total items containing 'diamond': " + totalDiamonds)
-```
-
-### inventory.getItems()
-
-Returns a list of all non-empty stack in the player's inventory.
-
-**Returns:** Array of item objects.
-
-**Item Object Properties:**
-- `slot` (number): Inventory slot index (0-45).
-- `id` (string): Item identifier (e.g., `"minecraft:stone"`).
-- `count` (number): Stack size.
-- `name` (string): Display name.
-
-**Example:**
-```javascript
-let items = inventory.getItems()
-for (let i = 0; i < items.length(); i++) {
-    System.print("Slot " + items[i].slot + ": " + items[i].name)
+if (player.getHunger() < 15) {
+    if (inventory.has("cooked_beef")) {
+        inventory.use("cooked_beef");
+    } else if (inventory.has("apple")) {
+        inventory.use("apple");
+    }
 }
 ```
-
-### inventory.getEmptySlots()
-
-Returns the number of empty slots in the main inventory part (slots 0-35).
-
-**Returns:** Number
-
-### inventory.drop(slot, [dropAll])
-
-Drops the item stack at the specified slot.
-
-**Parameters:**
-- `slot` (number): Slot index.
-- `dropAll` (boolean, optional): If `true`, drops the whole stack. If `false`, drops a single item. Defaults to `false`.
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-inventory.drop(9, true) // Drop everything in slot 9
-```
-
-### inventory.swap(slot1, slot2)
-
-Swaps the item stacks between two inventory slots.
-
-**Parameters:**
-- `slot1`, `slot2` (number): Slot indices to swap.
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-inventory.swap(0, 9) // Move item from hotbar 0 to slot 9
-```
-
-### inventory.equip(slot)
-
-Equips an item from the specified slot into the appropriate armor slot or offhand (simulates Shift-Click).
-
-**Parameters:**
-- `slot` (number): Slot index.
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-inventory.equip(9) // Automatically wear armor from slot 9
-```
-
-### inventory.use(itemName)
-
-Finds an item with the specified name in the inventory and uses it (simulates Right-Click).
-
-**Parameters:**
-- `itemName` (string): Item ID or part of it to use (e.g., `"cooked_beef"`, `"golden_apple"`).
-
-**Returns:** `true` if item was found and used, `false` otherwise.
-
-**Example:**
-```javascript
-if (player.getHealth() < 10) {
-    inventory.use("golden_apple")
-}
-```
-
-## See Also
-
-- [Player Object](player-object.md)
-- [Tag Object](tag-object.md)

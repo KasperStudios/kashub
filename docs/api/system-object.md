@@ -1,106 +1,45 @@
-# System Object API
+# 🖥️ System Object
 
-The `System` object provides system-level utilities for scripts.
+The `System` object (capital 'S') provides core engine utilities, script lifecycle management, and hardware status information.
 
 ## Methods
 
-### System.print(message)
+### `System.print(message)`
+Outputs a message to the in-game script console.
+- **Parameters:** `message` (string or object)
+- **Returns:** `null`
 
-Outputs a message to the in-game chat (prefixed with `§7[KH]§r`) and the console.
+### `System.wait(ms)`
+Pauses the script execution for a specific duration.
+- **Parameters:** `ms` (number, milliseconds)
+- **Returns:** `null`
 
-**Parameters:**
-- `message` (string): The message to output.
+### `System.time()`
+Returns the current system epoch time in milliseconds.
+- **Returns:** `number`
 
-**Returns:** `null`
+### `System.exit()`
+Immediately terminates the current script.
+- **Returns:** `null`
 
-**Example:**
+### `System.gc()`
+Requests a garbage collection to free up memory (use sparingly).
+- **Returns:** `null`
+
+### `System.getMemory()`
+Returns current memory usage information.
+- **Returns:** `{total: number, free: number, used: number}`
+
+---
+
+## Example: Execution Control
 ```javascript
-System.print("Hello from KasHub!")
+System.print("Starting process...");
+let start = System.time();
+
+System.wait(1000); // Simulate work
+
+let end = System.time();
+System.print("Finished in " + (end - start) + "ms");
+System.exit();
 ```
-
-### System.log(message)
-
-Outputs a message to the console only (no in-game chat). Use this for debugging to avoid spamming chat.
-
-**Parameters:**
-- `message` (string): The message to log.
-
-**Returns:** `null`
-
-**Example:**
-```javascript
-System.log("Internal status update: OK")
-```
-
-### System.wait(ms)
-
-Pauses the script execution for a specified duration.
-
-**Parameters:**
-- `ms` (number): Duration in milliseconds.
-
-**Returns:** `null`
-
-**Example:**
-```javascript
-System.print("Waiting for 5 seconds...")
-System.wait(5000)
-System.print("Done!")
-```
-
-### System.time()
-
-Returns the current system timestamp in milliseconds.
-
-**Returns:** Number (timestamp)
-
-**Example:**
-```javascript
-let start = System.time()
-// ... do something ...
-let elapsed = System.time() - start
-System.print("Action took " + elapsed + "ms")
-```
-
-### System.exit()
-
-Immediately stops the execution of the current script.
-
-**Returns:** `null`
-
-**Example:**
-```javascript
-if (player.getHealth() < 1) {
-    System.print("Player died, stopping script.")
-    System.exit()
-}
-```
-
-### System.gc()
-
-Requests immediate Java Garbage Collection. 
-
-**Returns:** `null`
-
-### System.memory()
-
-Returns an object with current memory usage information.
-
-**Returns:** Object
-
-**Properties:**
-- `used` (number): Used memory in MB.
-- `free` (number): Free memory in MB.
-- `total` (number): Total allocated memory in MB.
-- `max` (number): Maximum possible memory in MB.
-
-**Example:**
-```javascript
-let mem = System.memory()
-System.print("Memory usage: " + mem.used + " / " + mem.max + " MB")
-```
-
-## See Also
-
-- [Game Object](game-object.md)
-- [Player Object](player-object.md)

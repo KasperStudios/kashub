@@ -1,361 +1,79 @@
-# Quick Start Guide
+# 🚀 Quick Start Guide
 
-Get started with Kashub in just 5 minutes! This guide will teach you the basics of writing and running scripts.
+Get started with Kashub in just 5 minutes! This guide will teach you how to set up your hardware and write your first script.
 
-## Your First Script
+## 🛠️ Step 0: The Neural Implant
+
+Kashub is powered by a physical **Neural Implant**. Without it, the IDE and scripting engine will remain offline.
+
+1. **Obtain an Implant**: In Creative mode, search for "Neural Implant". In Survival, craft a Standard Neural Implant.
+2. **Equip it**: Open your inventory (`E`) and place the implant into the dedicated slot with the brain icon.
+3. **Boot Up**: You will hear a startup sound, and the Kashub OS will begin initializing.
+
+## 📝 Your First Script
 
 Let's write a simple script that displays your player information.
 
 ### Step 1: Open the Editor
-
-Press `K` to open the Kashub editor.
+Press `K` to open the Kashub IDE.
 
 ### Step 2: Create a New Script
-
-1. Click the "New Script" button (or press `Ctrl+N`)
-2. Name your script `my_first_script.kh`
-3. The editor will open with an empty file
+1. Click the **New Script** button (or press `Ctrl+N`).
+2. Name your script `hello_world.kh`.
 
 ### Step 3: Write Your Code
-
 Copy and paste this code into the editor:
 
 ```javascript
 // My First Kashub Script
-System.print("Hello, Kashub!")
+System.print("Initializing Neural Link...");
 
 // Get player information
-let health = player.getHealth()
-let hunger = player.getHunger()
-let name = player.getName()
-let pos = player.getPos()
+let pos = player.pos();
+let health = player.isCreative() ? "Infinite" : 20;
 
 // Display information
-System.print("Player: " + name)
-System.print("Health: " + health + "/20")
-System.print("Hunger: " + hunger + "/20")
-System.print("Position: X=" + pos.x + " Y=" + pos.y + " Z=" + pos.z)
+System.print("Position: " + pos.x + ", " + pos.y + ", " + pos.z);
+System.print("Mode: " + (player.isCreative() ? "Creative" : "Survival"));
 
-System.print("Script complete!")
+System.print("Neural Link Stable! 🎉");
 ```
 
 ### Step 4: Run Your Script
+Press **F5** or click the **Run** button. You should see output in the console panel at the bottom.
 
-Press `F5` or click the "Run" button. You should see output in your chat:
+## 🤖 Example: Auto-Defense
 
-```
-[KH] Hello, Kashub!
-[KH] Player: YourName
-[KH] Health: 20/20
-[KH] Hunger: 20/20
-[KH] Position: X=100 Y=64 Z=200
-[KH] Script complete!
-```
-
-Congratulations! You've just run your first Kashub script! 🎉
-
-## Understanding the Code
-
-Let's break down what each part does:
-
-### Comments
+Here is a more advanced script that automatically attacks hostile mobs near you.
 
 ```javascript
-// This is a comment - it's ignored by the script
-```
+System.print("Defense Matrix: ONLINE");
 
-Comments help you document your code. Use `//` for single-line comments.
-
-### System.print()
-
-```javascript
-System.print("Hello, Kashub!")
-```
-
-`System.print()` displays messages in chat and the console. It's the main way to output information.
-
-### Variables
-
-```javascript
-let health = player.getHealth()
-```
-
-Variables store values. Use `let` to declare a new variable. Variable names can contain letters, numbers, and underscores.
-
-### Objects and Methods
-
-```javascript
-player.getHealth()
-```
-
-Kashub uses object-oriented syntax:
-- `player` is an object representing your character
-- `getHealth()` is a method that returns your health value
-- Methods are called with parentheses `()`
-
-### String Concatenation
-
-```javascript
-System.print("Health: " + health + "/20")
-```
-
-Use `+` to combine strings and values into a single message.
-
-## Example 2: Auto-Heal Script
-
-Let's create something more useful - a script that automatically heals you when health is low:
-
-```javascript
-System.print("Auto-Heal script starting...")
-
-// Check health every second
 while (true) {
-    let health = player.getHealth()
+    // Find nearest hostile entity within 10 blocks
+    let enemy = vision.nearest("hostile", 10);
     
-    if (health < 10) {
-        System.print("Low health detected! Healing...")
-        
-        // Try to use a golden apple
-        inventory.use("golden_apple")
-        
-        // Wait 5 seconds before checking again
-        System.wait(5000)
+    if (enemy != null) {
+        System.print("Targeting: " + enemy.id);
+        player.lookAt(enemy.pos.x, enemy.pos.y, enemy.pos.z);
+        player.attack(enemy);
     }
     
-    // Check again in 1 second
-    System.wait(1000)
+    // Always add a delay in loops!
+    System.wait(200);
 }
 ```
 
-This script:
-1. Runs forever (`while (true)`)
-2. Checks your health every second
-3. If health drops below 10, uses a golden apple
-4. Waits 5 seconds after healing before checking again
+## 🧠 Key Concepts
 
-### Running Background Scripts
+1. **Objects**: Access systems like `player`, `inventory`, `scanner`, and `Terminal`.
+2. **Methods**: Perform actions using parentheses, e.g., `player.jump()`.
+3. **Loops**: Use `while(true)` for continuous automation.
+4. **Safety**: Use `System.wait(ms)` in every loop to prevent game lag.
 
-To run this script in the background:
-1. Press `F5` to start it
-2. Press `Esc` to close the editor
-3. The script continues running
-4. Press `Z` to stop all scripts
-
-## Example 3: Finding Diamonds
-
-Let's use the scanner to find nearby diamond ore:
-
-```javascript
-System.print("Diamond scanner starting...")
-
-// Scan for diamond ore within 32 blocks
-let ores = scanner.blocks("diamond_ore", 32)
-
-if (ores.length() > 0) {
-    System.print("Found " + ores.length() + " diamond ore blocks!")
-    
-    // Get the nearest one
-    let nearest = ores[0]
-    
-    System.print("Nearest diamond at:")
-    System.print("  X: " + nearest.x)
-    System.print("  Y: " + nearest.y)
-    System.print("  Z: " + nearest.z)
-    System.print("  Distance: " + nearest.dist + " blocks")
-} else {
-    System.print("No diamond ore found nearby")
-}
-```
-
-This script:
-1. Scans for diamond ore within 32 blocks
-2. Displays how many were found
-3. Shows the coordinates of the nearest one
-4. Shows the distance to it
-
-## Key Concepts
-
-### 1. Objects
-
-Kashub provides several built-in objects:
-
-- `System` - Utilities and I/O
-- `player` - Your character
-- `scanner` - Find blocks and entities
-- `vision` - Targeting and vision
-- `inventory` - Manage items
-- `world` - World information
-- `game` - Game settings
-
-### 2. Methods
-
-Methods are functions attached to objects:
-
-```javascript
-player.getHealth()    // Get health
-player.moveTo(x, y, z)  // Move to coordinates
-inventory.count("diamond")  // Count diamonds
-```
-
-### 3. Variables
-
-Store values for later use:
-
-```javascript
-let health = player.getHealth()
-let pos = player.getPos()
-let diamonds = inventory.count("diamond")
-```
-
-### 4. Conditionals
-
-Make decisions in your code:
-
-```javascript
-if (health < 10) {
-    System.print("Low health!")
-} else {
-    System.print("Health is good")
-}
-```
-
-### 5. Loops
-
-Repeat actions:
-
-```javascript
-// Repeat 5 times
-let i = 0
-while (i < 5) {
-    System.print("Count: " + i)
-    i = i + 1
-}
-```
-
-### 6. Waiting
-
-Add delays to your scripts:
-
-```javascript
-System.wait(1000)  // Wait 1 second (1000 milliseconds)
-System.wait(500)   // Wait 0.5 seconds
-```
-
-## Editor Shortcuts
-
-- `F5` - Run script
-- `Ctrl+S` - Save script
-- `Ctrl+N` - New script
-- `Ctrl+Space` - Auto-complete
-- `Ctrl+F` - Find
-- `F9` - Toggle breakpoint
-- `F10` - Step over (debug)
-- `F11` - Step into (debug)
-
-## Common Patterns
-
-### Check before action
-
-```javascript
-let health = player.getHealth()
-if (health < 10) {
-    inventory.use("golden_apple")
-}
-```
-
-### Loop with delay
-
-```javascript
-while (true) {
-    // Do something
-    System.print("Running...")
-    
-    // Wait before next iteration
-    System.wait(1000)
-}
-```
-
-### Find and use item
-
-```javascript
-let diamonds = inventory.count("diamond")
-if (diamonds > 0) {
-    System.print("You have " + diamonds + " diamonds!")
-}
-```
-
-### Scan and navigate
-
-```javascript
-let ores = scanner.blocks("diamond_ore", 32)
-if (ores.length() > 0) {
-    let nearest = ores[0]
-    player.moveTo(nearest.x, nearest.y, nearest.z)
-}
-```
-
-## Safety Tips
-
-### 1. Always add delays in loops
-
-```javascript
-// BAD - Will freeze the game!
-while (true) {
-    player.attack()
-}
-
-// GOOD - Adds delay
-while (true) {
-    player.attack()
-    System.wait(100)
-}
-```
-
-### 2. Use CrashGuard for risky code
-
-```javascript
-crashguard(timeout=10000, minFps=30) {
-    // Your code here
-    while (true) {
-        player.attack()
-        System.wait(100)
-    }
-}
-```
-
-### 3. Check for null values
-
-```javascript
-let enemy = vision.nearest("zombie", 10)
-if (enemy != null) {
-    player.attack(enemy)
-}
-```
-
-### 4. Limit loop iterations
-
-```javascript
-let i = 0
-let maxIterations = 100
-while (i < maxIterations) {
-    // Do something
-    i = i + 1
-}
-```
+---
 
 ## Next Steps
-
-Now that you know the basics:
-
-1. **Learn the full syntax** - Read [KHScript Syntax](khscript-syntax.md)
-2. **Explore the API** - Check out [API Reference](api/system-object.md)
-3. **Study examples** - Browse [Example Scripts](examples/README.md)
-4. **Master the editor** - Read [Editor Guide](editor-guide.md)
-
-## Getting Help
-
-- **In-game help** - Type `/kashub help` in chat
-- **Discord** - Join our [community](https://discord.gg/gFeWtpEKN9)
-- **GitHub** - Report issues or ask questions
-
-Happy scripting! 🚀
+- **Full Syntax**: Read the [KHScript Syntax Reference](khscript-syntax.md).
+- **Deep Scanning**: Learn about [Neural Implant & Scanning](neural-implant.md).
+- **CC:T Bridge**: Connect to computers in the [CC:T Integration](cct-integration.md) guide.

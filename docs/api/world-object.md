@@ -1,71 +1,35 @@
-# World Object API
+# 🌍 World Object
 
-The `world` object provides access to world data and block information.
+The `world` object provides access to environmental data, block information, and server-side configurations like custom recipes.
 
 ## Methods
 
-### world.getBlock(x, y, z)
+### `world.getBlock(x, y, z)`
+Returns the unique identifier (ID) of the block at the specified world coordinates.
+- **Returns:** `string` (e.g., `"minecraft:stone"`)
 
-Returns the identifier of the block at the specified coordinates.
+### `world.getTime()`
+Returns the current world time in ticks (0-24000).
+- **Returns:** `number`
 
-**Parameters:**
-- `x`, `y`, `z` (number): Coordinates.
+### `world.getWeather()`
+Returns the current world weather status.
+- **Returns:** `string` (`"clear"`, `"rain"`, or `"thunder"`)
 
-**Returns:** String (Block ID, e.g., `"minecraft:stone"`) or `null` if world not loaded.
+### `world.defineRecipe(type, id, ...)`
+Defines a custom server-side crafting recipe. Requires **SERVER** origin privileges.
+- **Parameters:** `type` (`"shaped"`, `"shapeless"`, or `"remove"`), `id` (recipe identifier), and recipe-specific arguments.
+- **Returns:** `boolean`
 
-**Example:**
-```javascript
-let blockAtFeet = world.getBlock(100, 64, 100)
-System.print("Standing on: " + blockAtFeet)
-```
+---
 
-### world.getTime()
-
-Returns the current world time of day.
-
-**Returns:** Number (0-24000)
-
-### world.getWeather()
-
-Returns current world weather state.
-
-**Returns:** String (`"clear"`, `"rain"`, or `"thunder"`) or `"unknown"` if world not loaded.
-
-**Example:**
+## Example: Checking Environment
 ```javascript
 if (world.getWeather() == "thunder") {
-    System.print("Watch out for lightning!")
+    System.print("Warning: Storm approaching. Finding shelter...");
+    player.moveTo(home.x, home.y, home.z);
 }
+
+let block = world.getBlock(player.pos().x, player.pos().y - 1, player.pos().z);
+System.print("Standing on: " + block);
 ```
-
-### world.defineRecipe(type, id, ...)
-
-Defines a custom client-side crafting recipe. This allows the built-in crafting logic to understand how to craft specific items.
-
-**Parameters for `"shaped"`:**
-- `type`: `"shaped"`
-- `id`: Recipe identifier string.
-- `row1`, `row2`, `row3`: 3-character pattern strings (e.g., `"AAA"`).
-- `ingredients`: Multi-arg key-value pairs (e.g., `"A:stick"`, `"B:diamond"`).
-- `result`: Result string (e.g., `"result:diamond_shovel"`).
-- `count` (optional): Output count.
-
-**Parameters for `"shapeless"`:**
-- `type`: `"shapeless"`
-- `id`: Recipe identifier string.
-- `ingredients`: Multi-arg list of item IDs.
-- `result`: Result string (e.g., `"result:sword"`).
-- `count` (optional): Output count.
-
-**Returns:** `true` if registered, `false` otherwise.
-
-**Example:**
-```javascript
-// Define recipe for a diamond shovel
-world.defineRecipe("shaped", "my_shovel", " A ", " S ", " S ", "A:diamond", "S:stick", "result:diamond_shovel")
-```
-
-## See Also
-
-- [Scanner Object](scanner-object.md)
-- [Tag Object](tag-object.md)

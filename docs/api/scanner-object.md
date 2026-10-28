@@ -1,73 +1,34 @@
-# Scanner Object API
+# 📡 Scanner Object
 
-The `scanner` object provides methods for detecting blocks and entities around the player.
+The `scanner` object allows for bulk detection of blocks and entities in a radius around the player. It is powered by the **Neural Implant**.
 
 ## Methods
 
-### scanner.blocks([type], [radius])
+### `scanner.blocks(id, radius, [limit])`
+Searches for blocks matching the ID within the specified radius.
+- **Parameters:** `id` (string), `radius` (number), `limit` (optional int).
+- **Returns:** List of block data objects `{id, x, y, z}`.
 
-Searches for blocks of a specific type within a given radius. Implementation includes a Performance/Fair Play filter (limited visibility check).
+### `scanner.entities(id, radius, [limit])`
+Searches for entities matching the ID within the specified radius.
+- **Parameters:** `id` (string), `radius` (number), `limit` (optional int).
+- **Returns:** List of entity data objects.
 
-**Parameters:**
-- `type` (string, optional): Block identifier or filter. Use `"*"` for all blocks. Defaults to `"*"` (though restricted by implementation to common ores/blocks if not specified usually).
-- `radius` (number, optional): Search radius in blocks. Defaults to `32`.
+### `scanner.peripherals(radius)`
+Finds all blocks within range that support advanced interaction (e.g., inventories, machines, CC:T computers).
+- **Returns:** List of peripheral objects.
 
-**Returns:** Array of block objects, sorted by distance (nearest first).
+### `scanner.deepScan()`
+Performs a deep scan of the block or entity currently in crosshair, adding it to the **Compendium**.
+- **Returns:** `boolean` (true if a new entry was discovered).
 
-**Block Object Properties:**
-- `x`, `y`, `z` (number): Coordinates.
-- `id` (string): Block identifier (e.g., `"minecraft:diamond_ore"`).
-- `dist` (number): Distance from player.
+---
 
-**Example:**
+## Example: Diamond Hunter
 ```javascript
-// Scan for diamond ore within 32 blocks
-let ores = scanner.blocks("diamond_ore", 32)
-
+let ores = scanner.blocks("diamond_ore", 16);
 if (ores.length() > 0) {
-    let nearest = ores[0]
-    System.print("Found diamond at " + nearest.x + ", " + nearest.y)
-    player.lookAt(nearest.x, nearest.y, nearest.z)
+    System.print("Found " + ores.length() + " diamond ores nearby!");
+    player.moveTo(ores.get(0).x, ores.get(0).y, ores.get(0).z);
 }
 ```
-
-### scanner.entities([type], [radius])
-
-Searches for entities within a given radius.
-
-**Parameters:**
-- `type` (string, optional): Entity type filter. Supported: `"living"`, `"all"`, `"*"` or specific name like `"zombie"`. Defaults to `"living"`.
-- `radius` (number, optional): Search radius in blocks. Defaults to `32`.
-
-**Returns:** Array of entity objects, sorted by distance (nearest first).
-
-**Entity Object Properties:**
-- `type` (string): Entity identifier (e.g., `"zombie"`).
-- `id` (number): Unique Entity ID.
-- `x`, `y`, `z` (number): Current coordinates.
-- `dist` (number): Distance from player.
-- `health` (number, optional): Current health (for living entities).
-
-**Example:**
-```javascript
-// Find nearest hostile mob
-let mobs = scanner.entities("all", 16)
-
-for (let i = 0; i < mobs.length(); i++) {
-    let mob = mobs[i]
-    if (mob.type.contains("zombie")) {
-        System.print("Zombie detected: " + mob.id)
-    }
-}
-```
-
-## Internal Details
-
-- **Distance Sorting**: All results from `scanner` methods are automatically sorted nearest-to-farthest.
-- **Fair Play**: If enabled by the server, block scanning is filtered by visibility from the player's position (raycasting).
-
-## See Also
-
-- [Vision Object](vision-object.md)
-- [World Object](world-object.md)
-- [Tag Object](tag-object.md)

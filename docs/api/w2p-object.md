@@ -1,57 +1,35 @@
-# W2P Object API (Write to Play)
+# ⏺️ W2P (Write-to-Play) Object
 
-The `w2p` (Write to Play) object provides a macro system for recording and replaying player actions.
-
-IN DEVELOPING
+The `w2p` object controls the **Macro Recording** system, allowing scripts to record and replay player actions.
 
 ## Methods
 
-### w2p.record(name)
+### `w2p.record([name])`
+Starts recording the player's inputs into a macro.
+- **Parameters:** `name` (optional string, defaults to `"default"`)
+- **Returns:** `boolean`
 
-Starts recording player actions into a macro with the specified name.
+### `w2p.stop()`
+Stops the current recording or playback process.
+- **Returns:** `boolean`
 
-**Parameters:**
-- `name` (string, optional): Name of the macro. Defaults to `"default"`.
+### `w2p.play([name])`
+Starts replaying a previously recorded macro.
+- **Parameters:** `name` (optional string, defaults to `"default"`)
+- **Returns:** `boolean`
 
-**Returns:** `true`
+---
 
-**Example:**
+## Example: Macro Control
 ```javascript
-// Start recording actions to "mining_run"
-w2p.record("mining_run")
-System.print("Recording started. Perform actions now.")
+// Record a 5-second action
+w2p.record("mine_pattern");
+System.wait(5000);
+w2p.stop();
+
+// Replay it 3 times
+for (let i = 0; i < 3; i++) {
+    w2p.play("mine_pattern");
+    System.wait(5000);
+}
 ```
-
-### w2p.stop()
-
-Stops the current macro recording or playback.
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-// Stop whatever is happening
-w2p.stop()
-System.print("Recording/Playback stopped.")
-```
-
-### w2p.play(name)
-
-Plays back a previously recorded macro.
-
-**Parameters:**
-- `name` (string, optional): Name of the macro to play. Defaults to `"default"`.
-
-**Returns:** `true`
-
-**Example:**
-```javascript
-// Replay the "mining_run" macro
-w2p.play("mining_run")
-System.print("Playing macro...")
-```
-
-## See Also
-
-- [Player Object](player-object.md)
-- [System Object](system-object.md)
