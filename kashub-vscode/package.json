@@ -1,8 +1,8 @@
 {
   "name": "kashub-vscode",
-  "displayName": "Kashub Language",
-  "description": "Full language support for Kashub (.kh) scripts with real-time debugging and live connection to Minecraft",
-  "version": "0.9.1",
+  "displayName": "KasHub",
+  "description": "Comprehensive language support for the Kashub Minecraft mod with KHinux shell integration",
+  "version": "1.0.0-FSR",
   "publisher": "KasperStudios",
   "icon": "images/icon.png",
   "repository": {
@@ -43,7 +43,8 @@
           ".khs",
           ".khscript"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": "images/khicon.png"
       }
     ],
     "breakpoints": [

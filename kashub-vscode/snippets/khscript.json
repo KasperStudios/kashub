@@ -324,5 +324,40 @@
       "System.print(\"Mining complete!\")"
     ],
     "description": "Mining bot template (V2)"
+  },
+  "Sudo Command": {
+    "prefix": ["sudo"],
+    "body": [
+      "sudo ${1:command}"
+    ],
+    "description": "Execute command with elevated privileges"
+  },
+  "Switch User": {
+    "prefix": ["su"],
+    "body": [
+      "su ${1:username} ${2:password}"
+    ],
+    "description": "Switch current user session"
+  },
+  "Shell Script Execution": {
+    "prefix": ["sh", "bash"],
+    "body": [
+      "sh \"${1:script_path}\" ${2:args}"
+    ],
+    "description": "Execute a KHinux shell script"
+  },
+  "List Tasks": {
+    "prefix": ["ps", "tasks"],
+    "body": [
+      "ps"
+    ],
+    "description": "List all running tasks"
+  },
+  "Kill Task": {
+    "prefix": ["kill"],
+    "body": [
+      "kill ${1:taskId}"
+    ],
+    "description": "Terminate a running task"
   }
 }

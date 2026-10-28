@@ -11,8 +11,18 @@ export class KashubCompletionProvider implements vscode.CompletionItemProvider {
         token: vscode.CancellationToken
     ): Promise<vscode.CompletionItem[]> {
         const linePrefix = document.lineAt(position).text.substring(0, position.character);
-        const match = linePrefix.match(/(\$?[\w]+)$/);
-        const prefix = match ? match[1] : '';
+        const dotMatch = linePrefix.match(/(\w+)\.([\w]*)$/);
+        const wordMatch = linePrefix.match(/(\$?[\w]+)$/);
+        
+        let prefix = '';
+        let objectContext: string | undefined;
+        
+        if (dotMatch) {
+            objectContext = dotMatch[1];
+            prefix = dotMatch[2];
+        } else if (wordMatch) {
+            prefix = wordMatch[1];
+        }
         
         const code = document.getText();
         
@@ -21,7 +31,8 @@ export class KashubCompletionProvider implements vscode.CompletionItemProvider {
                 code,
                 prefix,
                 position.line,
-                position.character
+                position.character,
+                objectContext
             );
             
             return items.map(item => this.convertItem(item));

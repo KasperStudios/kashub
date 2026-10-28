@@ -72,7 +72,7 @@
       "patterns": [
         {
           "name": "keyword.control.khscript",
-          "match": "\\b(if|else|while|for|loop|break|continue|return|crashguard)\\b"
+          "match": "\\b(if|else|while|for|loop|break|continue|return|crashguard|sudo|su|sh|ps|kill|task|bash)\\b"
         },
         {
           "name": "storage.type.khscript",
@@ -88,7 +88,7 @@
         },
         {
           "name": "support.class.builtin.khscript",
-          "match": "\\b(System|player|scanner|vision|inventory|world|game|Math|tag)\\b"
+          "match": "\\b(System|player|scanner|vision|inventory|world|game|Math|tag|VFS|Terminal|w2p)\\b"
         },
         {
           "name": "keyword.other.special.khscript",
@@ -100,11 +100,11 @@
       "patterns": [
         {
           "name": "support.function.builtin.khscript",
-          "match": "\\b(print|log|chat|wait)\\b"
+          "match": "\\b(print|log|chat|wait|time)\\b"
         },
         {
           "name": "support.function.system.khscript",
-          "match": "\\b(System|player|scanner|vision|inventory|world|game|Math|tag)\\.(print|log|chat|wait|time|exit|gc|memory|getHealth|getHunger|getName|getPos|moveTo|lookAt|sprint|attack|breakBlock|placeBlock|animation|blocks|entities|getTarget|getNearest|nearest|count|canSee|isLookingAt|check|find|getItems|getEmptySlots|drop|swap|equip|use|craft|getBlock|getTime|getWeather|defineRecipe|setGamma|fullBright|setFov|sqrt|abs|min|max|floor|ceil|round|random|pow|itemHas|itemsWith|blockHas)\\b"
+          "match": "\\b(System|player|scanner|vision|inventory|world|game|Math|tag|VFS|Terminal|w2p)\\.(print|log|chat|wait|time|exit|gc|memory|openFile|console|getHealth|getHunger|getName|getPos|moveTo|lookAt|sprint|sneak|jump|attack|breakBlock|placeBlock|animation|blocks|entities|getTarget|getNearest|nearest|count|canSee|isLookingAt|check|find|getItems|getEmptySlots|drop|swap|equip|use|craft|hasImplant|getImplantTier|getBlock|getTime|getWeather|getBiome|isRaining|getDimension|defineRecipe|setGamma|fullBright|setFov|sqrt|abs|min|max|floor|ceil|round|random|pow|itemHas|itemsWith|blockHas|read|write|list|exists|delete|mkdir|execute|hasSudo|hasSu)\\b"
         },
         {
           "name": "support.function.movement.khscript",

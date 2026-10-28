@@ -260,10 +260,11 @@ export class KashubClient {
         code: string,
         prefix: string,
         line: number,
-        column: number
+        column: number,
+        objectContext?: string
     ): Promise<CompletionItem[]> {
         if (!this.connected) {
-            return this.offlineCompletions(prefix);
+            return this.offlineCompletions(prefix, objectContext);
         }
 
         try {
@@ -271,11 +272,12 @@ export class KashubClient {
                 code,
                 prefix,
                 line,
-                column
+                column,
+                objectContext
             });
             return response.data.items;
         } catch (error) {
-            return this.offlineCompletions(prefix);
+            return this.offlineCompletions(prefix, objectContext);
         }
     }
 
@@ -375,26 +377,116 @@ export class KashubClient {
         };
     }
 
-    private offlineCompletions(prefix: string): CompletionItem[] {
-        const COMMANDS = [
-            'print', 'log', 'wait', 'jump', 'run', 'moveTo', 'lookAt',
-            'chat', 'attack', 'eat', 'equipArmor', 'sneak', 'sprint',
-            'drop', 'selectSlot', 'breakBlock', 'placeBlock', 'getBlock',
-            'tp', 'onEvent', 'interact', 'swim', 'stop', 'loop',
-            'scanner', 'vision', 'input', 'animation', 'fullbright',
-            'scripts', 'eval', 'ai', 'sound', 'autoCraft', 'autoTrade',
-            'export', 'import'
-        ];
+    private offlineCompletions(prefix: string, objectContext?: string): CompletionItem[] {
+        const OBJECT_METHODS: Record<string, string[]> = {
+            player: [
+                'getPos()', 'getHealth()', 'getHunger()', 'getName()',
+                'moveTo(x, y, z)', 'lookAt(x, y, z)', 'attack(target)',
+                'breakBlock()', 'placeBlock(name)', 'chat(msg)',
+                'sprint(enabled)', 'sneak(enabled)', 'jump()',
+                'getInventory()', 'hasImplant()', 'getImplantTier()'
+            ],
+            System: [
+                'print(msg)', 'log(msg)', 'wait(ms)', 'time()',
+                'exit()', 'memory()', 'gc()', 'openFile(path)', 'console(cmd)'
+            ],
+            scanner: [
+                'blocks(filter, radius)', 'entities(filter, radius)',
+                'block(x, y, z)', 'nearest(filter, radius)'
+            ],
+            vision: [
+                'nearest(filter, maxDist)', 'entities()', 'players()',
+                'mobs()', 'items()', 'canSee(entity)'
+            ],
+            inventory: [
+                'check()', 'has(item)', 'count(item)',
+                'select(slot)', 'drop(slot)', 'getItems()', 'getEmptySlots()'
+            ],
+            world: [
+                'getBlock(x, y, z)', 'getBiome(x, y, z)', 'getTime()',
+                'isRaining()', 'getDimension()'
+            ],
+            game: [
+                'setGamma(val)', 'fullBright(enabled)', 'setFov(val)'
+            ],
+            VFS: [
+                'read(path)', 'write(path, data)', 'list(path)',
+                'exists(path)', 'delete(path)', 'mkdir(path)'
+            ],
+            Terminal: [
+                'execute(command)', 'openFile(path)', 'hasSudo()', 'hasSu()'
+            ],
+            Math: [
+                'sqrt(x)', 'abs(x)', 'min(a, b)', 'max(a, b)',
+                'floor(x)', 'ceil(x)', 'round(x)', 'random(max)', 'pow(base, exp)'
+            ],
+            tag: [
+                'itemHas(item, tag)', 'itemsWith(tag)', 'blockHas(block, tag)'
+            ]
+        };
 
         const lowerPrefix = prefix.toLowerCase();
-        return COMMANDS
-            .filter(c => c.toLowerCase().startsWith(lowerPrefix))
-            .map(c => ({
-                label: c,
-                kind: 'Function',
-                detail: 'Basic command (offline)',
+
+        // If user typed 'object.', show methods for this object
+        if (objectContext && OBJECT_METHODS[objectContext]) {
+            return OBJECT_METHODS[objectContext]
+                .filter(m => m.toLowerCase().startsWith(lowerPrefix))
+                .map(m => {
+                    const label = m.substring(0, m.indexOf('('));
+                    return {
+                        label,
+                        kind: 'Function',
+                        detail: `${objectContext}.${m}`,
+                        documentation: `Method of ${objectContext}`,
+                        insertText: m.endsWith('()') ? `${label}()` : `${label}(`
+                    };
+                });
+        }
+
+        // Global symbols (objects, keywords, commands)
+        const GLOBAL_SYMBOLS: Array<{ label: string; kind: string; detail: string; insertText: string }> = [
+            // Objects
+            { label: 'System', kind: 'Variable', detail: 'Global System object', insertText: 'System.' },
+            { label: 'player', kind: 'Variable', detail: 'Local Player object', insertText: 'player.' },
+            { label: 'scanner', kind: 'Variable', detail: 'Block and Entity scanner', insertText: 'scanner.' },
+            { label: 'vision', kind: 'Variable', detail: 'Visual entity tracker', insertText: 'vision.' },
+            { label: 'inventory', kind: 'Variable', detail: 'Player inventory manager', insertText: 'inventory.' },
+            { label: 'world', kind: 'Variable', detail: 'World state and environment', insertText: 'world.' },
+            { label: 'game', kind: 'Variable', detail: 'Game settings and visual tweaks', insertText: 'game.' },
+            { label: 'VFS', kind: 'Variable', detail: 'Virtual File System', insertText: 'VFS.' },
+            { label: 'Terminal', kind: 'Variable', detail: 'Khinux Terminal interface', insertText: 'Terminal.' },
+            { label: 'Math', kind: 'Variable', detail: 'Math utilities', insertText: 'Math.' },
+            { label: 'tag', kind: 'Variable', detail: 'Minecraft Tag inspector', insertText: 'tag.' },
+
+            // Control flow keywords
+            { label: 'fn', kind: 'Keyword', detail: 'Function declaration', insertText: 'fn ${1:name}(${2:params}) {\n\t$0\n}' },
+            { label: 'let', kind: 'Keyword', detail: 'Variable declaration', insertText: 'let ${1:name} = ${2:value}' },
+            { label: 'const', kind: 'Keyword', detail: 'Constant declaration', insertText: 'const ${1:NAME} = ${2:value}' },
+            { label: 'if', kind: 'Keyword', detail: 'If conditional statement', insertText: 'if (${1:condition}) {\n\t$0\n}' },
+            { label: 'else', kind: 'Keyword', detail: 'Else conditional branch', insertText: 'else {\n\t$0\n}' },
+            { label: 'while', kind: 'Keyword', detail: 'While loop', insertText: 'while (${1:condition}) {\n\t$0\n}' },
+            { label: 'for', kind: 'Keyword', detail: 'For loop', insertText: 'for (let ${1:i} = 0; ${1:i} < ${2:10}; ${1:i} = ${1:i} + 1) {\n\t$0\n}' },
+            { label: 'break', kind: 'Keyword', detail: 'Break loop execution', insertText: 'break' },
+            { label: 'continue', kind: 'Keyword', detail: 'Continue loop execution', insertText: 'continue' },
+            { label: 'return', kind: 'Keyword', detail: 'Return from function', insertText: 'return ' },
+            { label: 'crashguard', kind: 'Keyword', detail: 'Protected CrashGuard block', insertText: 'crashguard(timeout=${1:5000}, minFps=${2:25}) {\n\t$0\n}' },
+
+            // Global helper functions
+            { label: 'print', kind: 'Function', detail: 'Print to chat and logger', insertText: 'print("${1:message}")' },
+            { label: 'log', kind: 'Function', detail: 'Log message to console', insertText: 'log("${1:message}")' },
+            { label: 'wait', kind: 'Function', detail: 'Wait milliseconds', insertText: 'wait(${1:1000})' },
+            { label: 'chat', kind: 'Function', detail: 'Send player chat message', insertText: 'chat("${1:message}")' },
+            { label: 'time', kind: 'Function', detail: 'Current epoch time in ms', insertText: 'time()' }
+        ];
+
+        return GLOBAL_SYMBOLS
+            .filter(s => s.label.toLowerCase().startsWith(lowerPrefix))
+            .map(s => ({
+                label: s.label,
+                kind: s.kind,
+                detail: s.detail,
                 documentation: '',
-                insertText: c + ' '
+                insertText: s.insertText
             }));
     }
 }
