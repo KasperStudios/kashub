@@ -33,3 +33,9 @@ kashub-vscode/.vscode-test/
 
 # Server Plugin
 kashub-server-plugin/build
+
+# Root working images and scratch
+icons.png
+image.png
+scratch/
+fabric.mod.json
