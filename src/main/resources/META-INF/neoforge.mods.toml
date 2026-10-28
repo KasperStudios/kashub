@@ -1,0 +1,47 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="CC0-1.0"
+
+[[mods]]
+modId="kashub"
+version="${file.jarVersion}"
+displayName="Kashub"
+description="Next-gen scripting mod with modern UI. Automate gameplay with KHScript - featuring Vision API, Script Marketplace, runtime task manager, and a stunning code editor with 15+ themes."
+authors="KasperStudios"
+
+[[mixins]]
+config="kashub.mixins.json"
+
+[[mods]]
+modId="khgui"
+version="1.0.6"
+displayName="KHGui (Embedded)"
+authors="KasperStudios"
+description="Embedded GUI framework for Kashub."
+
+[[dependencies.kashub]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.kashub]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.kashub]]
+    modId="architectury"
+    type="required"
+    versionRange="[13.0.8,)"
+    ordering="AFTER"
+    side="BOTH"
+[[dependencies.kashub]]
+    modId="curios"
+    type="optional"
+    versionRange="[9.0.0,)"
+    ordering="AFTER"
+    side="BOTH"

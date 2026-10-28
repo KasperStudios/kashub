@@ -1,0 +1,235 @@
+plugins {
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '8.3.6'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name + "-neoforge"
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    parchment {
+        minecraftVersion = "1.21.1"
+        mappingsVersion = "2024.11.17"
+    }
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+    }
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+sourceSets.main.java {
+    exclude 'kasperstudios/kashub/fabric/**'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+    maven { url "https://maven.architectury.dev/" }
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+configurations {
+    shadowBundle {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    // KHGui Library (neoforge version)
+    shadowBundle "kasperstudios.khgui:khgui-neoforge:1.0.8"
+    implementation "kasperstudios.khgui:khgui-neoforge:1.0.8"
+
+    // KHWrapper Bridge (neoforge version)
+    shadowBundle "com.kasperstudios.khwrapper:khwrapper-neoforge:1.0.17"
+    implementation "com.kasperstudios.khwrapper:khwrapper-neoforge:1.0.17"
+    
+    // HTTP client
+    shadowBundle 'com.squareup.okhttp3:okhttp:4.12.0'
+    shadowBundle 'com.squareup.okio:okio:3.6.0'
+    shadowBundle 'org.jetbrains.kotlin:kotlin-stdlib:1.9.21'
+
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okio:okio:3.6.0'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.21'
+
+    // Discord Rich Presence (Shaded for production, additionalRuntimeClasspath for dev)
+    def discordIPC = 'io.github.CDAGaming:DiscordIPC:0.9.1'
+    shadowBundle(discordIPC) {
+        exclude group: 'com.google.code.gson', module: 'gson'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    implementation(discordIPC) {
+        exclude group: 'com.google.code.gson', module: 'gson'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    additionalRuntimeClasspath(discordIPC) {
+        exclude group: 'com.google.code.gson', module: 'gson'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// shadowBundle configuration for libraries to be embedded
+configurations {
+    shadowBundle {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+// Relocate shaded dependencies to avoid conflicts with other mods
+shadowJar {
+    from sourceSets.main.output
+    from("src/main/resources") {
+        include "assets/kashub/**"
+        include "data/kashub/**"
+        include "data/curios/**"
+        include "kashub.mixins.json"
+        include "kashub.accesswidener"
+    }
+    configurations = [project.configurations.shadowBundle]
+    
+    // Relocate libraries to internal package
+    relocate 'okhttp3', 'kasperstudios.kashub.shaded.okhttp3'
+    relocate 'okio', 'kasperstudios.kashub.shaded.okio'
+    relocate 'kotlin', 'kasperstudios.kashub.shaded.kotlin'
+    relocate 'kotlinx', 'kasperstudios.kashub.shaded.kotlinx'
+    relocate 'org.jetbrains.annotations', 'kasperstudios.kashub.shaded.annotations'
+
+    // Total Architectury cleanup: exclude ANYTHING containing "architectury" in its path
+    exclude { it.path.contains('architectury') }
+    
+    // THE NUCLEAR OPTION: Exclude ALL manifests and insert ours via doLast
+    exclude 'META-INF/neoforge.mods.toml'
+    exclude 'META-INF/mods.toml'
+    exclude 'fabric.mod.json'
+    
+    doLast {
+        def jarFile = archiveFile.get().asFile
+        if (jarFile.exists()) {
+            println "ShadowJar Post-Processing: ${jarFile.name}..."
+            def zipPath = java.nio.file.Paths.get(jarFile.absolutePath)
+            def uri = java.net.URI.create("jar:file:" + zipPath.toUri().getPath())
+            def env = [create: "false"]
+            
+            java.nio.file.FileSystems.newFileSystem(uri, env).withCloseable { fs ->
+                // 1. Delete architecture residuals
+                def toDelete = []
+                java.nio.file.Files.walk(fs.getPath("/")).forEach { path ->
+                    if (path.toString().toLowerCase().contains("architectury")) {
+                        toDelete << path
+                    }
+                    // Aggressive cleanup: delete ANY neoforge.mods.toml that might have leaked
+                    if (path.toString().endsWith("neoforge.mods.toml") || path.toString().endsWith("mods.toml")) {
+                        toDelete << path
+                    }
+                }
+                toDelete.reverse().each { path ->
+                    println "Deleting conflicting path: ${path}"
+                    java.nio.file.Files.deleteIfExists(path)
+                }
+
+                // 2. SURGICALLY INSERT OUR MANIFEST
+                def sourceManifest = project.file("src/main/resources/META-INF/neoforge.mods.toml")
+                if (sourceManifest.exists()) {
+                    def targetPath = fs.getPath("/META-INF/neoforge.mods.toml")
+                    println "INJECTING KASHUB MANIFEST: ${targetPath}"
+                    
+                    // Create parent directory if missing (it shouldn't be, but just in case)
+                    java.nio.file.Files.createDirectories(targetPath.getParent())
+                    
+                    def content = sourceManifest.text
+                    content = content.replace('${file.jarVersion}', project.version.toString())
+                    
+                    java.nio.file.Files.writeString(targetPath, content, java.nio.charset.StandardCharsets.UTF_8)
+                } else {
+                    throw new GradleException("CRITICAL: Source manifest missing at ${sourceManifest}")
+                }
+            }
+        }
+    }
+    
+    exclude 'META-INF/versions/**'
+    exclude 'META-INF/kotlin-stdlib*'
+    exclude 'META-INF/okio.kotlin_module'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    
+    archiveClassifier.set('') // Replace main jar
+}
+
+// Ensure the mod uses the shaded jar
+tasks.named('jar', Jar).configure {
+    enabled = false // Disable normal jar
+    dependsOn shadowJar
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+        version: project.version,
+        mod_id: project.mod_id,
+        mod_name: project.archives_base_name
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand replaceProperties + [ 'file': [ 'jarVersion': project.version ] ]
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}"}
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        // Add repositories to publish to here.
+    }
+}
