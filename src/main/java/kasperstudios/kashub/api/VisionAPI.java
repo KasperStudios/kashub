@@ -1,24 +1,22 @@
 package kasperstudios.kashub.api;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class VisionAPI {
     private static VisionAPI instance;
@@ -38,11 +36,11 @@ public class VisionAPI {
         public final String blockId;
         public final Entity entity;
         public final String entityType;
-        public final Vec3d hitPos;
+        public final Vec3 hitPos;
         public final double distance;
 
         public RaycastResult(HitResult.Type type, BlockPos blockPos, String blockId,
-                           Entity entity, String entityType, Vec3d hitPos, double distance) {
+                           Entity entity, String entityType, Vec3 hitPos, double distance) {
             this.type = type;
             this.blockPos = blockPos;
             this.blockId = blockId;
@@ -62,16 +60,16 @@ public class VisionAPI {
         public final String type;
         public final String name;
         public final double distance;
-        public final Vec3d position;
+        public final Vec3 position;
         public final float health;
         public final float maxHealth;
 
         public EntityInfo(Entity entity, double distance) {
             this.entity = entity;
-            this.type = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
+            this.type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
             this.name = entity.getName().getString();
             this.distance = distance;
-            this.position = entity.getPos();
+            this.position = entity.position();
 
             if (entity instanceof LivingEntity living) {
                 this.health = living.getHealth();
@@ -84,31 +82,31 @@ public class VisionAPI {
     }
 
     public RaycastResult raycast(double maxDistance) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
-        if (player == null || client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        if (player == null || client.level == null) {
             return new RaycastResult(HitResult.Type.MISS, null, null, null, null, null, 0);
         }
 
-        Vec3d start = player.getCameraPosVec(1.0f);
-        Vec3d direction = player.getRotationVec(1.0f);
-        Vec3d end = start.add(direction.multiply(maxDistance));
+        Vec3 start = player.getEyePosition(1.0f);
+        Vec3 direction = player.getViewVector(1.0f);
+        Vec3 end = start.add(direction.scale(maxDistance));
 
-        RaycastContext context = new RaycastContext(
+        ClipContext context = new ClipContext(
             start, end,
-            RaycastContext.ShapeType.OUTLINE,
-            RaycastContext.FluidHandling.NONE,
+            ClipContext.Block.OUTLINE,
+            ClipContext.Fluid.NONE,
             player
         );
-        BlockHitResult blockHit = client.world.raycast(context);
+        BlockHitResult blockHit = client.level.clip(context);
 
-        Box searchBox = player.getBoundingBox().stretch(direction.multiply(maxDistance)).expand(1.0);
+        AABB searchBox = player.getBoundingBox().expandTowards(direction.scale(maxDistance)).inflate(1.0);
         Entity closestEntity = null;
         double closestDistance = maxDistance;
 
-        for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
-            Box entityBox = entity.getBoundingBox().expand(entity.getTargetingMargin());
-            Optional<Vec3d> hitOpt = entityBox.raycast(start, end);
+        for (Entity entity : client.level.getEntities(player, searchBox)) {
+            AABB entityBox = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Optional<Vec3> hitOpt = entityBox.clip(start, end);
 
             if (hitOpt.isPresent()) {
                 double dist = start.distanceTo(hitOpt.get());
@@ -120,27 +118,27 @@ public class VisionAPI {
         }
 
         double blockDistance = blockHit.getType() != HitResult.Type.MISS
-            ? start.distanceTo(blockHit.getPos()) : Double.MAX_VALUE;
+            ? start.distanceTo(blockHit.getLocation()) : Double.MAX_VALUE;
 
         if (closestEntity != null && closestDistance < blockDistance) {
-            String entityType = Registries.ENTITY_TYPE.getId(closestEntity.getType()).toString();
+            String entityType = BuiltInRegistries.ENTITY_TYPE.getKey(closestEntity.getType()).toString();
             return new RaycastResult(
                 HitResult.Type.ENTITY,
                 null, null,
                 closestEntity, entityType,
-                closestEntity.getPos(),
+                closestEntity.position(),
                 closestDistance
             );
         }
 
         if (blockHit.getType() == HitResult.Type.BLOCK) {
-            BlockState state = client.world.getBlockState(blockHit.getBlockPos());
-            String blockId = Registries.BLOCK.getId(state.getBlock()).toString();
+            BlockState state = client.level.getBlockState(blockHit.getBlockPos());
+            String blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
             return new RaycastResult(
                 HitResult.Type.BLOCK,
                 blockHit.getBlockPos(), blockId,
                 null, null,
-                blockHit.getPos(),
+                blockHit.getLocation(),
                 blockDistance
             );
         }
@@ -149,27 +147,27 @@ public class VisionAPI {
     }
 
     public List<EntityInfo> scanEntities(double maxDistance, double coneAngle) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
-        if (player == null || client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        if (player == null || client.level == null) {
             return Collections.emptyList();
         }
 
-        Vec3d playerPos = player.getPos();
-        Vec3d lookDir = player.getRotationVec(1.0f);
+        Vec3 playerPos = player.position();
+        Vec3 lookDir = player.getViewVector(1.0f);
         double cosAngle = Math.cos(Math.toRadians(coneAngle / 2));
 
         List<EntityInfo> results = new ArrayList<>();
-        Box searchBox = player.getBoundingBox().expand(maxDistance);
+        AABB searchBox = player.getBoundingBox().inflate(maxDistance);
 
-        for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
-            Vec3d entityPos = entity.getPos();
+        for (Entity entity : client.level.getEntities(player, searchBox)) {
+            Vec3 entityPos = entity.position();
             double distance = playerPos.distanceTo(entityPos);
 
             if (distance > maxDistance) continue;
 
-            Vec3d toEntity = entityPos.subtract(playerPos).normalize();
-            double dot = lookDir.dotProduct(toEntity);
+            Vec3 toEntity = entityPos.subtract(playerPos).normalize();
+            double dot = lookDir.dot(toEntity);
 
             if (dot >= cosAngle) {
                 results.add(new EntityInfo(entity, distance));
@@ -181,22 +179,22 @@ public class VisionAPI {
     }
 
     public EntityInfo findNearest(String entityType, double maxDistance) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
-        if (player == null || client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        if (player == null || client.level == null) {
             return null;
         }
 
-        Vec3d playerPos = player.getPos();
-        Box searchBox = player.getBoundingBox().expand(maxDistance);
+        Vec3 playerPos = player.position();
+        AABB searchBox = player.getBoundingBox().inflate(maxDistance);
 
         Entity nearest = null;
         double nearestDist = Double.MAX_VALUE;
 
-        for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
+        for (Entity entity : client.level.getEntities(player, searchBox)) {
             if (!matchesType(entity, entityType)) continue;
 
-            double dist = playerPos.distanceTo(entity.getPos());
+            double dist = playerPos.distanceTo(entity.position());
             if (dist < nearestDist && dist <= maxDistance) {
                 nearestDist = dist;
                 nearest = entity;
@@ -207,19 +205,19 @@ public class VisionAPI {
     }
 
     public int countEntities(String entityType, double maxDistance) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
-        if (player == null || client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        if (player == null || client.level == null) {
             return 0;
         }
 
-        Vec3d playerPos = player.getPos();
-        Box searchBox = player.getBoundingBox().expand(maxDistance);
+        Vec3 playerPos = player.position();
+        AABB searchBox = player.getBoundingBox().inflate(maxDistance);
 
         int count = 0;
-        for (Entity entity : client.world.getOtherEntities(player, searchBox)) {
+        for (Entity entity : client.level.getEntities(player, searchBox)) {
             if (matchesType(entity, entityType)) {
-                double dist = playerPos.distanceTo(entity.getPos());
+                double dist = playerPos.distanceTo(entity.position());
                 if (dist <= maxDistance) {
                     count++;
                 }
@@ -248,12 +246,12 @@ public class VisionAPI {
         String lowerType = type.toLowerCase();
 
         return switch (lowerType) {
-            case "hostile", "monster", "mob" -> entity instanceof HostileEntity;
-            case "passive", "animal" -> entity instanceof AnimalEntity;
-            case "player" -> entity instanceof PlayerEntity;
+            case "hostile", "monster", "mob" -> entity instanceof Monster;
+            case "passive", "animal" -> entity instanceof Animal;
+            case "player" -> entity instanceof Player;
             case "living" -> entity instanceof LivingEntity;
             default -> {
-                String entityId = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
+                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
                 yield entityId.contains(lowerType);
             }
         };

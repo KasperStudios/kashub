@@ -1,10 +1,11 @@
 package kasperstudios.kashub.util;
 
 import kasperstudios.kashub.config.KashubConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ScriptLogger {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScriptLogger.class);
     private static ScriptLogger instance;
     private static final Path LOG_PATH = Paths.get("logs", "kashub");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -22,16 +24,16 @@ public class ScriptLogger {
     private static final int MAX_BUFFER_SIZE = 1000;
 
     public enum LogLevel {
-        DEBUG(0, Formatting.GRAY),
-        INFO(1, Formatting.WHITE),
-        WARN(2, Formatting.YELLOW),
-        ERROR(3, Formatting.RED),
-        SUCCESS(1, Formatting.GREEN);
+        DEBUG(0, ChatFormatting.GRAY),
+        INFO(1, ChatFormatting.WHITE),
+        WARN(2, ChatFormatting.YELLOW),
+        ERROR(3, ChatFormatting.RED),
+        SUCCESS(1, ChatFormatting.GREEN);
 
         public final int priority;
-        public final Formatting color;
+        public final ChatFormatting color;
 
-        LogLevel(int priority, Formatting color) {
+        LogLevel(int priority, ChatFormatting color) {
             this.priority = priority;
             this.color = color;
         }
@@ -41,7 +43,7 @@ public class ScriptLogger {
         try {
             Files.createDirectories(LOG_PATH);
         } catch (Exception e) {
-            System.err.println("Failed to create log directory: " + e.getMessage());
+            LOGGER.error("Failed to create log directory: {}", e.getMessage());
         }
     }
 
@@ -75,10 +77,12 @@ public class ScriptLogger {
         LocalDateTime now = LocalDateTime.now();
         LogEntry entry = new LogEntry(now, level, message, scriptName);
 
-        synchronized (logBuffer) {
-            logBuffer.add(entry);
-            if (logBuffer.size() > MAX_BUFFER_SIZE) {
-                logBuffer.remove(0);
+        if (config.logToTerminal) {
+            synchronized (logBuffer) {
+                logBuffer.add(entry);
+                if (logBuffer.size() > MAX_BUFFER_SIZE) {
+                    logBuffer.remove(0);
+                }
             }
         }
 
@@ -90,7 +94,19 @@ public class ScriptLogger {
             sendToChat(entry);
         }
 
-        System.out.println(formatLogEntry(entry));
+        // Broadcast telemetry to connected AI agents & external tools via WebSocket
+        try {
+            kasperstudios.kashub.api.server.KashubAPIServer.broadcast(
+                new kasperstudios.kashub.api.server.events.ScriptOutputEvent(
+                    entry.scriptName != null ? Math.abs(entry.scriptName.hashCode()) : -1,
+                    entry.message,
+                    entry.level.name().toLowerCase(),
+                    System.currentTimeMillis()
+                )
+            );
+        } catch (Throwable ignored) {}
+
+        LOGGER.info(formatLogEntry(entry));
     }
 
     public void debug(String message) {
@@ -127,7 +143,7 @@ public class ScriptLogger {
 
     public void error(String message, Throwable t) {
         log(LogLevel.ERROR, message + ": " + t.getMessage());
-        t.printStackTrace();
+        LOGGER.error(message, t);
     }
 
     public void success(String message) {
@@ -136,6 +152,71 @@ public class ScriptLogger {
 
     public void scriptLog(String scriptName, LogLevel level, String message) {
         log(level, message, scriptName);
+    }
+
+    public void scriptLogAppend(String scriptName, LogLevel level, String message) {
+        KashubConfig config = KashubConfig.getInstance();
+        if (!config.enableLogging || !config.logToTerminal) return;
+
+        synchronized (logBuffer) {
+            if (message.contains("\n")) {
+                String[] parts = message.split("\n", -1);
+                for (int i = 0; i < parts.length; i++) {
+                    if (i == 0) {
+                        // Append first part to last entry if it matches
+                        if (!logBuffer.isEmpty()) {
+                            LogEntry last = logBuffer.get(logBuffer.size() - 1);
+                            if (last.level == level && java.util.Objects.equals(last.scriptName, scriptName) && !last.message.endsWith("\n")) {
+                                logBuffer.set(logBuffer.size() - 1, new LogEntry(last.timestamp, level, last.message + parts[i], scriptName));
+                            } else {
+                                log(level, parts[i], scriptName);
+                            }
+                        } else {
+                            log(level, parts[i], scriptName);
+                        }
+                    } else {
+                        // All subsequent parts start a new line
+                        log(level, parts[i], scriptName);
+                    }
+                }
+                return;
+            }
+
+            if (!logBuffer.isEmpty()) {
+                LogEntry last = logBuffer.get(logBuffer.size() - 1);
+                // Only append if it's the same script/level AND the last entry didn't just end with a newline (optional, but safer)
+                if (last.level == level && java.util.Objects.equals(last.scriptName, scriptName)) {
+                    logBuffer.set(logBuffer.size() - 1, new LogEntry(last.timestamp, level, last.message + message, scriptName));
+                    return;
+                }
+            }
+            log(level, message, scriptName);
+        }
+    }
+
+    public void printOut(String message) {
+        KashubConfig config = KashubConfig.getInstance();
+        
+        if (config.printToTerminal) {
+            LocalDateTime now = LocalDateTime.now();
+            LogEntry entry = new LogEntry(now, LogLevel.INFO, message, "PRINT");
+            synchronized (logBuffer) {
+                logBuffer.add(entry);
+                if (logBuffer.size() > MAX_BUFFER_SIZE) {
+                    logBuffer.remove(0);
+                }
+            }
+        }
+        
+        if (config.printToChat) {
+            Minecraft client = Minecraft.getInstance();
+            if (client.player != null) {
+                net.minecraft.network.chat.Component chatMessage = net.minecraft.network.chat.Component.literal("[Print] " + message).withStyle(ChatFormatting.WHITE);
+                client.player.displayClientMessage(chatMessage, false);
+            }
+        }
+        
+        LOGGER.info("[Print] {}", message);
     }
 
     private void writeToFile(LogEntry entry) {
@@ -147,18 +228,18 @@ public class ScriptLogger {
             writer.write(formatLogEntry(entry));
             writer.newLine();
         } catch (IOException e) {
-            System.err.println("Failed to write to log file: " + e.getMessage());
+            LOGGER.error("Failed to write to log file: {}", e.getMessage());
         }
     }
 
     private void sendToChat(LogEntry entry) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
             String prefix = "[KH] ";
             String text = prefix + entry.message;
 
-            Text chatMessage = Text.literal(text).formatted(entry.level.color);
-            client.player.sendMessage(chatMessage, false);
+            Component chatMessage = Component.literal(text).withStyle(entry.level.color);
+            client.player.displayClientMessage(chatMessage, false);
         }
     }
 
@@ -198,6 +279,10 @@ public class ScriptLogger {
         synchronized (logBuffer) {
             logBuffer.clear();
         }
+    }
+
+    public void clear() {
+        clearBuffer();
     }
 
     private String formatMessage(String message, Object... args) {

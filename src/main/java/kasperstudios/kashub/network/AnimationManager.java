@@ -1,15 +1,13 @@
 package kasperstudios.kashub.network;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.client.Minecraft;
 
 public class AnimationManager {
     private static AnimationManager instance;
     private final Map<String, Animation> activeAnimations = new ConcurrentHashMap<>();
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
 
     private AnimationManager() {}
 

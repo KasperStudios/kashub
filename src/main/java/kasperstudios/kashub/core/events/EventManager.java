@@ -2,14 +2,25 @@ package kasperstudios.kashub.core.events;
 
 import kasperstudios.kashub.core.Context;
 import kasperstudios.kashub.core.Value;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import kasperstudios.kashub.core.Interpreter;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EventManager {
+    private static final String EVENT_ON_TICK = "onTick";
+    private static final String EVENT_ON_DAMAGE = "onDamage";
+    private static final String EVENT_ON_HEAL = "onHeal";
+    private static final String EVENT_ON_HUNGER = "onHunger";
+    private static final String EVENT_ON_DEATH = "onDeath";
+
     private static EventManager instance;
 
     private final Map<String, List<EventHandler>> handlers = new ConcurrentHashMap<>();
@@ -19,11 +30,11 @@ public class EventManager {
     private final Map<String, String> eventOwners = new ConcurrentHashMap<>();
 
     private static final Set<String> IMPLEMENTED_EVENTS = Set.of(
-            "onTick",
-            "onDamage",
-            "onHeal",
-            "onHunger",
-            "onDeath",
+            EVENT_ON_TICK,
+            EVENT_ON_DAMAGE,
+            EVENT_ON_HEAL,
+            EVENT_ON_HUNGER,
+            EVENT_ON_DEATH,
             "onChat",
             "onBlockBreak",
             "onBlockPlace",
@@ -57,12 +68,12 @@ public class EventManager {
 
     private void initializeDefaultEvents() {
 
-        handlers.put("onTick", new ArrayList<>());
-        handlers.put("onDamage", new ArrayList<>());
-        handlers.put("onHeal", new ArrayList<>());
-        handlers.put("onHunger", new ArrayList<>());
+        handlers.put(EVENT_ON_TICK, new ArrayList<>());
+        handlers.put(EVENT_ON_DAMAGE, new ArrayList<>());
+        handlers.put(EVENT_ON_HEAL, new ArrayList<>());
+        handlers.put(EVENT_ON_HUNGER, new ArrayList<>());
         handlers.put("onChat", new ArrayList<>());
-        handlers.put("onDeath", new ArrayList<>());
+        handlers.put(EVENT_ON_DEATH, new ArrayList<>());
         handlers.put("onRespawn", new ArrayList<>());
         handlers.put("onJump", new ArrayList<>());
         handlers.put("onSneak", new ArrayList<>());
@@ -162,7 +173,7 @@ public class EventManager {
                         "Error executing event script for " + eventName + ": " + e.getMessage());
             }
         } else {
-            if (eventName.equals("onTick")) {
+            if (eventName.equals(EVENT_ON_TICK)) {
                 kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
                         "EventManager: onTick fired but no script registered (total scripts: " + eventScripts.size()
                                 + ")");
@@ -171,8 +182,8 @@ public class EventManager {
     }
 
     public void tick() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
 
         if (player == null)
             return;
@@ -185,7 +196,7 @@ public class EventManager {
             tickData.put("time", System.currentTimeMillis());
             kasperstudios.kashub.util.ScriptLogger.getInstance().debug(
                     "EventManager.tick(): Firing onTick event, registered scripts: " + eventScripts.size());
-            fireEvent("onTick", tickData);
+            fireEvent(EVENT_ON_TICK, tickData);
         }
 
         float currentHealth = player.getHealth();
@@ -194,32 +205,32 @@ public class EventManager {
             damageData.put("damage", lastHealth - currentHealth);
             damageData.put("health", currentHealth);
             damageData.put("maxHealth", player.getMaxHealth());
-            fireEvent("onDamage", damageData);
+            fireEvent(EVENT_ON_DAMAGE, damageData);
         } else if (currentHealth > lastHealth) {
             Map<String, Object> healData = new HashMap<>();
             healData.put("healed", currentHealth - lastHealth);
             healData.put("health", currentHealth);
             healData.put("maxHealth", player.getMaxHealth());
-            fireEvent("onHeal", healData);
+            fireEvent(EVENT_ON_HEAL, healData);
         }
         lastHealth = currentHealth;
 
-        int currentFood = player.getHungerManager().getFoodLevel();
+        int currentFood = player.getFoodData().getFoodLevel();
         if (currentFood != lastFood) {
             Map<String, Object> hungerData = new HashMap<>();
             hungerData.put("food", currentFood);
             hungerData.put("previousFood", lastFood);
-            hungerData.put("saturation", player.getHungerManager().getSaturationLevel());
-            fireEvent("onHunger", hungerData);
+            hungerData.put("saturation", player.getFoodData().getSaturationLevel());
+            fireEvent(EVENT_ON_HUNGER, hungerData);
         }
         lastFood = currentFood;
 
-        if (player.isDead()) {
+        if (player.isDeadOrDying()) {
             Map<String, Object> deathData = new HashMap<>();
             deathData.put("position_x", player.getX());
             deathData.put("position_y", player.getY());
             deathData.put("position_z", player.getZ());
-            fireEvent("onDeath", deathData);
+            fireEvent(EVENT_ON_DEATH, deathData);
         }
     }
 

@@ -1,14 +1,13 @@
 package kasperstudios.kashub.services.integration;
 
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
-
-import java.util.*;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * TagManager - Work with item/block tags from other mods.
@@ -48,23 +47,23 @@ public class TagManager {
      */
     public boolean itemHasTag(String itemId, String tagId) {
         try {
-            Identifier itemIdentifier = Identifier.tryParse(itemId);
+            ResourceLocation itemIdentifier = ResourceLocation.tryParse(itemId);
             if (itemIdentifier == null) {
-                itemIdentifier = Identifier.of("minecraft", itemId);
+                itemIdentifier = ResourceLocation.fromNamespaceAndPath("minecraft", itemId);
             }
             
-            Item item = Registries.ITEM.get(itemIdentifier);
+            Item item = BuiltInRegistries.ITEM.get(itemIdentifier);
             if (item == null) {
                 return false;
             }
             
-            Identifier tagIdentifier = Identifier.tryParse(tagId);
+            ResourceLocation tagIdentifier = ResourceLocation.tryParse(tagId);
             if (tagIdentifier == null) {
                 return false;
             }
             
-            TagKey<Item> tag = TagKey.of(Registries.ITEM.getKey(), tagIdentifier);
-            return item.getRegistryEntry().isIn(tag);
+            TagKey<Item> tag = TagKey.create(BuiltInRegistries.ITEM.key(), tagIdentifier);
+            return item.builtInRegistryHolder().is(tag);
             
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to check item tag: " + itemId + " -> " + tagId, e);
@@ -81,23 +80,23 @@ public class TagManager {
      */
     public boolean blockHasTag(String blockId, String tagId) {
         try {
-            Identifier blockIdentifier = Identifier.tryParse(blockId);
+            ResourceLocation blockIdentifier = ResourceLocation.tryParse(blockId);
             if (blockIdentifier == null) {
-                blockIdentifier = Identifier.of("minecraft", blockId);
+                blockIdentifier = ResourceLocation.fromNamespaceAndPath("minecraft", blockId);
             }
             
-            Block block = Registries.BLOCK.get(blockIdentifier);
+            Block block = BuiltInRegistries.BLOCK.get(blockIdentifier);
             if (block == null) {
                 return false;
             }
             
-            Identifier tagIdentifier = Identifier.tryParse(tagId);
+            ResourceLocation tagIdentifier = ResourceLocation.tryParse(tagId);
             if (tagIdentifier == null) {
                 return false;
             }
             
-            TagKey<Block> tag = TagKey.of(Registries.BLOCK.getKey(), tagIdentifier);
-            return block.getRegistryEntry().isIn(tag);
+            TagKey<Block> tag = TagKey.create(BuiltInRegistries.BLOCK.key(), tagIdentifier);
+            return block.builtInRegistryHolder().is(tag);
             
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to check block tag: " + blockId + " -> " + tagId, e);
@@ -115,17 +114,17 @@ public class TagManager {
         List<String> items = new ArrayList<>();
         
         try {
-            Identifier tagIdentifier = Identifier.tryParse(tagId);
+            ResourceLocation tagIdentifier = ResourceLocation.tryParse(tagId);
             if (tagIdentifier == null) {
                 return items;
             }
             
-            TagKey<Item> tag = TagKey.of(Registries.ITEM.getKey(), tagIdentifier);
+            TagKey<Item> tag = TagKey.create(BuiltInRegistries.ITEM.key(), tagIdentifier);
             
-            Registries.ITEM.stream()
-                .filter(item -> item.getRegistryEntry().isIn(tag))
+            BuiltInRegistries.ITEM.stream()
+                .filter(item -> item.builtInRegistryHolder().is(tag))
                 .forEach(item -> {
-                    Identifier id = Registries.ITEM.getId(item);
+                    ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
                     if (id != null) {
                         items.add(id.toString());
                     }
@@ -148,17 +147,17 @@ public class TagManager {
         List<String> blocks = new ArrayList<>();
         
         try {
-            Identifier tagIdentifier = Identifier.tryParse(tagId);
+            ResourceLocation tagIdentifier = ResourceLocation.tryParse(tagId);
             if (tagIdentifier == null) {
                 return blocks;
             }
             
-            TagKey<Block> tag = TagKey.of(Registries.BLOCK.getKey(), tagIdentifier);
+            TagKey<Block> tag = TagKey.create(BuiltInRegistries.BLOCK.key(), tagIdentifier);
             
-            Registries.BLOCK.stream()
-                .filter(block -> block.getRegistryEntry().isIn(tag))
+            BuiltInRegistries.BLOCK.stream()
+                .filter(block -> block.builtInRegistryHolder().is(tag))
                 .forEach(block -> {
-                    Identifier id = Registries.BLOCK.getId(block);
+                    ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
                     if (id != null) {
                         blocks.add(id.toString());
                     }

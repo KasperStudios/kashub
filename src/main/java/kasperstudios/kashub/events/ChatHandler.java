@@ -1,13 +1,8 @@
 package kasperstudios.kashub.events;
 
-import kasperstudios.kashub.core.TaskManager;
 import kasperstudios.kashub.core.events.EventManager;
-import kasperstudios.kashub.core.Interpreter;
-import kasperstudios.kashub.core.Context;
-import kasperstudios.kashub.core.Value;
-import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
-import net.minecraft.text.Text;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,8 +18,8 @@ public class ChatHandler {
         return instance;
     }
 
-    public void handleChatMessage(GameMessageS2CPacket packet) {
-        Text content = packet.content();
+    public void handleChatMessage(ClientboundSystemChatPacket packet) {
+        Component content = packet.content();
         if (content == null) return;
 
         String message = content.getString();

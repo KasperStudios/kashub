@@ -9,41 +9,63 @@ import java.util.Objects;
  * Supports arithmetic, logic, comparison, and ternary operators.
  */
 public class Parser {
+    private static final int MAX_RECURSION_DEPTH = 256;
     private final String input;
     private int pos;
     private final Context ctx;
+    private int depth = 0;
 
     public Parser(String input, Context ctx) {
-        this.input = input.trim();
+        this.input = input != null ? input.trim() : "";
         this.ctx = ctx;
         this.pos = 0;
     }
 
     public Value parse() {
-        skipWhitespace();
-        if (pos >= input.length())
-            return Value.NULL;
-        Value result = parseTernary();
-        skipWhitespace();
-        return result;
+        if (input.isEmpty()) return Value.NULL;
+        try {
+            skipWhitespace();
+            if (pos >= input.length())
+                return Value.NULL;
+            Value result = parseTernary();
+            skipWhitespace();
+            return result;
+        } catch (StackOverflowError e) {
+            throw new RuntimeException("Expression too complex (StackOverflow)");
+        }
+    }
+
+    private void checkDepth() {
+        if (++depth > MAX_RECURSION_DEPTH) {
+            throw new RuntimeException("Maximum recursion depth exceeded (" + MAX_RECURSION_DEPTH + ")");
+        }
+    }
+
+    private void exitDepth() {
+        depth--;
     }
 
     private Value parseTernary() {
-        Value condition = parseOr();
-        skipWhitespace();
-        if (pos < input.length() && input.charAt(pos) == '?') {
-            pos++;
+        checkDepth();
+        try {
+            Value condition = parseOr();
             skipWhitespace();
-            Value trueValue = parseTernary();
-            skipWhitespace();
-            if (pos < input.length() && input.charAt(pos) == ':') {
+            if (pos < input.length() && input.charAt(pos) == '?') {
                 pos++;
                 skipWhitespace();
-                Value falseValue = parseTernary();
-                return condition.asBoolean() ? trueValue : falseValue;
+                Value trueValue = parseTernary();
+                skipWhitespace();
+                if (pos < input.length() && input.charAt(pos) == ':') {
+                    pos++;
+                    skipWhitespace();
+                    Value falseValue = parseTernary();
+                    return condition.asBoolean() ? trueValue : falseValue;
+                }
             }
+            return condition;
+        } finally {
+            exitDepth();
         }
-        return condition;
     }
 
     private Value parseOr() {
@@ -80,14 +102,12 @@ public class Parser {
                 pos += 2;
                 skipWhitespace();
                 Value right = parseComparison();
-                left = Value.of(
-                        Objects.equals(left.getValue(), right.getValue()) || left.toString().equals(right.toString()));
+                left = Value.of(left.equals(right));
             } else if (input.charAt(pos) == '!' && input.charAt(pos + 1) == '=') {
                 pos += 2;
                 skipWhitespace();
                 Value right = parseComparison();
-                left = Value.of(!Objects.equals(left.getValue(), right.getValue())
-                        && !left.toString().equals(right.toString()));
+                left = Value.of(!left.equals(right));
             } else {
                 break;
             }
@@ -166,7 +186,7 @@ public class Parser {
                 double res = switch (c) {
                     case '*' -> l * r;
                     case '/' -> r != 0 ? l / r : 0;
-                    case '%' -> r != 0 ? l % r : 0;
+                    case '%' -> r != 0 ? ((l % r) + r) % r : 0;
                     default -> 0;
                 };
                 left = Value.of(res);
@@ -179,19 +199,38 @@ public class Parser {
     }
 
     private Value parseUnary() {
-        skipWhitespace();
-        if (pos < input.length()) {
-            char c = input.charAt(pos);
-            if (c == '!') {
-                pos++;
-                return Value.of(!parseUnary().asBoolean());
+        checkDepth();
+        try {
+            skipWhitespace();
+            if (pos < input.length()) {
+                char c = input.charAt(pos);
+                if (c == '!') {
+                    pos++;
+                    return Value.of(!parseUnary().asBoolean());
+                }
+                if (c == '-') {
+                    pos++;
+                    return Value.of(-parseUnary().asDouble());
+                }
+                
+                // typeof operator support
+                if (input.substring(pos).startsWith("typeof ")) {
+                    pos += 7;
+                    Value val = parseUnary();
+                    if (val == Value.NULL) return Value.of("undefined");
+                    if (val.isNumber()) return Value.of("number");
+                    if (val.isString()) return Value.of("string");
+                    if (val.isBoolean()) return Value.of("boolean");
+                    if (val.isList()) return Value.of("object");
+                    if (val.isMap()) return Value.of("object");
+                    if (val.isCallable()) return Value.of("function");
+                    return Value.of("object");
+                }
             }
-            if (c == '-' && (pos + 1 >= input.length() || !Character.isDigit(input.charAt(pos + 1)))) {
-                pos++;
-                return Value.of(-parseUnary().asDouble());
-            }
+            return parsePrimary();
+        } finally {
+            exitDepth();
         }
-        return parsePrimary();
     }
 
     private Value parsePrimary() {
@@ -217,6 +256,7 @@ public class Parser {
             val = parseListLiteral();
         } else {
             val = Value.NULL;
+            pos++; // Skip unknown char to avoid infinite loop
         }
 
         // Handle member access and calls
@@ -225,7 +265,9 @@ public class Parser {
             if (pos < input.length() && input.charAt(pos) == '.') {
                 pos++;
                 String member = parseIdentifierOnly();
-                val = val.getMember(member);
+                if (!member.isEmpty()) {
+                    val = val.getMember(member);
+                }
             } else if (pos < input.length() && input.charAt(pos) == '(') {
                 pos++;
                 List<Value> args = parseCallArguments();
@@ -305,9 +347,23 @@ public class Parser {
 
     private Value parseNumber() {
         int start = pos;
-        while (pos < input.length() && (Character.isDigit(input.charAt(pos)) || input.charAt(pos) == '.'))
-            pos++;
-        return Value.of(Double.parseDouble(input.substring(start, pos)));
+        boolean hasDot = false;
+        while (pos < input.length()) {
+            char c = input.charAt(pos);
+            if (Character.isDigit(c)) {
+                pos++;
+            } else if (c == '.' && !hasDot) {
+                hasDot = true;
+                pos++;
+            } else {
+                break;
+            }
+        }
+        try {
+            return Value.of(Double.parseDouble(input.substring(start, pos)));
+        } catch (NumberFormatException e) {
+            return Value.of(0);
+        }
     }
 
     private Value parseIdentifier() {
@@ -356,8 +412,32 @@ public class Parser {
     }
 
     private void skipWhitespace() {
-        while (pos < input.length() && Character.isWhitespace(input.charAt(pos)))
-            pos++;
+        while (pos < input.length()) {
+            char c = input.charAt(pos);
+            if (Character.isWhitespace(c)) {
+                pos++;
+                continue;
+            }
+            if (c == '/' && pos + 1 < input.length()) {
+                char next = input.charAt(pos + 1);
+                if (next == '/') {
+                    pos = input.length();
+                    return;
+                }
+                if (next == '*') {
+                    pos += 2;
+                    while (pos + 1 < input.length()) {
+                        if (input.charAt(pos) == '*' && input.charAt(pos + 1) == '/') {
+                            pos += 2;
+                            break;
+                        }
+                        pos++;
+                    }
+                    continue;
+                }
+            }
+            break;
+        }
     }
 
     public static Value evaluate(String expression, Context ctx) {

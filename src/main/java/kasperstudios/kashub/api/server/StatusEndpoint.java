@@ -4,8 +4,7 @@ import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.core.TaskManager;
-import net.minecraft.client.MinecraftClient;
-
+import net.minecraft.client.Minecraft;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,7 +17,7 @@ public class StatusEndpoint {
             response.put("version", Kashub.VERSION);
             response.put("modId", Kashub.MOD_ID);
 
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             boolean inWorld = mc.player != null;
             response.put("inWorld", inWorld);
 
@@ -27,13 +26,13 @@ public class StatusEndpoint {
                 player.put("name", mc.player.getName().getString());
                 player.put("health", mc.player.getHealth());
                 player.put("maxHealth", mc.player.getMaxHealth());
-                player.put("food", mc.player.getHungerManager().getFoodLevel());
+                player.put("food", mc.player.getFoodData().getFoodLevel());
                 player.put("x", mc.player.getX());
                 player.put("y", mc.player.getY());
                 player.put("z", mc.player.getZ());
-                player.put("yaw", mc.player.getYaw());
-                player.put("pitch", mc.player.getPitch());
-                player.put("dimension", mc.player.getWorld().getRegistryKey().getValue().toString());
+                player.put("yaw", mc.player.getYRot());
+                player.put("pitch", mc.player.getXRot());
+                player.put("dimension", mc.player.level().dimension().location().toString());
                 player.put("gameMode",
                         mc.player.isCreative() ? "creative" : mc.player.isSpectator() ? "spectator" : "survival");
                 response.put("player", player);

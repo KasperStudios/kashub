@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.util.*;
 
 public class DraftManager {
+    private static final String DRAFT_EXTENSION = ".draft.json";
+
     private static final Logger LOGGER = LogManager.getLogger(DraftManager.class);
     private static final Path DRAFTS_DIR = Paths.get("config", "kashub", "drafts");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -50,7 +52,7 @@ public class DraftManager {
 
         activeDrafts.put(scriptName, draft);
 
-        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
+        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + DRAFT_EXTENSION);
         try {
             String json = GSON.toJson(draft);
             Files.write(draftPath, json.getBytes());
@@ -66,7 +68,7 @@ public class DraftManager {
             return activeDrafts.get(scriptName);
         }
 
-        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
+        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + DRAFT_EXTENSION);
         if (Files.exists(draftPath)) {
             try {
                 String json = new String(Files.readAllBytes(draftPath));
@@ -86,14 +88,14 @@ public class DraftManager {
             return true;
         }
 
-        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
+        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + DRAFT_EXTENSION);
         return Files.exists(draftPath);
     }
 
     public void deleteDraft(String scriptName) {
         activeDrafts.remove(scriptName);
 
-        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + ".draft.json");
+        Path draftPath = DRAFTS_DIR.resolve(sanitizeFileName(scriptName) + DRAFT_EXTENSION);
         try {
             Files.deleteIfExists(draftPath);
             LOGGER.debug("Deleted draft for: {}", scriptName);
@@ -108,7 +110,7 @@ public class DraftManager {
         try {
             if (Files.exists(DRAFTS_DIR)) {
                 Files.list(DRAFTS_DIR)
-                    .filter(p -> p.toString().endsWith(".draft.json"))
+                    .filter(p -> p.toString().endsWith(DRAFT_EXTENSION))
                     .forEach(path -> {
                         try {
                             String json = new String(Files.readAllBytes(path));
@@ -146,7 +148,7 @@ public class DraftManager {
         try {
             if (Files.exists(DRAFTS_DIR)) {
                 Files.list(DRAFTS_DIR)
-                    .filter(p -> p.toString().endsWith(".draft.json"))
+                    .filter(p -> p.toString().endsWith(DRAFT_EXTENSION))
                     .forEach(path -> {
                         try {
                             String json = new String(Files.readAllBytes(path));

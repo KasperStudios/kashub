@@ -5,7 +5,13 @@ import kasperstudios.kashub.util.ScriptFileWatcher;
 import kasperstudios.kashub.util.ScriptLogger;
 import kasperstudios.kashub.util.ScriptManager;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -28,24 +34,47 @@ public class TaskManager {
     }
 
     public Task startScript(String name, String code) {
-        return startScript(name, code, null, Type.USER);
+        return startScript(name, code, null, Type.USER, ExecutionOrigin.USER, null, false, false);
+    }
+
+    public Task startScript(String name, String code, List<String> args) {
+        return startScript(name, code, null, Type.USER, ExecutionOrigin.USER, args, false, false);
     }
 
     public Task startScript(String name, String code, Set<String> tags) {
-        return startScript(name, code, tags, Type.USER);
+        return startScript(name, code, tags, Type.USER, ExecutionOrigin.USER, null, false, false);
     }
 
     public Task startScript(String name, String code, Set<String> tags, Type type) {
+        ExecutionOrigin origin = (type == Type.SYSTEM) ? ExecutionOrigin.SERVER : ExecutionOrigin.USER;
+        return startScript(name, code, tags, type, origin, null, false, false);
+    }
+
+    public Task startScript(String name, String code, Set<String> tags, Type type, List<String> args) {
+        ExecutionOrigin origin = (type == Type.SYSTEM) ? ExecutionOrigin.SERVER : ExecutionOrigin.USER;
+        return startScript(name, code, tags, type, origin, args, false, false);
+    }
+
+    public Task startScript(String name, String code, Set<String> tags, Type type, ExecutionOrigin origin, List<String> args, boolean sudo, boolean su) {
         if (!enabled) {
             ScriptLogger.getInstance().warn("Script execution is disabled");
             return null;
         }
 
+        // v1.0.0 - Neural Implant Access Policy
+        if (type != Type.SYSTEM) {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.player != null && !kasperstudios.kashub.services.AccessPolicy.getInstance().hasAccess(mc.player)) {
+                ScriptLogger.getInstance().error("ACCESS DENIED: Neural Implant not detected or access restricted.");
+                return null;
+            }
+        }
+
         int id = nextId.getAndIncrement();
-        Task task = new Task(id, name, code, tags, type);
+        Task task = new Task(id, name, code, tags, type, origin, args, sudo, su);
         tasks.put(id, task);
 
-        ScriptLogger.getInstance().info("Started task " + id + ": " + name);
+        ScriptLogger.getInstance().info("Started task " + id + ": " + name + (sudo ? " (SUDO)" : "") + (su ? " (SU)" : ""));
 
         if (KashubConfig.getInstance().hotReload && type == Type.USER) {
             ScriptFileWatcher.getInstance().registerScript(name, id);
@@ -64,7 +93,11 @@ public class TaskManager {
     public Task startScriptFromFile(String name) {
         try {
             String code = ScriptManager.loadScript(name);
-            return startScript(name, code, null, Type.USER);
+            if (code == null) {
+                ScriptLogger.getInstance().error("Script not found: " + name);
+                return null;
+            }
+            return startScript(name, code, null, Type.USER, null);
         } catch (Exception e) {
             ScriptLogger.getInstance().error("Failed to load script " + name + ": " + e.getMessage());
             return null;
@@ -74,7 +107,7 @@ public class TaskManager {
     public Task startSystemScript(String name, String code) {
         Set<String> tags = new HashSet<>();
         tags.add("system");
-        return startScript(name, code, tags, Type.SYSTEM);
+        return startScript(name, code, tags, Type.SYSTEM, ExecutionOrigin.SERVER, null, true, false); // System scripts get sudo by default
     }
 
     public void tick() {

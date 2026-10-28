@@ -3,15 +3,14 @@ package kasperstudios.kashub.api.server;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
-import net.minecraft.client.MinecraftClient;
-
+import net.minecraft.client.Minecraft;
 import java.util.*;
 
 public class VariablesEndpoint {
 
     public static void handle(HttpExchange exchange, Gson gson) {
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
 
             if (mc.player == null) {
                 Map<String, Object> response = new HashMap<>();
@@ -40,7 +39,7 @@ public class VariablesEndpoint {
             for (kasperstudios.kashub.core.Environment.Variable var : varDefs
                     .values()) {
                 String name = var.getName();
-                String value = var.getValue();
+                String value = var.getValue().asString();
                 String description = var.getDescription();
 
                 variables.put(name, value);

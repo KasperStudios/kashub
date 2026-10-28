@@ -1,0 +1,23 @@
+// ==========================================
+// Welcome to KasHub (v1.0.0-FSR)
+// ==========================================
+// A next-gen in-game scripting and automation engine.
+// Press F5 to run this script!
+// Press Ctrl+Space for autocomplete.
+
+System.print("§a[KasHub] Welcome to KasHub Scripting Engine!")
+
+let name = player.getName()
+let health = player.getHealth()
+let pos = player.getPos()
+
+System.print("Hello, §e" + name + "§f!")
+System.print("Your Health: §c" + health + " HP")
+System.print("Coordinates: §b" + pos.x + ", " + pos.y + ", " + pos.z)
+
+// Quick Tips:
+// • Open / Close Editor: 'K' key
+// • Emergency Script Stop: 'M' key
+// • Scan Nearby Computer: 'Left Alt'
+// • File Management: Explorer panel on the left (supports folders!)
+// • Khinux Terminal: Click '[+] Terminal' in the status bar

@@ -1,12 +1,12 @@
 package kasperstudios.kashub.services.network;
 
-import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.text.Text;
-
-import java.util.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -95,9 +95,9 @@ public class PlayerInteractionManager {
      * Send message to player (client-side only for now).
      */
     public void sendMessage(String playerName, String message) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null && client.player.getName().getString().equals(playerName)) {
-            client.player.sendMessage(Text.literal(message), false);
+            client.player.displayClientMessage(Component.literal(message), false);
         }
     }
     
@@ -139,8 +139,8 @@ public class PlayerInteractionManager {
      * Get current player name.
      */
     public String getCurrentPlayerName() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
         return player != null ? player.getName().getString() : null;
     }
     

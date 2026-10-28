@@ -1,0 +1,18 @@
+{
+  "category.kashub": "Kashub",
+  "key.kashub.open_editor": "Open Editor",
+  "key.kashub.stop_scripts": "Stop Scripts",
+  "key.kashub.scan_peripheral": "Scan Peripheral",
+  "item.kashub.neuro_implant_t1": "Neuro-Implant (Tier 1)",
+  "item.kashub.neuro_implant_t2": "Neuro-Implant (Tier 2)",
+  "item.kashub.neuro_implant.tier": "Tier: %d",
+  "item.kashub.neuro_implant.instruction": "§e[ Place in Neural Slot to activate ]",
+  "item.kashub.neuro_implant.desc.t1": "Basic access to KasHub API and automation.",
+  "item.kashub.neuro_implant.desc.t2": "Advanced access. Supports ComputerCraft:T.",
+  "item.kashub.neuro_implant.warning": "WARNING: Requires surgical installation.",
+  "item.kashub.neuro_implant.t2_requires_cc": "Error: Neuro-Core V2 requires ComputerCraft installed!",
+  "message.kashub.no_implant": "Error: No neural link detected. Install an implant.",
+  "message.kashub.slot_occupied": "Error: Neural slot already occupied!",
+  "message.kashub.link_established": "§bNeural Link established with Computer #%d",
+  "curios.identifier.neural": "Neural"
+}

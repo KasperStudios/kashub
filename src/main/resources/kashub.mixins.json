@@ -1,16 +1,10 @@
 {
-	"required": true,
+	"required": false,
 	"package": "kasperstudios.kashub.mixin",
 	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-	],
+	"mixins": [],
 	"client": [
-		"KeyBindingMixin",
-		"ChatMessageMixin",
-		"BlockBreakMixin",
-		"BlockPlaceMixin",
-		"AttackMixin",
-		"CraftingScreenHandlerMixin"
+		"LightTextureMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

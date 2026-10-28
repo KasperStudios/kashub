@@ -1,13 +1,12 @@
 package kasperstudios.kashub.gui.widgets;
 
 import kasperstudios.kashub.gui.theme.EditorTheme;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import kasperstudios.kashub.core.State;
 import kasperstudios.kashub.core.Task;
 import kasperstudios.kashub.core.TaskManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.function.Consumer;
 public class TaskManagerPanel {
     private int x, y, width, height;
     private EditorTheme theme;
-    private final TextRenderer textRenderer;
+    private final Font textRenderer;
 
     private List<Task> tasks = new ArrayList<>();
     private int scrollY = 0;
@@ -39,7 +38,7 @@ public class TaskManagerPanel {
         this.width = width;
         this.height = height;
         this.theme = theme;
-        this.textRenderer = MinecraftClient.getInstance().textRenderer;
+        this.textRenderer = Minecraft.getInstance().font;
     }
 
     public void setOnTaskSelect(Consumer<Task> onTaskSelect) {
@@ -51,7 +50,7 @@ public class TaskManagerPanel {
         tasks = new ArrayList<>(allTasks);
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 
         pulseAnimation += delta * 0.1f;
         if (pulseAnimation > Math.PI * 2) {
@@ -75,33 +74,33 @@ public class TaskManagerPanel {
         renderControlButtons(context, mouseX, mouseY);
     }
 
-    private void renderHeader(DrawContext context, int mouseX, int mouseY) {
+    private void renderHeader(GuiGraphics context, int mouseX, int mouseY) {
         context.fill(x, y, x + width, y + HEADER_HEIGHT, adjustBrightness(theme.consoleBackground, 10));
-        context.drawText(textRenderer, "📋 TASK MANAGER", x + 10, y + 10, theme.textColor, true);
+        context.drawString(textRenderer, "📋 TASK MANAGER", x + 10, y + 10, theme.textColor, true);
 
         int runningCount = (int) tasks.stream().filter(t -> t.getState() == State.RUNNING).count();
         String countText = runningCount + " running";
         int countColor = runningCount > 0 ? theme.consoleSuccessColor : theme.textDimColor;
-        context.drawText(textRenderer, countText, x + width - textRenderer.getWidth(countText) - 10, y + 10, countColor,
+        context.drawString(textRenderer, countText, x + width - textRenderer.width(countText) - 10, y + 10, countColor,
                 false);
     }
 
-    private void renderEmptyState(DrawContext context) {
+    private void renderEmptyState(GuiGraphics context) {
         String message = "No active scripts";
-        int textWidth = textRenderer.getWidth(message);
+        int textWidth = textRenderer.width(message);
         int centerX = x + (width - textWidth) / 2;
         int centerY = y + (height - HEADER_HEIGHT) / 2 + HEADER_HEIGHT;
 
-        context.drawText(textRenderer, "📭", centerX - 10, centerY - 20, theme.textDimColor, false);
-        context.drawText(textRenderer, message, centerX, centerY, theme.textDimColor, false);
+        context.drawString(textRenderer, "📭", centerX - 10, centerY - 20, theme.textDimColor, false);
+        context.drawString(textRenderer, message, centerX, centerY, theme.textDimColor, false);
 
         String hint = "Run a script to see it here";
-        int hintWidth = textRenderer.getWidth(hint);
-        context.drawText(textRenderer, hint, x + (width - hintWidth) / 2, centerY + 15, theme.textDimColor & 0x88FFFFFF,
+        int hintWidth = textRenderer.width(hint);
+        context.drawString(textRenderer, hint, x + (width - hintWidth) / 2, centerY + 15, theme.textDimColor & 0x88FFFFFF,
                 false);
     }
 
-    private void renderTaskList(DrawContext context, int mouseX, int mouseY, float delta) {
+    private void renderTaskList(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int listY = y + HEADER_HEIGHT;
         int listHeight = height - HEADER_HEIGHT - 50;
         int visibleRows = listHeight / ROW_HEIGHT;
@@ -136,7 +135,7 @@ public class TaskManagerPanel {
         }
     }
 
-    private void renderTaskRow(DrawContext context, Task task, int rowY, int mouseX, int mouseY, float delta) {
+    private void renderTaskRow(GuiGraphics context, Task task, int rowY, int mouseX, int mouseY, float delta) {
         boolean isSelected = task.getId() == selectedTaskId;
         boolean isHovered = task.getId() == hoveredTaskId;
 
@@ -166,32 +165,32 @@ public class TaskManagerPanel {
         context.fill(dotX - 4, dotY - 4, dotX + 4, dotY + 4, statusColor);
 
         String idText = "#" + task.getId();
-        context.drawText(textRenderer, idText, x + 24, rowY + 6, theme.textDimColor, false);
+        context.drawString(textRenderer, idText, x + 24, rowY + 6, theme.textDimColor, false);
 
         String name = task.getName();
         if (name.length() > 20) {
             name = name.substring(0, 17) + "...";
         }
-        context.drawText(textRenderer, name, x + 24, rowY + 18, theme.textColor, false);
+        context.drawString(textRenderer, name, x + 24, rowY + 18, theme.textColor, false);
 
         String stateText = task.getState().getDisplayName();
         int stateX = x + 140;
-        context.drawText(textRenderer, stateText, stateX, rowY + 12, statusColor, false);
+        context.drawString(textRenderer, stateText, stateX, rowY + 12, statusColor, false);
 
         String uptime = task.getUptimeFormatted();
         int uptimeX = x + width - 80;
-        context.drawText(textRenderer, uptime, uptimeX, rowY + 12, theme.textDimColor, false);
+        context.drawString(textRenderer, uptime, uptimeX, rowY + 12, theme.textDimColor, false);
 
         if (task.getLastError() != null && task.getState() == State.ERROR) {
             String error = task.getLastError();
             if (error.length() > 30) {
                 error = error.substring(0, 27) + "...";
             }
-            context.drawText(textRenderer, "⚠ " + error, x + 24, rowY + 28, theme.consoleErrorColor, false);
+            context.drawString(textRenderer, "⚠ " + error, x + 24, rowY + 28, theme.consoleErrorColor, false);
         }
     }
 
-    private void renderControlButtons(DrawContext context, int mouseX, int mouseY) {
+    private void renderControlButtons(GuiGraphics context, int mouseX, int mouseY) {
         int buttonY = y + height - 40;
         int buttonX = x + 10;
 
@@ -217,7 +216,7 @@ public class TaskManagerPanel {
         }
     }
 
-    private void renderButton(DrawContext context, String text, int bx, int by, int bw, int bh, int color,
+    private void renderButton(GuiGraphics context, String text, int bx, int by, int bw, int bh, int color,
             boolean hovered) {
         int bgColor = hovered ? brighten(color, 20) : color;
 
@@ -230,10 +229,10 @@ public class TaskManagerPanel {
             context.fill(bx + bw - 1, by, bx + bw, by + bh, 0xFFFFFFFF);
         }
 
-        int textWidth = textRenderer.getWidth(text);
+        int textWidth = textRenderer.width(text);
         int textX = bx + (bw - textWidth) / 2;
         int textY = by + (bh - 8) / 2;
-        context.drawText(textRenderer, text, textX, textY, 0xFFFFFFFF, true);
+        context.drawString(textRenderer, text, textX, textY, 0xFFFFFFFF, true);
     }
 
     private boolean isButtonHovered(int bx, int by, int bw, int bh, int mouseX, int mouseY) {

@@ -4,6 +4,7 @@ import kasperstudios.kashub.core.Parser;
 import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.core.Context;
 import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Metadata;
 import java.util.List;
 import java.util.regex.Matcher;
 
@@ -21,6 +22,17 @@ public class ReturnCommand implements Command {
     @Override
     public String getRegex() {
         return "^return(?:\\s+(.+))?$";
+    }
+
+    @Override
+    public Metadata getMetadata() {
+        return new Metadata(
+                "return",
+                "Flow",
+                getRegex(),
+                "return [expression]",
+                "Exits the current function and returns the evaluated expression value to the caller.",
+                List.of("expression"));
     }
 
     @Override

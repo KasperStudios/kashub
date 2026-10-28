@@ -1,0 +1,94 @@
+// CrashGuard & System Object Test Script
+// Demonstrates new safety features and System object
+
+System.print("=== CrashGuard & System Test ===")
+
+// Test 1: Basic crashguard
+System.print("\n[Test 1] Basic crashguard")
+crashguard {
+    System.print("Inside crashguard - safe!")
+    let x = 10
+    System.print("x = " + x)
+}
+System.print("After crashguard - still running!")
+
+// Test 2: Error handling
+System.print("\n[Test 2] Error handling")
+crashguard {
+    System.print("Before error...")
+    let y = 10 / 0  // This will cause an error
+    System.print("This won't execute")
+}
+System.print("After error - script continues!")
+
+// Test 3: Timeout protection
+System.print("\n[Test 3] Timeout protection (3 seconds)")
+crashguard(timeout=3000) {
+    System.print("Starting long operation...")
+    let i = 0
+    while (i < 100) {
+        System.wait(100)
+        i = i + 1
+    }
+    System.print("Completed!")
+}
+
+// Test 4: FPS monitoring
+System.print("\n[Test 4] FPS monitoring")
+crashguard(minFps=30) {
+    System.print("Scanning blocks...")
+    let blocks = scanner.blocks("stone", 32)
+    System.print("Found: " + blocks.count + " blocks")
+}
+
+// Test 5: System object methods
+System.print("\n[Test 5] System object methods")
+
+// Time tracking
+let startTime = System.time()
+System.wait(500)
+let elapsed = System.time() - startTime
+System.print("Elapsed: " + elapsed + "ms")
+
+// Memory info
+let mem = System.memory()
+System.print("Memory used: " + mem.used + " MB")
+System.print("Memory free: " + mem.free + " MB")
+System.print("Memory total: " + mem.total + " MB")
+
+// Log vs Print
+System.log("This goes to console only")
+System.print("This goes to chat and console")
+
+// Test 6: Combined features
+System.print("\n[Test 6] Combined features")
+crashguard(timeout=5000, minFps=25) {
+    let start = System.time()
+    
+    System.print("Safe mining operation...")
+    let ores = scanner.blocks("diamond_ore,iron_ore", 32)
+    
+    if (ores.count > 0) {
+        System.print("Found " + ores.count + " ores")
+    } else {
+        System.print("No ores found")
+    }
+    
+    let duration = System.time() - start
+    System.log("Operation took: " + duration + "ms")
+}
+
+// Test 7: Nested crashguard
+System.print("\n[Test 7] Nested crashguard")
+crashguard {
+    System.print("Outer guard")
+    
+    crashguard(timeout=1000) {
+        System.print("Inner guard")
+        System.wait(500)
+    }
+    
+    System.print("Back to outer guard")
+}
+
+System.print("\n=== All tests complete! ===")

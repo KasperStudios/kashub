@@ -1,6 +1,7 @@
 package kasperstudios.kashub.core;
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 
 /**
@@ -14,6 +15,27 @@ public interface Command {
     String getName();
 
     /**
+     * @return Map of tokens to color IDs (or specific HEX strings) for the highlighter.
+     */
+    default Map<String, Object> getHighlighting() {
+        return Map.of();
+    }
+
+    /**
+     * @return True if this command requires system-level (sudo) privileges.
+     */
+    default boolean requiresSudo() {
+        return false;
+    }
+
+    /**
+     * @return True if this command requires kernel-level (su) privileges.
+     */
+    default boolean requiresSu() {
+        return false;
+    }
+
+    /**
      * @return Category for help and organization
      */
     default String getCategory() {
@@ -25,12 +47,16 @@ public interface Command {
      */
     String getRegex();
 
+    static final java.util.Map<String, java.util.regex.Pattern> PATTERN_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
      * @param line Input line from the script
      * @return Matcher for the current line
      */
     default Matcher getMatcher(String line) {
-        return java.util.regex.Pattern.compile(getRegex()).matcher(line.trim());
+        String regex = getRegex();
+        java.util.regex.Pattern pattern = PATTERN_CACHE.computeIfAbsent(regex, java.util.regex.Pattern::compile);
+        return pattern.matcher(line.trim());
     }
 
     /**

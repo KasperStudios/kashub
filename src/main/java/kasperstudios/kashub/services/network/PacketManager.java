@@ -1,12 +1,8 @@
 package kasperstudios.kashub.services.network;
 
+import com.kasperstudios.khwrapper.KHWrapper;
 import kasperstudios.kashub.Kashub;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import kasperstudios.kashub.network.payload.NetworkingPayloads;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +21,8 @@ public class PacketManager {
     private static final Object LOCK = new Object();
     
     private final Map<String, Consumer<byte[]>> packetHandlers = new ConcurrentHashMap<>();
-    
+    private boolean initialized = false;
+
     private PacketManager() {}
     
     public static PacketManager getInstance() {
@@ -42,27 +39,30 @@ public class PacketManager {
     /**
      * Initialize packet handling.
      */
-    public void initialize() {
-        // Register custom payload type
-        PayloadTypeRegistry.playC2S().register(ScriptPacket.ID, ScriptPacket.CODEC);
-        PayloadTypeRegistry.playS2C().register(ScriptPacket.ID, ScriptPacket.CODEC);
-        
-        // Register packet receiver
-        ClientPlayNetworking.registerGlobalReceiver(ScriptPacket.ID, (payload, context) -> {
-            String channel = payload.channel();
-            byte[] data = payload.data();
-            
-            Consumer<byte[]> handler = packetHandlers.get(channel);
-            if (handler != null) {
-                context.client().execute(() -> {
-                    try {
-                        handler.accept(data);
-                    } catch (Exception e) {
-                        Kashub.LOGGER.error("Error handling packet on channel " + channel, e);
-                    }
-                });
+    public synchronized void initialize() {
+        if (initialized) return;
+        initialized = true;
+        // Unified registration for both directions
+        KHWrapper.register(com.kasperstudios.khwrapper.NetworkRegistration.bidirectional(
+            NetworkingPayloads.ScriptPacketPayload.ID,
+            NetworkingPayloads.ScriptPacketPayload::read,
+            (packet, context) -> {
+                NetworkingPayloads.ScriptPacketPayload payload = (NetworkingPayloads.ScriptPacketPayload) packet;
+                String channel = payload.channel();
+                byte[] data = payload.data();
+                
+                Consumer<byte[]> handler = packetHandlers.get(channel);
+                if (handler != null) {
+                    context.execute(() -> {
+                        try {
+                            handler.accept(data);
+                        } catch (Exception e) {
+                            Kashub.LOGGER.error("Error handling packet on channel " + channel, e);
+                        }
+                    });
+                }
             }
-        });
+        ));
         
         Kashub.LOGGER.info("PacketManager initialized");
     }
@@ -71,13 +71,8 @@ public class PacketManager {
      * Send packet to server.
      */
     public void sendPacket(String channel, byte[] data) {
-        if (!ClientPlayNetworking.canSend(ScriptPacket.ID)) {
-            Kashub.LOGGER.warn("Cannot send packet - not connected to server");
-            return;
-        }
-        
-        ScriptPacket packet = new ScriptPacket(channel, data);
-        ClientPlayNetworking.send(packet);
+        NetworkingPayloads.ScriptPacketPayload packet = new NetworkingPayloads.ScriptPacketPayload(channel, data);
+        KHWrapper.sendPacket(packet);
     }
     
     /**
@@ -106,43 +101,5 @@ public class PacketManager {
      */
     public void clearHandlers() {
         packetHandlers.clear();
-    }
-    
-    /**
-     * Custom packet payload for script communication.
-     */
-    public record ScriptPacket(String channel, byte[] data) implements CustomPayload {
-        
-        public static final CustomPayload.Id<ScriptPacket> ID = 
-            new CustomPayload.Id<>(Identifier.of("kashub", "script_packet"));
-        
-        public static final PacketCodec<RegistryByteBuf, ScriptPacket> CODEC = 
-            new PacketCodec<RegistryByteBuf, ScriptPacket>() {
-                @Override
-                public ScriptPacket decode(RegistryByteBuf buf) {
-                    return read(buf);
-                }
-                
-                @Override
-                public void encode(RegistryByteBuf buf, ScriptPacket packet) {
-                    write(buf, packet);
-                }
-            };
-        
-        private static void write(RegistryByteBuf buf, ScriptPacket packet) {
-            buf.writeString(packet.channel);
-            buf.writeByteArray(packet.data);
-        }
-        
-        private static ScriptPacket read(RegistryByteBuf buf) {
-            String channel = buf.readString();
-            byte[] data = buf.readByteArray();
-            return new ScriptPacket(channel, data);
-        }
-        
-        @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
-        }
     }
 }

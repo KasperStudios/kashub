@@ -1,9 +1,8 @@
 package kasperstudios.kashub.core;
 
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -40,11 +39,11 @@ public class TimerManager {
                         String msg = t.message != null ? t.message : "Timer '" + name + "' expired!";
                         ScriptLogger.getInstance().info("[TIMER] " + msg);
 
-                        MinecraftClient client = MinecraftClient.getInstance();
+                        Minecraft client = Minecraft.getInstance();
                         if (client.player != null) {
                             client.execute(() -> {
                                 if (client.player != null) {
-                                    client.player.sendMessage(Text.literal("§e[TIMER] §r" + msg), false);
+                                    client.player.displayClientMessage(Component.literal("§e[TIMER] §r" + msg), false);
                                 }
                             });
                         }

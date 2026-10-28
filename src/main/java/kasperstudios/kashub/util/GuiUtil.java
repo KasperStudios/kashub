@@ -1,9 +1,9 @@
 package kasperstudios.kashub.util;
 
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class GuiUtil {
-    public static void drawGradientRect(DrawContext context, int x1, int y1, int x2, int y2,
+    public static void drawGradientRect(GuiGraphics context, int x1, int y1, int x2, int y2,
             int colorStart, int colorEnd, boolean vertical) {
         if (vertical) {
             for (int y = y1; y < y2; y++) {
@@ -40,11 +40,11 @@ public class GuiUtil {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
-    public static void drawRect(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+    public static void drawRect(GuiGraphics context, int x1, int y1, int x2, int y2, int color) {
         context.fill(x1, y1, x2, y2, color);
     }
 
-    public static void drawRoundedRect(DrawContext context, int x1, int y1, int x2, int y2, int color, int radius) {
+    public static void drawRoundedRect(GuiGraphics context, int x1, int y1, int x2, int y2, int color, int radius) {
         drawRect(context, x1 + radius, y1, x2 - radius, y2, color);
         drawRect(context, x1, y1 + radius, x1 + radius, y2 - radius, color);
         drawRect(context, x2 - radius, y1 + radius, x2, y2 - radius, color);

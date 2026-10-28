@@ -1,0 +1,16 @@
+// Kashub Auto-Farm - V2 Syntax
+// Simplified farming example
+
+print "=== Auto Farm ==="
+print "This is a simplified example"
+print "Full farming logic requires more complex block detection"
+
+let farmRadius = 5
+print "Farm radius: " + farmRadius + " blocks"
+
+// Get current position
+let startPos = player.getPos()
+print "Starting position: " + startPos.x + ", " + startPos.y + ", " + startPos.z
+
+print "=== Example Complete ==="
+print "Note: Full farming automation requires additional block interaction APIs"

@@ -2,14 +2,11 @@ package kasperstudios.kashub.services.network;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.kasperstudios.khwrapper.IPacketBuffer;
+import com.kasperstudios.khwrapper.IPacketPayload;
+import com.kasperstudios.khwrapper.KHWrapper;
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.config.KashubConfig;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
 
 import java.util.List;
 
@@ -47,19 +44,21 @@ public class ConfigSyncManager {
      * Initialize config sync.
      */
     public void initialize() {
-        // Register payload type
-        PayloadTypeRegistry.playS2C().register(ConfigSyncPacket.ID, ConfigSyncPacket.CODEC);
-        
-        // Register receiver
-        ClientPlayNetworking.registerGlobalReceiver(ConfigSyncPacket.ID, (payload, context) -> {
-            context.client().execute(() -> {
-                try {
-                    applyServerConfig(payload.config());
-                } catch (Exception e) {
-                    Kashub.LOGGER.error("Failed to apply server config", e);
-                }
-            });
-        });
+        // Unified registration
+        KHWrapper.register(com.kasperstudios.khwrapper.NetworkRegistration.s2c(
+            ConfigSyncPacket.ID,
+            ConfigSyncPacket::read,
+            (packet, context) -> {
+                ConfigSyncPacket payload = (ConfigSyncPacket) packet;
+                context.execute(() -> {
+                    try {
+                        applyServerConfig(payload.config());
+                    } catch (Exception e) {
+                        Kashub.LOGGER.error("Failed to apply server config", e);
+                    }
+                });
+            }
+        ));
         
         Kashub.LOGGER.info("ConfigSyncManager initialized");
     }
@@ -109,7 +108,6 @@ public class ConfigSyncManager {
         }
         
         // Return local config with server overrides applied
-        // (Server settings are checked via isCommandAllowed, isEditorAllowed, etc.)
         return KashubConfig.getInstance();
     }
     
@@ -170,38 +168,24 @@ public class ConfigSyncManager {
     /**
      * Config sync packet.
      */
-    public record ConfigSyncPacket(ServerConfig config) implements CustomPayload {
+    public record ConfigSyncPacket(ServerConfig config) implements IPacketPayload {
+        public static final String ID = "kashub:config_sync";
         
-        public static final CustomPayload.Id<ConfigSyncPacket> ID = 
-            new CustomPayload.Id<>(Identifier.of("kashub", "config_sync"));
-        
-        public static final PacketCodec<RegistryByteBuf, ConfigSyncPacket> CODEC = 
-            new PacketCodec<RegistryByteBuf, ConfigSyncPacket>() {
-                @Override
-                public ConfigSyncPacket decode(RegistryByteBuf buf) {
-                    return read(buf);
-                }
-                
-                @Override
-                public void encode(RegistryByteBuf buf, ConfigSyncPacket packet) {
-                    write(buf, packet);
-                }
-            };
-        
-        private static void write(RegistryByteBuf buf, ConfigSyncPacket packet) {
-            String json = GSON.toJson(packet.config);
-            buf.writeString(json);
-        }
-        
-        private static ConfigSyncPacket read(RegistryByteBuf buf) {
-            String json = buf.readString();
-            ServerConfig config = GSON.fromJson(json, ServerConfig.class);
-            return new ConfigSyncPacket(config);
+        @Override
+        public String getPacketId() {
+            return ID;
         }
         
         @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
+        public void write(IPacketBuffer buffer) {
+            String json = GSON.toJson(config);
+            buffer.writeString(json);
+        }
+        
+        public static ConfigSyncPacket read(IPacketBuffer buffer) {
+            String json = buffer.readString();
+            ServerConfig config = GSON.fromJson(json, ServerConfig.class);
+            return new ConfigSyncPacket(config);
         }
     }
 }

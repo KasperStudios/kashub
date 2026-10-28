@@ -7,13 +7,21 @@ import com.sun.net.httpserver.HttpExchange;
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.config.KashubConfig;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 public class KashubAPIServer {
+    private static final String METHOD_GET = "GET";
+    private static final String METHOD_POST = "POST";
+    private static final String METHOD_OPTIONS = "OPTIONS";
+    private static final String METHOD_NOT_ALLOWED = "{\"error\":\"Method not allowed\"}";
+
     private static KashubAPIServer instance;
     private HttpServer server;
     private KashubWebSocketServer wsServer;
@@ -87,45 +95,45 @@ public class KashubAPIServer {
 
         server.createContext("/api/status", exchange -> {
             handleCors(exchange);
-            if ("GET".equals(exchange.getRequestMethod())) {
+            if (METHOD_GET.equals(exchange.getRequestMethod())) {
                 StatusEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
         server.createContext("/api/validate", exchange -> {
             handleCors(exchange);
-            if ("POST".equals(exchange.getRequestMethod())) {
+            if (METHOD_POST.equals(exchange.getRequestMethod())) {
                 ValidateEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
         server.createContext("/api/autocomplete", exchange -> {
             handleCors(exchange);
-            if ("POST".equals(exchange.getRequestMethod())) {
+            if (METHOD_POST.equals(exchange.getRequestMethod())) {
                 AutocompleteEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
         server.createContext("/api/run", exchange -> {
             handleCors(exchange);
-            if ("POST".equals(exchange.getRequestMethod())) {
+            if (METHOD_POST.equals(exchange.getRequestMethod())) {
                 RunEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
@@ -134,18 +142,18 @@ public class KashubAPIServer {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
 
-            if ("OPTIONS".equals(method)) {
+            if (METHOD_OPTIONS.equals(method)) {
                 sendResponse(exchange, 200, "");
                 return;
             }
 
-            if (path.equals("/api/tasks") && "GET".equals(method)) {
+            if (path.equals("/api/tasks") && METHOD_GET.equals(method)) {
                 TasksEndpoint.handleList(exchange, gson);
-            } else if (path.matches("/api/tasks/\\d+/stop") && "POST".equals(method)) {
+            } else if (path.matches("/api/tasks/\\d+/stop") && METHOD_POST.equals(method)) {
                 TasksEndpoint.handleStop(exchange, gson);
-            } else if (path.matches("/api/tasks/\\d+/pause") && "POST".equals(method)) {
+            } else if (path.matches("/api/tasks/\\d+/pause") && METHOD_POST.equals(method)) {
                 TasksEndpoint.handlePause(exchange, gson);
-            } else if (path.matches("/api/tasks/\\d+/resume") && "POST".equals(method)) {
+            } else if (path.matches("/api/tasks/\\d+/resume") && METHOD_POST.equals(method)) {
                 TasksEndpoint.handleResume(exchange, gson);
             } else {
                 sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
@@ -154,23 +162,50 @@ public class KashubAPIServer {
 
         server.createContext("/api/variables", exchange -> {
             handleCors(exchange);
-            if ("GET".equals(exchange.getRequestMethod())) {
+            if (METHOD_GET.equals(exchange.getRequestMethod())) {
                 VariablesEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
         server.createContext("/api/commands", exchange -> {
             handleCors(exchange);
-            if ("GET".equals(exchange.getRequestMethod())) {
+            if (METHOD_GET.equals(exchange.getRequestMethod())) {
                 CommandsEndpoint.handle(exchange, gson);
-            } else if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            } else if (METHOD_OPTIONS.equals(exchange.getRequestMethod())) {
                 sendResponse(exchange, 200, "");
             } else {
-                sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
+            }
+        });
+
+        // Telemetry: Recent script execution logs & prints
+        server.createContext("/api/logs", exchange -> {
+            handleCors(exchange);
+            String method = exchange.getRequestMethod();
+            if (METHOD_OPTIONS.equals(method)) {
+                sendResponse(exchange, 200, "");
+                return;
+            }
+            if (METHOD_GET.equals(method)) {
+                int limit = 50;
+                String query = exchange.getRequestURI().getQuery();
+                if (query != null && query.contains("limit=")) {
+                    try {
+                        for (String p : query.split("&")) {
+                            if (p.startsWith("limit=")) {
+                                limit = Math.min(200, Math.max(1, Integer.parseInt(p.substring(6))));
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                var logs = kasperstudios.kashub.util.ScriptLogger.getInstance().getRecentLogs(limit);
+                sendResponse(exchange, 200, gson.toJson(logs));
+            } else {
+                sendResponse(exchange, 405, METHOD_NOT_ALLOWED);
             }
         });
 
@@ -179,37 +214,37 @@ public class KashubAPIServer {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
 
-            if ("OPTIONS".equals(method)) {
+            if (METHOD_OPTIONS.equals(method)) {
                 sendResponse(exchange, 200, "");
                 return;
             }
 
-            if (path.equals("/api/profiler/status") && "GET".equals(method)) {
+            if (path.equals("/api/profiler/status") && METHOD_GET.equals(method)) {
                 ProfilerEndpoint.handleStatus(exchange, gson);
-            } else if (path.equals("/api/profiler/start") && "POST".equals(method)) {
+            } else if (path.equals("/api/profiler/start") && METHOD_POST.equals(method)) {
                 ProfilerEndpoint.handleStart(exchange, gson);
-            } else if (path.equals("/api/profiler/stop") && "POST".equals(method)) {
+            } else if (path.equals("/api/profiler/stop") && METHOD_POST.equals(method)) {
                 ProfilerEndpoint.handleStop(exchange, gson);
-            } else if (path.equals("/api/profiler/clear") && "POST".equals(method)) {
+            } else if (path.equals("/api/profiler/clear") && METHOD_POST.equals(method)) {
                 ProfilerEndpoint.handleClear(exchange, gson);
-            } else if (path.equals("/api/profiler/report") && "GET".equals(method)) {
+            } else if (path.equals("/api/profiler/report") && METHOD_GET.equals(method)) {
                 ProfilerEndpoint.handleReport(exchange, gson);
-            } else if (path.equals("/api/profiler/json") && "GET".equals(method)) {
+            } else if (path.equals("/api/profiler/json") && METHOD_GET.equals(method)) {
                 ProfilerEndpoint.handleJSON(exchange, gson);
-            } else if (path.equals("/api/profiler/chrome-tracing") && "GET".equals(method)) {
+            } else if (path.equals("/api/profiler/chrome-tracing") && METHOD_GET.equals(method)) {
                 ProfilerEndpoint.handleChromeTracing(exchange, gson);
-            } else if (path.equals("/api/profiler/save") && "POST".equals(method)) {
+            } else if (path.equals("/api/profiler/save") && METHOD_POST.equals(method)) {
                 ProfilerEndpoint.handleSave(exchange, gson);
 
-            } else if (path.equals("/api/debug/scopes") && "GET".equals(method)) {
+            } else if (path.equals("/api/debug/scopes") && METHOD_GET.equals(method)) {
                 DebugEndpoint.handleScopes(exchange, gson);
-            } else if (path.equals("/api/debug/variables") && "GET".equals(method)) {
+            } else if (path.equals("/api/debug/variables") && METHOD_GET.equals(method)) {
                 DebugEndpoint.handleVariables(exchange, gson);
-            } else if (path.equals("/api/debug/evaluate") && "POST".equals(method)) {
+            } else if (path.equals("/api/debug/evaluate") && METHOD_POST.equals(method)) {
                 DebugEndpoint.handleEvaluate(exchange, gson);
-            } else if (path.equals("/api/debug/stacktrace") && "GET".equals(method)) {
+            } else if (path.equals("/api/debug/stacktrace") && METHOD_GET.equals(method)) {
                 DebugEndpoint.handleStackTrace(exchange, gson);
-            } else if (path.equals("/api/debug/setVariable") && "POST".equals(method)) {
+            } else if (path.equals("/api/debug/setVariable") && METHOD_POST.equals(method)) {
                 DebugEndpoint.handleSetVariable(exchange, gson);
 
             } else {

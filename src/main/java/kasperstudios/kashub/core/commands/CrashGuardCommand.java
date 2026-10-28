@@ -4,8 +4,7 @@ import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.core.Context;
 import kasperstudios.kashub.core.Interpreter;
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.client.MinecraftClient;
-
+import net.minecraft.client.Minecraft;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
@@ -47,6 +46,17 @@ public class CrashGuardCommand implements Command {
     }
 
     @Override
+    public kasperstudios.kashub.core.Metadata getMetadata() {
+        return new kasperstudios.kashub.core.Metadata(
+                "crashguard",
+                "Safety",
+                getRegex(),
+                "crashguard([timeout=MS, minFps=N]) { ... }",
+                "Executes enclosed code block with active crash protection, execution timeout, and FPS throttling guard.",
+                List.of("options"));
+    }
+
+    @Override
     public void execute(Context ctx, String line, List<String> blockBody) throws Exception {
         if (blockBody == null || blockBody.isEmpty()) {
             ScriptLogger.getInstance().warn("crashguard: Empty block");
@@ -80,27 +90,22 @@ public class CrashGuardCommand implements Command {
     }
 
     private void executeWithGuard(Context ctx, List<String> blockBody, int timeoutMs, int minFps) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         
-        // Create isolated context to prevent variable pollution
         Context guardContext = new Context(ctx);
         
-        // FPS monitoring
         FpsMonitor fpsMonitor = new FpsMonitor(client, minFps);
         fpsMonitor.start();
         
         try {
-            // Execute with timeout
             Future<?> task = GUARD_EXECUTOR.submit(() -> {
                 try {
                     Interpreter.executeBlock(blockBody, guardContext);
                 } catch (Exception e) {
                     ScriptLogger.getInstance().error("crashguard: Caught exception - " + e.getMessage());
-                    // Don't rethrow - this is the whole point of crashguard
                 }
             });
             
-            // Wait with timeout
             try {
                 task.get(timeoutMs, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
@@ -116,26 +121,25 @@ public class CrashGuardCommand implements Command {
         } finally {
             fpsMonitor.stop();
             
-            // Check if FPS dropped significantly
             if (fpsMonitor.hadFpsDrop()) {
                 ScriptLogger.getInstance().warn("crashguard: FPS drop detected (min: " + fpsMonitor.getMinFps() + ")");
             }
         }
     }
 
-    /**
-     * FPS Monitor - tracks FPS during execution
-     */
     private static class FpsMonitor {
-        private final MinecraftClient client;
+        private final Minecraft client;
         private final int minFpsThreshold;
         private volatile boolean running = false;
         private volatile int minFpsRecorded = Integer.MAX_VALUE;
         private Thread monitorThread;
+        private long lastTickTime;
+        private int tickCount;
         
-        public FpsMonitor(MinecraftClient client, int minFpsThreshold) {
+        public FpsMonitor(Minecraft client, int minFpsThreshold) {
             this.client = client;
             this.minFpsThreshold = minFpsThreshold;
+            this.lastTickTime = System.currentTimeMillis();
         }
         
         public void start() {
@@ -143,20 +147,24 @@ public class CrashGuardCommand implements Command {
             monitorThread = new Thread(() -> {
                 while (running) {
                     try {
-                        int currentFps = client.getCurrentFps();
-                        if (currentFps < minFpsRecorded) {
-                            minFpsRecorded = currentFps;
-                        }
-                        
-                        // If FPS drops too low, log warning
-                        if (currentFps < minFpsThreshold) {
-                            ScriptLogger.getInstance().warn(
-                                "crashguard: Low FPS detected (" + currentFps + " < " + minFpsThreshold + ")");
-                        }
-                        
                         Thread.sleep(FPS_CHECK_INTERVAL_MS);
                     } catch (InterruptedException e) {
                         break;
+                    }
+                    
+                    long now = System.currentTimeMillis();
+                    long elapsed = now - lastTickTime;
+                    lastTickTime = now;
+                    
+                    int currentFps = elapsed > 0 ? (int) (1000L / elapsed) : 60;
+                    
+                    if (currentFps < minFpsRecorded) {
+                        minFpsRecorded = currentFps;
+                    }
+                    
+                    if (currentFps < minFpsThreshold) {
+                        ScriptLogger.getInstance().warn(
+                            "crashguard: Low FPS detected (~" + currentFps + " < " + minFpsThreshold + ")");
                     }
                 }
             });

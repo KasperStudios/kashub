@@ -1,34 +1,32 @@
 package kasperstudios.kashub.gui.dialogs;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.theme.EditorTheme;
 import kasperstudios.kashub.gui.theme.ThemeManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 public class KeybindDialog extends Screen {
     private final Screen parent;
     private final String scriptName;
     private EditorTheme theme;
-    private final TextRenderer textRenderer;
 
     private boolean waitingForKey = false;
     private int currentKey = -1;
 
-    private static final int DIALOG_WIDTH = 300;
-    private static final int DIALOG_HEIGHT = 150;
+    private int getDialogWidth() { return this.width; }
+    private int getDialogHeight() { return this.height; }
 
     public KeybindDialog(Screen parent, String scriptName) {
-        super(Text.literal("Set Keybind"));
+        super(Component.literal("Set Keybind"));
         this.parent = parent;
         this.scriptName = scriptName;
         this.theme = ThemeManager.getCurrentTheme();
-        this.textRenderer = MinecraftClient.getInstance().textRenderer;
+        this.font = Minecraft.getInstance().font;
 
         this.currentKey = KashubConfig.getInstance().getKeyForScript(scriptName);
     }
@@ -39,35 +37,32 @@ public class KeybindDialog extends Screen {
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
 
     }
 
     private int getDialogX() {
-        return (this.width - DIALOG_WIDTH) / 2;
+        return 0;
     }
 
     private int getDialogY() {
-        return (this.height - DIALOG_HEIGHT) / 2;
+        return 0;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 
         context.fill(0, 0, this.width, this.height, 0xCC000000);
 
         int dx = getDialogX();
         int dy = getDialogY();
 
-        context.fill(dx, dy, dx + DIALOG_WIDTH, dy + DIALOG_HEIGHT, theme.sidebarColor);
+        context.fill(dx, dy, dx + getDialogWidth(), dy + getDialogHeight(), theme.sidebarColor);
 
-        context.fill(dx, dy, dx + DIALOG_WIDTH, dy + 2, theme.accentColor);
-        context.fill(dx, dy + DIALOG_HEIGHT - 2, dx + DIALOG_WIDTH, dy + DIALOG_HEIGHT, theme.accentColor);
-        context.fill(dx, dy, dx + 2, dy + DIALOG_HEIGHT, theme.accentColor);
-        context.fill(dx + DIALOG_WIDTH - 2, dy, dx + DIALOG_WIDTH, dy + DIALOG_HEIGHT, theme.accentColor);
+        // Borders removed for fullscreen mode
 
         String title = "⌨ Set Keybind for: " + scriptName;
-        context.drawText(textRenderer, title, dx + 12, dy + 12, theme.textColor, true);
+        context.drawString(font, title, dx + 12, dy + 12, theme.textColor, true);
 
         String keyText;
         if (waitingForKey) {
@@ -79,14 +74,14 @@ public class KeybindDialog extends Screen {
         }
 
         int keyBoxY = dy + 45;
-        context.fill(dx + 12, keyBoxY, dx + DIALOG_WIDTH - 12, keyBoxY + 30,
+        context.fill(dx + 12, keyBoxY, dx + getDialogWidth() - 12, keyBoxY + 30,
             waitingForKey ? (theme.accentColor & 0x44FFFFFF) : theme.buttonColor);
 
-        int textWidth = textRenderer.getWidth(keyText);
-        context.drawText(textRenderer, keyText, dx + (DIALOG_WIDTH - textWidth) / 2, keyBoxY + 10,
+        int textWidth = font.width(keyText);
+        context.drawString(font, keyText, dx + (getDialogWidth() - textWidth) / 2, keyBoxY + 10,
             waitingForKey ? theme.accentColor : theme.textColor, false);
 
-        int buttonY = dy + DIALOG_HEIGHT - 40;
+        int buttonY = dy + getDialogHeight() - 40;
         int buttonWidth = 80;
         int spacing = 10;
 
@@ -94,19 +89,19 @@ public class KeybindDialog extends Screen {
         boolean setHovered = mouseX >= setX && mouseX < setX + buttonWidth && mouseY >= buttonY && mouseY < buttonY + 24;
         context.fill(setX, buttonY, setX + buttonWidth, buttonY + 24,
             setHovered ? brighten(theme.consoleSuccessColor, 20) : theme.consoleSuccessColor);
-        context.drawText(textRenderer, "Set Key", setX + 14, buttonY + 8, 0xFFFFFFFF, true);
+        context.drawString(font, "Set Key", setX + 14, buttonY + 8, 0xFFFFFFFF, true);
 
         int clearX = setX + buttonWidth + spacing;
         boolean clearHovered = mouseX >= clearX && mouseX < clearX + buttonWidth && mouseY >= buttonY && mouseY < buttonY + 24;
         context.fill(clearX, buttonY, clearX + buttonWidth, buttonY + 24,
             clearHovered ? brighten(theme.consoleWarnColor, 20) : theme.consoleWarnColor);
-        context.drawText(textRenderer, "Clear", clearX + 22, buttonY + 8, 0xFFFFFFFF, true);
+        context.drawString(font, "Clear", clearX + 22, buttonY + 8, 0xFFFFFFFF, true);
 
-        int cancelX = dx + DIALOG_WIDTH - buttonWidth - 12;
+        int cancelX = dx + getDialogWidth() - buttonWidth - 12;
         boolean cancelHovered = mouseX >= cancelX && mouseX < cancelX + buttonWidth && mouseY >= buttonY && mouseY < buttonY + 24;
         context.fill(cancelX, buttonY, cancelX + buttonWidth, buttonY + 24,
             cancelHovered ? brighten(theme.buttonColor, 20) : theme.buttonColor);
-        context.drawText(textRenderer, "Cancel", cancelX + 18, buttonY + 8, 0xFFFFFFFF, true);
+        context.drawString(font, "Cancel", cancelX + 18, buttonY + 8, 0xFFFFFFFF, true);
 
         super.render(context, mouseX, mouseY, delta);
     }
@@ -115,12 +110,12 @@ public class KeybindDialog extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int dx = getDialogX();
         int dy = getDialogY();
-        int buttonY = dy + DIALOG_HEIGHT - 40;
+        int buttonY = dy + getDialogHeight() - 40;
         int buttonWidth = 80;
         int spacing = 10;
 
         int keyBoxY = dy + 45;
-        if (mouseX >= dx + 12 && mouseX < dx + DIALOG_WIDTH - 12 &&
+        if (mouseX >= dx + 12 && mouseX < dx + getDialogWidth() - 12 &&
             mouseY >= keyBoxY && mouseY < keyBoxY + 30) {
             waitingForKey = true;
             return true;
@@ -139,9 +134,9 @@ public class KeybindDialog extends Screen {
             return true;
         }
 
-        int cancelX = dx + DIALOG_WIDTH - buttonWidth - 12;
+        int cancelX = dx + getDialogWidth() - buttonWidth - 12;
         if (mouseX >= cancelX && mouseX < cancelX + buttonWidth && mouseY >= buttonY && mouseY < buttonY + 24) {
-            this.close();
+            this.onClose();
             return true;
         }
 
@@ -163,7 +158,7 @@ public class KeybindDialog extends Screen {
         }
 
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            this.close();
+            this.onClose();
             return true;
         }
 
@@ -171,17 +166,17 @@ public class KeybindDialog extends Screen {
     }
 
     @Override
-    public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+    public void onClose() {
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     private String getKeyName(int keyCode) {
-        String name = InputUtil.fromKeyCode(keyCode, 0).getLocalizedText().getString();
+        String name = InputConstants.getKey(keyCode, 0).getDisplayName().getString();
         return name.isEmpty() ? "Key " + keyCode : name;
     }
 

@@ -2,18 +2,16 @@ package kasperstudios.kashub.gui.widgets;
 
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.gui.theme.EditorTheme;
-import kasperstudios.kashub.gui.theme.ThemeManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import java.util.ArrayList;
 import java.util.List;
 
 public class SettingsPanel {
     private int x, y, width, height;
     private EditorTheme theme;
-    private final TextRenderer textRenderer;
+    private final Font textRenderer;
 
     private int scrollY = 0;
     private List<SettingEntry> settings = new ArrayList<>();
@@ -29,7 +27,7 @@ public class SettingsPanel {
         this.width = width;
         this.height = height;
         this.theme = theme;
-        this.textRenderer = MinecraftClient.getInstance().textRenderer;
+        this.textRenderer = Minecraft.getInstance().font;
 
         initializeSettings();
     }
@@ -59,8 +57,6 @@ public class SettingsPanel {
             () -> config.sandboxMode, v -> config.sandboxMode = v));
         settings.add(new SettingEntry("Allow Cheats", "Enable cheat commands",
             () -> config.allowCheats, v -> config.allowCheats = v));
-        settings.add(new SettingEntry("Allow AI", "Enable AI integration",
-            () -> config.allowAiIntegration, v -> config.allowAiIntegration = v));
 
         settings.add(new SettingEntry("SCRIPTS", null, null, true));
         settings.add(new SettingEntry("Hide System Scripts", "Hide example/system scripts in file panel",
@@ -85,12 +81,12 @@ public class SettingsPanel {
             }));
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 
         context.fill(x, y, x + width, y + height, theme.consoleBackground);
 
         context.fill(x, y, x + width, y + HEADER_HEIGHT, adjustBrightness(theme.consoleBackground, 10));
-        context.drawText(textRenderer, "⚙ SETTINGS", x + 10, y + 10, theme.textColor, true);
+        context.drawString(textRenderer, "⚙ SETTINGS", x + 10, y + 10, theme.textColor, true);
 
         context.fill(x, y + HEADER_HEIGHT - 1, x + width, y + HEADER_HEIGHT, theme.accentColor & 0x66FFFFFF);
 
@@ -125,23 +121,23 @@ public class SettingsPanel {
         }
     }
 
-    private void renderSectionHeader(DrawContext context, SettingEntry entry, int rowY) {
+    private void renderSectionHeader(GuiGraphics context, SettingEntry entry, int rowY) {
         context.fill(x, rowY, x + width, rowY + ROW_HEIGHT, adjustBrightness(theme.consoleBackground, 5));
-        context.drawText(textRenderer, "▸ " + entry.name, x + 10, rowY + 14, theme.accentColor, true);
+        context.drawString(textRenderer, "▸ " + entry.name, x + 10, rowY + 14, theme.accentColor, true);
         context.fill(x + 10, rowY + ROW_HEIGHT - 2, x + width - 10, rowY + ROW_HEIGHT - 1, theme.accentColor & 0x44FFFFFF);
     }
 
-    private void renderSettingRow(DrawContext context, SettingEntry entry, int rowY, int mouseX, int mouseY) {
+    private void renderSettingRow(GuiGraphics context, SettingEntry entry, int rowY, int mouseX, int mouseY) {
 
         boolean isHovered = mouseX >= x && mouseX < x + width && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
         if (isHovered) {
             context.fill(x + 4, rowY + 2, x + width - 4, rowY + ROW_HEIGHT - 2, theme.buttonHoverColor);
         }
 
-        context.drawText(textRenderer, entry.name, x + 20, rowY + 8, theme.textColor, false);
+        context.drawString(textRenderer, entry.name, x + 20, rowY + 8, theme.textColor, false);
 
         if (entry.description != null) {
-            context.drawText(textRenderer, entry.description, x + 20, rowY + 22, theme.textDimColor, false);
+            context.drawString(textRenderer, entry.description, x + 20, rowY + 22, theme.textDimColor, false);
         }
 
         if (entry.getter != null) {
@@ -153,7 +149,7 @@ public class SettingsPanel {
         }
     }
 
-    private void renderToggle(DrawContext context, int tx, int ty, boolean value, int mouseX, int mouseY) {
+    private void renderToggle(GuiGraphics context, int tx, int ty, boolean value, int mouseX, int mouseY) {
         boolean isHovered = mouseX >= tx && mouseX < tx + TOGGLE_WIDTH && mouseY >= ty && mouseY < ty + TOGGLE_HEIGHT;
 
         int bgColor = value ? theme.consoleSuccessColor : theme.textDimColor;

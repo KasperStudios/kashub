@@ -1,11 +1,10 @@
 package kasperstudios.kashub.services.integration;
 
 import kasperstudios.kashub.Kashub;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -87,17 +86,17 @@ public class UIIntegrationManager {
      */
     private void injectButton(Screen screen, UIHook hook) throws Exception {
         // Create button
-        ButtonWidget button = ButtonWidget.builder(
-            Text.literal(hook.buttonText),
+        Button button = Button.builder(
+            Component.literal(hook.buttonText),
             btn -> hook.onClick.accept(screen)
         )
-        .dimensions(hook.x, hook.y, hook.width, hook.height)
+        .bounds(hook.x, hook.y, hook.width, hook.height)
         .build();
         
         // Try to add button using reflection
         try {
             // Method 1: Try addDrawableChild (modern Minecraft)
-            Method addDrawableChild = Screen.class.getDeclaredMethod("addDrawableChild", net.minecraft.client.gui.Element.class);
+            Method addDrawableChild = Screen.class.getDeclaredMethod("addDrawableChild", net.minecraft.client.gui.components.events.GuiEventListener.class);
             addDrawableChild.setAccessible(true);
             addDrawableChild.invoke(screen, button);
             Kashub.LOGGER.info("Button injected successfully");
@@ -123,9 +122,9 @@ public class UIIntegrationManager {
      * Get screen class name from current screen.
      */
     public String getCurrentScreenClass() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.currentScreen != null) {
-            return mc.currentScreen.getClass().getName();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) {
+            return mc.screen.getClass().getName();
         }
         return null;
     }
@@ -134,9 +133,9 @@ public class UIIntegrationManager {
      * Check if screen is open.
      */
     public boolean isScreenOpen(String screenClassName) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.currentScreen != null) {
-            return mc.currentScreen.getClass().getName().equals(screenClassName);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) {
+            return mc.screen.getClass().getName().equals(screenClassName);
         }
         return false;
     }

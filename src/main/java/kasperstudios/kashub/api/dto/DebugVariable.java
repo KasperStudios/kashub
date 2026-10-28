@@ -1,6 +1,10 @@
 package kasperstudios.kashub.api.dto;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class DebugVariable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DebugVariable.class);
 
     public String name;
 
@@ -44,7 +48,8 @@ public class DebugVariable {
             Double.parseDouble(value);
             return "number";
         } catch (NumberFormatException e) {
-
+            // Value is not a number, fall through to other type checks
+            LOGGER.debug("Value '{}' is not a number: {}", value, e.getMessage());
         }
 
         if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {

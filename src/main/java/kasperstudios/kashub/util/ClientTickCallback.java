@@ -1,23 +1,26 @@
 package kasperstudios.kashub.util;
 
-import net.minecraft.client.MinecraftClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ClientTickCallback {
-    private static final List<Consumer<MinecraftClient>> END_TICK_CALLBACKS = new ArrayList<>();
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientTickCallback.class);
+    private static final List<Consumer<Minecraft>> END_TICK_CALLBACKS = new ArrayList<>();
 
-    public static void registerEndTick(Consumer<MinecraftClient> callback) {
+    public static void registerEndTick(Consumer<Minecraft> callback) {
         END_TICK_CALLBACKS.add(callback);
     }
 
-    public static void onEndTick(MinecraftClient client) {
-        for (Consumer<MinecraftClient> callback : END_TICK_CALLBACKS) {
+    public static void onEndTick(Minecraft client) {
+        for (Consumer<Minecraft> callback : END_TICK_CALLBACKS) {
             try {
                 callback.accept(client);
             } catch (Exception e) {
-                System.err.println("Error in client tick callback: " + e.getMessage());
+                LOGGER.error("Error in client tick callback: {}", e.getMessage());
             }
         }
     }

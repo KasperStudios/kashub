@@ -1,10 +1,13 @@
 package kasperstudios.kashub.services.modpack;
 
-import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.core.events.EventManager;
 import kasperstudios.kashub.util.ScriptLogger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

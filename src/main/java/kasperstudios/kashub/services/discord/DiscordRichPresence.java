@@ -9,20 +9,16 @@ import com.jagrosh.discordipc.entities.User;
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.api.server.KashubAPIServer;
 import kasperstudios.kashub.config.KashubConfig;
-import kasperstudios.kashub.gui.editor.ModernEditorScreen;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 /**
  * Discord Rich Presence integration for Kashub mod.
- * Shows current game state in Discord profile.
- * 
- * Available assets: end, mclogo, mclogonew, nether, overworld
  */
 public class DiscordRichPresence {
-    private static final long APPLICATION_ID = 1202154855427211274L;
+    private static final long APPLICATION_ID = 1280831105146163210L;
     private static DiscordRichPresence instance;
     
     private IPCClient client;
@@ -30,7 +26,6 @@ public class DiscordRichPresence {
     private boolean initialized = false;
     private long startTimestamp;
     
-    // Asset keys from Discord Developer Portal
     private static final String LARGE_IMAGE_KEY = "mclogonew";
     private static final String SMALL_IMAGE_OVERWORLD = "overworld";
     private static final String SMALL_IMAGE_NETHER = "nether";
@@ -49,17 +44,13 @@ public class DiscordRichPresence {
         if (initialized) return;
         
         KashubConfig config = KashubConfig.getInstance();
-        if (!config.discordRpcEnabled) {
-            Kashub.LOGGER.info("Discord RPC is disabled in config");
-            return;
-        }
+        if (!config.discordRpcEnabled) return;
         
         try {
             client = new IPCClient(APPLICATION_ID);
             client.setListener(new DiscordListener());
             client.connect();
             initialized = true;
-            Kashub.LOGGER.info("Discord RPC initialized");
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to initialize Discord RPC: " + e.getMessage());
             connected = false;
@@ -70,97 +61,49 @@ public class DiscordRichPresence {
     private class DiscordListener implements IPCListener {
         @Override
         public void onReady(IPCClient client) {
-            Kashub.LOGGER.info("Discord RPC connected!");
             connected = true;
             startTimestamp = System.currentTimeMillis() / 1000;
             updatePresence();
         }
         
-        @Override
-        public void onClose(IPCClient client, JsonObject json) {
-            Kashub.LOGGER.info("Discord RPC closed");
-            connected = false;
-        }
-        
-        @Override
-        public void onDisconnect(IPCClient client, Throwable t) {
-            Kashub.LOGGER.warn("Discord RPC disconnected: " + (t != null ? t.getMessage() : "unknown"));
-            connected = false;
-        }
-        
-        @Override
-        public void onPacketSent(IPCClient client, Packet packet) {}
-        
-        @Override
-        public void onPacketReceived(IPCClient client, Packet packet) {}
-        
-        @Override
-        public void onActivityJoin(IPCClient client, String secret) {}
-        
-        @Override
-        public void onActivitySpectate(IPCClient client, String secret) {}
-        
-        @Override
-        public void onActivityJoinRequest(IPCClient client, String secret, User user) {}
+        @Override public void onClose(IPCClient client, JsonObject json) { connected = false; }
+        @Override public void onDisconnect(IPCClient client, Throwable t) { connected = false; }
+        @Override public void onPacketSent(IPCClient client, Packet packet) {}
+        @Override public void onPacketReceived(IPCClient client, Packet packet) {}
+        @Override public void onActivityJoin(IPCClient client, String secret) {}
+        @Override public void onActivitySpectate(IPCClient client, String secret) {}
+        @Override public void onActivityJoinRequest(IPCClient client, String secret, User user) {}
     }
 
     public void updatePresence() {
         if (!connected || client == null) return;
         
-        KashubConfig config = KashubConfig.getInstance();
-        if (!config.discordRpcEnabled) {
-            clearPresence();
-            return;
-        }
-        
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         
         try {
             RichPresence.Builder builder = new RichPresence.Builder();
-            
-            // Set start timestamp for "elapsed" time
             builder.setStartTimestamp(startTimestamp);
-            
-            // Large image - Kashub logo
             builder.setLargeImage(LARGE_IMAGE_KEY, "Kashub Mod");
             
-            if (mc.player != null && mc.world != null) {
-                // Check if VSCode is connected
+            if (mc.player != null && mc.level != null) {
                 if (isVSCodeConnected()) {
                     builder.setDetails("Coding in VSCode");
                     builder.setState("External editor connected");
-                }
-                // Check if in editor
-                else if (ModernEditorScreen.isEditorOpen()) {
-                    String file = ModernEditorScreen.getActiveFile();
+                } else if (mc.screen != null && mc.screen.getClass().getSimpleName().contains("CodeEditorScreen")) {
                     builder.setDetails("Editing Script");
-                    if (file != null) {
-                        builder.setState(file);
-                    } else {
-                        builder.setState("New file");
-                    }
+                    builder.setState("IDE Active");
                 } else {
-                    // In-game state
-                    String state = buildStateString(mc, config);
-                    String details = buildDetailsString(mc, config);
-                    
+                    String state = buildStateString(mc, KashubConfig.getInstance());
+                    String details = buildDetailsString(mc, KashubConfig.getInstance());
                     builder.setDetails(details);
                     builder.setState(state);
                     
-                    // Small image - dimension icon
-                    if (config.discordShowDimension) {
-                        String dimensionIcon = getDimensionIcon(mc.world.getRegistryKey());
-                        String dimensionName = getDimensionName(mc.world.getRegistryKey());
-                        builder.setSmallImage(dimensionIcon, dimensionName);
+                    if (KashubConfig.getInstance().discordShowDimension) {
+                        builder.setSmallImage(getDimensionIcon(mc.level.dimension()), getDimensionName(mc.level.dimension()));
                     }
                 }
-            } else if (mc.currentScreen != null) {
-                // In menu
-                builder.setDetails("In Menu");
-                builder.setState("Browsing menus");
             } else {
-                // Main menu
                 builder.setDetails("Main Menu");
                 builder.setState("Idle");
             }
@@ -171,115 +114,59 @@ public class DiscordRichPresence {
         }
     }
     
-    private String buildDetailsString(MinecraftClient mc, KashubConfig config) {
-        if (mc.isInSingleplayer()) {
-            return "Playing Singleplayer";
-        } else {
-            ServerInfo serverInfo = mc.getCurrentServerEntry();
-            if (serverInfo != null && config.discordShowServerName) {
-                String serverName = serverInfo.name;
-                if (serverName.length() > 32) {
-                    serverName = serverName.substring(0, 29) + "...";
-                }
-                return "Playing on " + serverName;
+    public void clearPresence() {
+        if (client != null && connected) {
+            try { client.sendRichPresence(null); } catch (Exception ignored) {
+                Kashub.LOGGER.debug("Failed to clear Discord presence: {}", ignored.getMessage());
             }
-            return "Playing Multiplayer";
         }
     }
     
-    private String buildStateString(MinecraftClient mc, KashubConfig config) {
-        StringBuilder state = new StringBuilder();
-        
+    public void reconnect() {
+        shutdown();
+        initialize();
+    }
+    
+    private String buildDetailsString(Minecraft mc, KashubConfig config) {
+        if (mc.isLocalServer()) return "Playing Singleplayer";
+        ServerData serverInfo = mc.getCurrentServer();
+        if (serverInfo != null && config.discordShowServerName) return "Playing on " + serverInfo.name;
+        return "Playing Multiplayer";
+    }
+    
+    private String buildStateString(Minecraft mc, KashubConfig config) {
         if (config.discordShowCoords && mc.player != null) {
-            int x = (int) mc.player.getX();
-            int y = (int) mc.player.getY();
-            int z = (int) mc.player.getZ();
-            state.append(String.format("X: %d Y: %d Z: %d", x, y, z));
-        } else if (config.discordShowDimension && mc.world != null) {
-            state.append(getDimensionName(mc.world.getRegistryKey()));
-        } else {
-            state.append("Exploring");
+            return String.format("X: %d Y: %d Z: %d", (int) mc.player.getX(), (int) mc.player.getY(), (int) mc.player.getZ());
         }
-        
-        return state.toString();
+        return mc.level != null ? getDimensionName(mc.level.dimension()) : "Exploring";
     }
     
-    private String getDimensionIcon(RegistryKey<World> dimension) {
-        if (dimension == World.NETHER) {
-            return SMALL_IMAGE_NETHER;
-        } else if (dimension == World.END) {
-            return SMALL_IMAGE_END;
-        }
+    private String getDimensionIcon(ResourceKey<Level> dimension) {
+        if (dimension == Level.NETHER) return SMALL_IMAGE_NETHER;
+        if (dimension == Level.END) return SMALL_IMAGE_END;
         return SMALL_IMAGE_OVERWORLD;
     }
     
-    private String getDimensionName(RegistryKey<World> dimension) {
-        if (dimension == World.NETHER) {
-            return "The Nether";
-        } else if (dimension == World.END) {
-            return "The End";
-        }
+    private String getDimensionName(ResourceKey<Level> dimension) {
+        if (dimension == Level.NETHER) return "The Nether";
+        if (dimension == Level.END) return "The End";
         return "Overworld";
     }
     
     private boolean isVSCodeConnected() {
         try {
             KashubAPIServer server = KashubAPIServer.getInstance();
-            if (server.isRunning() && server.getWebSocketServer() != null) {
-                return server.getWebSocketServer().getClientCount() > 0;
-            }
-        } catch (Exception e) {
-            // Ignore
-        }
-        return false;
-    }
-    
-    public void clearPresence() {
-        if (client != null && connected) {
-            try {
-                client.sendRichPresence(null);
-            } catch (Exception e) {
-                Kashub.LOGGER.debug("Failed to clear Discord presence: " + e.getMessage());
-            }
-        }
+            return server.isRunning() && server.getWebSocketServer() != null && server.getWebSocketServer().getClientCount() > 0;
+        } catch (Exception e) { return false; }
     }
     
     public void shutdown() {
         if (client != null) {
-            try {
-                clearPresence();
-                client.close();
-            } catch (Exception e) {
-                Kashub.LOGGER.debug("Error shutting down Discord RPC: " + e.getMessage());
+            try { client.sendRichPresence(null); client.close(); } catch (Exception ignored) {
+                Kashub.LOGGER.debug("Error during Discord RPC shutdown: {}", ignored.getMessage());
             }
             connected = false;
             initialized = false;
         }
-    }
-    
-    public boolean isConnected() {
-        return connected;
-    }
-    
-    public boolean isEnabled() {
-        return KashubConfig.getInstance().discordRpcEnabled;
-    }
-    
-    public void setEnabled(boolean enabled) {
-        KashubConfig config = KashubConfig.getInstance();
-        config.discordRpcEnabled = enabled;
-        config.save();
-        
-        if (enabled && !initialized) {
-            initialize();
-        } else if (!enabled && connected) {
-            clearPresence();
-        }
-    }
-    
-    public void reconnect() {
-        shutdown();
-        initialized = false;
-        initialize();
     }
 }

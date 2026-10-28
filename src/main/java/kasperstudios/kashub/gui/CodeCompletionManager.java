@@ -1,9 +1,24 @@
 package kasperstudios.kashub.gui;
 
-import kasperstudios.kashub.core.*;
-import java.util.*;
+import kasperstudios.kashub.core.Command;
+import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Interpreter;
+import kasperstudios.kashub.core.Registry;
+import kasperstudios.kashub.core.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 public class CodeCompletionManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CodeCompletionManager.class);
     private static final Map<String, String> commandParameters = new HashMap<>();
     private static final Map<String, String> builtInParameters = new HashMap<>();
     private static final Map<String, String> snippets = new HashMap<>();
@@ -25,8 +40,8 @@ public class CodeCompletionManager {
         }
     };
 
-    private static final Map<String, String> environmentVariables = new HashMap<>();
-
+    // environmentVariables ($PLAYER_X etc.) are legacy v0.8 - removed in v0.9.0 object system.
+    // User-declared variables (let/var) are tracked here for completion.
     private static final Set<String> userVariables = new HashSet<>();
 
     private static final Map<String, List<String>> commandArguments = new HashMap<>();
@@ -39,7 +54,6 @@ public class CodeCompletionManager {
         initializeCommandParameters();
         initializeBuiltInParameters();
         initializeSnippets();
-        initializeEnvironmentVariables();
         initializeCommandArguments();
         initializeV2Completions();
     }
@@ -58,7 +72,7 @@ public class CodeCompletionManager {
             kasperstudios.kashub.core.Interpreter.execute(Collections.emptyList(), tempCtx);
 
             // Expected objects + fallback for safety
-            String[] possibleObjects = { "System", "player", "scanner", "vision", "inventory", "world", "game", "w2p",
+            String[] possibleObjects = { "System", "player", "scanner", "vision", "inventory", "world", "game",
                     "Math", "tag" };
 
             for (String objName : possibleObjects) {
@@ -69,8 +83,7 @@ public class CodeCompletionManager {
             }
 
         } catch (Exception e) {
-            System.err.println("Failed to initialize V2 completions: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Failed to initialize V2 completions: {}", e.getMessage());
         }
     }
 
@@ -98,6 +111,18 @@ public class CodeCompletionManager {
             }
         }
         return result;
+    }
+
+    public static List<String> getUserVariables() {
+        return new ArrayList<>(userVariables);
+    }
+
+    public static List<String> getObjectNames() {
+        return new ArrayList<>(objectDisplayNames);
+    }
+
+    public static List<String> getObjectMembers(String objectName) {
+        return objectMembers.getOrDefault(objectName.toLowerCase(), Collections.emptyList());
     }
 
     public static boolean hasObjectSuggestions(String objectName) {
@@ -136,25 +161,9 @@ public class CodeCompletionManager {
         snippets.put("crashguard_fps", "crashguard(minFps=$fps) {\n    $cursor\n}");
     }
 
-    private static void initializeEnvironmentVariables() {
-        updateEnvironmentVariables();
-    }
-
     private static void initializeCommandArguments() {
         // Core command arguments are now handled by the commands themselves via
         // getArgumentCompletions
-    }
-
-    public static void updateEnvironmentVariables() {
-        environmentVariables.clear();
-        Environment provider = Environment
-                .getInstance();
-
-        for (Map.Entry<String, Environment.Variable> entry : provider
-                .getVariableDefinitions().entrySet()) {
-            String varName = "$" + entry.getKey();
-            environmentVariables.put(varName, entry.getValue().getDescription());
-        }
     }
 
     public static void addUserVariable(String name) {
@@ -220,15 +229,15 @@ public class CodeCompletionManager {
     }
 
     public static String getCommandDescription(String command) {
-        if (command.startsWith("$")) {
-            String description = environmentVariables.get(command.toUpperCase());
-            if (description != null) {
-                return description;
-            }
-            if (userVariables.contains(command.substring(1))) {
-                return "User variable";
-            }
-            return "";
+        // Handle object member lookup (e.g., player.getHealth)
+        if (command.contains(".")) {
+            String[] parts = command.split("\\.", 2);
+            return getMemberDescription(parts[0], parts[1]);
+        }
+
+        // User-declared variables (let/var)
+        if (userVariables.contains(command)) {
+            return "Local variable";
         }
 
         for (ServerCommandMetadata meta : serverCommands) {
@@ -256,6 +265,26 @@ public class CodeCompletionManager {
         return "";
     }
 
+    public static String getMemberDescription(String objectName, String memberName) {
+        // Clean member name (remove parentheses if present)
+        String cleanMember = memberName.contains("(") ? memberName.substring(0, memberName.indexOf('(')) : memberName;
+        
+        // 1. Try to get documentation from the global DocumentationManager (player, System, etc.)
+        String doc = kasperstudios.kashub.util.DocumentationManager.getMemberDoc(objectName, cleanMember);
+        if (doc != null) return doc;
+
+        // 2. Try lookup in PeripheralDocsManager (static CC docs)
+        kasperstudios.kashub.services.integration.PeripheralDocsManager.MethodDoc methodDoc = kasperstudios.kashub.services.integration.PeripheralDocsManager.getDoc(objectName, cleanMember);
+        if (methodDoc != null) return methodDoc.description();
+
+        // 3. Fallback: If it's a known object but we don't have docs for the specific member
+        if (objectMembers.containsKey(objectName.toLowerCase())) {
+            return "Object member of '" + objectName + "'. Usage: " + objectName + "." + cleanMember + "()";
+        }
+
+        return "Object member: " + objectName + "." + cleanMember;
+    }
+
     public static String getCommandParameters(String command) {
         command = command.toLowerCase();
 
@@ -273,6 +302,24 @@ public class CodeCompletionManager {
 
     public static List<String> getCompletions(String partialWord) {
         List<String> result = new ArrayList<>();
+        if (partialWord == null) return result;
+
+        // Check for object member completions (e.g. "System.")
+        if (partialWord.contains(".")) {
+            int dotIndex = partialWord.lastIndexOf('.');
+            String objectName = partialWord.substring(0, dotIndex).toLowerCase();
+            String partialMember = partialWord.substring(dotIndex + 1).toLowerCase();
+            
+            List<String> members = objectMembers.get(objectName);
+            if (members != null) {
+                for (String m : members) {
+                    if (m.toLowerCase().startsWith(partialMember)) {
+                        result.add(partialWord.substring(0, dotIndex + 1) + m);
+                    }
+                }
+            }
+            return result;
+        }
 
         for (String keyword : keywords) {
             if (keyword.toLowerCase().startsWith(partialWord.toLowerCase())) {
@@ -280,21 +327,11 @@ public class CodeCompletionManager {
             }
         }
 
-        if (partialWord.startsWith("$")) {
-            String searchWord = partialWord.substring(1).toUpperCase();
-            for (String var : environmentVariables.keySet()) {
-                if (var.substring(1).startsWith(searchWord)) {
-                    result.add(var);
-                }
+        // User-declared variables (let/var) - no $ prefix in v0.9.0+ object system
+        for (String var : userVariables) {
+            if (var.toLowerCase().startsWith(partialWord.toLowerCase())) {
+                result.add(var);
             }
-
-            for (String var : userVariables) {
-                String varWithPrefix = "$" + var;
-                if (varWithPrefix.toLowerCase().startsWith(partialWord.toLowerCase())) {
-                    result.add(varWithPrefix);
-                }
-            }
-            return result;
         }
 
         for (ServerCommandMetadata meta : serverCommands) {

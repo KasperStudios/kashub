@@ -1,21 +1,20 @@
 package kasperstudios.kashub.api;
 
-import kasperstudios.kashub.mixin.KeyBindingMixin;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public class InputAPI {
     private static InputAPI instance;
-    private final MinecraftClient client;
+    private final Minecraft client;
 
     private InputAPI() {
-        this.client = MinecraftClient.getInstance();
+        this.client = Minecraft.getInstance();
     }
 
     public static InputAPI getInstance() {
@@ -27,26 +26,26 @@ public class InputAPI {
 
     public void jump() {
         client.execute(() -> {
-            if (client.player != null && client.player.isOnGround()) {
-                client.player.jump();
+            if (client.player != null && client.player.onGround()) {
+                client.player.jumpFromGround();
             }
         });
     }
 
     public void setSneak(boolean sneak) {
-        client.execute(() -> setKeyPressed(client.options.sneakKey, sneak));
+        client.execute(() -> setKeyPressed(client.options.keyShift, sneak));
     }
 
     public void toggleSneak() {
         client.execute(() -> {
-            KeyBinding key = client.options.sneakKey;
+            KeyMapping key = client.options.keyShift;
             setKeyPressed(key, !isKeyPressed(key));
         });
     }
 
     public void setSprint(boolean sprint) {
         client.execute(() -> {
-            setKeyPressed(client.options.sprintKey, sprint);
+            setKeyPressed(client.options.keySprint, sprint);
             if (client.player != null) {
                 client.player.setSprinting(sprint);
             }
@@ -54,63 +53,63 @@ public class InputAPI {
     }
 
     public void setForward(boolean forward) {
-        client.execute(() -> setKeyPressed(client.options.forwardKey, forward));
+        client.execute(() -> setKeyPressed(client.options.keyUp, forward));
     }
 
     public void setBack(boolean back) {
-        client.execute(() -> setKeyPressed(client.options.backKey, back));
+        client.execute(() -> setKeyPressed(client.options.keyDown, back));
     }
 
     public void setLeft(boolean left) {
-        client.execute(() -> setKeyPressed(client.options.leftKey, left));
+        client.execute(() -> setKeyPressed(client.options.keyLeft, left));
     }
 
     public void setRight(boolean right) {
-        client.execute(() -> setKeyPressed(client.options.rightKey, right));
+        client.execute(() -> setKeyPressed(client.options.keyRight, right));
     }
 
     public void stopMovement() {
         client.execute(() -> {
-            setKeyPressed(client.options.forwardKey, false);
-            setKeyPressed(client.options.backKey, false);
-            setKeyPressed(client.options.leftKey, false);
-            setKeyPressed(client.options.rightKey, false);
-            setKeyPressed(client.options.jumpKey, false);
-            setKeyPressed(client.options.sneakKey, false);
-            setKeyPressed(client.options.sprintKey, false);
+            setKeyPressed(client.options.keyUp, false);
+            setKeyPressed(client.options.keyDown, false);
+            setKeyPressed(client.options.keyLeft, false);
+            setKeyPressed(client.options.keyRight, false);
+            setKeyPressed(client.options.keyJump, false);
+            setKeyPressed(client.options.keyShift, false);
+            setKeyPressed(client.options.keySprint, false);
         });
     }
 
     public void attack() {
         client.execute(() -> {
-            if (client.interactionManager != null && client.player != null && client.targetedEntity != null) {
-                client.interactionManager.attackEntity(client.player, client.targetedEntity);
+            if (client.gameMode != null && client.player != null && client.crosshairPickEntity != null) {
+                client.gameMode.attack(client.player, client.crosshairPickEntity);
             }
         });
     }
 
     public void use() {
         client.execute(() -> {
-            if (client.interactionManager != null && client.player != null) {
-                client.interactionManager.interactItem(client.player, net.minecraft.util.Hand.MAIN_HAND);
+            if (client.gameMode != null && client.player != null) {
+                client.gameMode.useItem(client.player, net.minecraft.world.InteractionHand.MAIN_HAND);
             }
         });
     }
 
     public void holdAttack(boolean hold) {
-        client.execute(() -> setKeyPressed(client.options.attackKey, hold));
+        client.execute(() -> setKeyPressed(client.options.keyAttack, hold));
     }
 
     public void holdUse(boolean hold) {
-        client.execute(() -> setKeyPressed(client.options.useKey, hold));
+        client.execute(() -> setKeyPressed(client.options.keyUse, hold));
     }
 
     public void swapHands() {
         client.execute(() -> {
-            if (client.player != null && client.getNetworkHandler() != null) {
-                client.getNetworkHandler().sendPacket(new PlayerActionC2SPacket(
-                    PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND,
-                    BlockPos.ORIGIN,
+            if (client.player != null && client.getConnection() != null) {
+                client.getConnection().send(new ServerboundPlayerActionPacket(
+                    ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND,
+                    BlockPos.ZERO,
                     Direction.DOWN
                 ));
             }
@@ -120,7 +119,7 @@ public class InputAPI {
     public void dropItem() {
         client.execute(() -> {
             if (client.player != null) {
-                client.player.dropSelectedItem(false);
+                client.player.drop(false);
             }
         });
     }
@@ -128,7 +127,7 @@ public class InputAPI {
     public void dropStack() {
         client.execute(() -> {
             if (client.player != null) {
-                client.player.dropSelectedItem(true);
+                client.player.drop(true);
             }
         });
     }
@@ -137,7 +136,7 @@ public class InputAPI {
         if (slot < 0 || slot > 8) return;
         client.execute(() -> {
             if (client.player != null) {
-                client.player.getInventory().selectedSlot = slot;
+                client.player.getInventory().selected = slot;
             }
         });
     }
@@ -145,8 +144,8 @@ public class InputAPI {
     public void nextHotbarSlot() {
         client.execute(() -> {
             if (client.player != null) {
-                int current = client.player.getInventory().selectedSlot;
-                client.player.getInventory().selectedSlot = (current + 1) % 9;
+                int current = client.player.getInventory().selected;
+                client.player.getInventory().selected = (current + 1) % 9;
             }
         });
     }
@@ -154,8 +153,8 @@ public class InputAPI {
     public void previousHotbarSlot() {
         client.execute(() -> {
             if (client.player != null) {
-                int current = client.player.getInventory().selectedSlot;
-                client.player.getInventory().selectedSlot = (current + 8) % 9;
+                int current = client.player.getInventory().selected;
+                client.player.getInventory().selected = (current + 8) % 9;
             }
         });
     }
@@ -163,38 +162,27 @@ public class InputAPI {
     public void setLook(float yaw, float pitch) {
         client.execute(() -> {
             if (client.player != null) {
-                client.player.setYaw(yaw);
-                client.player.setPitch(MathHelper.clamp(pitch, -90.0f, 90.0f));
+                client.player.setYRot(yaw);
+                client.player.setXRot(Mth.clamp(pitch, -90.0f, 90.0f));
             }
         });
     }
 
     public void lookAt(double x, double y, double z) {
         client.execute(() -> {
-            ClientPlayerEntity player = client.player;
+            LocalPlayer player = client.player;
             if (player == null) return;
-
-            Vec3d playerPos = player.getEyePos();
-            double dx = x - playerPos.x;
-            double dy = y - playerPos.y;
-            double dz = z - playerPos.z;
-
-            double horizontalDist = Math.sqrt(dx * dx + dz * dz);
-            float yaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
-            float pitch = (float) (-Math.toDegrees(Math.atan2(dy, horizontalDist)));
-
-            player.setYaw(yaw);
-            player.setPitch(MathHelper.clamp(pitch, -90.0f, 90.0f));
+            player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, new Vec3(x, y, z));
         });
     }
 
     public void rotateLook(float deltaYaw, float deltaPitch) {
         client.execute(() -> {
             if (client.player != null) {
-                float newYaw = client.player.getYaw() + deltaYaw;
-                float newPitch = MathHelper.clamp(client.player.getPitch() + deltaPitch, -90.0f, 90.0f);
-                client.player.setYaw(newYaw);
-                client.player.setPitch(newPitch);
+                float newYaw = client.player.getYRot() + deltaYaw;
+                float newPitch = Mth.clamp(client.player.getXRot() + deltaPitch, -90.0f, 90.0f);
+                client.player.setYRot(newYaw);
+                client.player.setXRot(newPitch);
             }
         });
     }
@@ -203,7 +191,7 @@ public class InputAPI {
     public void sprint(boolean enabled) { setSprint(enabled); }
     public void toggleSprint() {
         client.execute(() -> {
-            KeyBinding key = client.options.sprintKey;
+            KeyMapping key = client.options.keySprint;
             setKeyPressed(key, !isKeyPressed(key));
         });
     }
@@ -218,11 +206,11 @@ public class InputAPI {
     public void moveLeft(boolean enabled) { setLeft(enabled); }
     public void moveRight(boolean enabled) { setRight(enabled); }
 
-    private void setKeyPressed(KeyBinding key, boolean pressed) {
-        ((KeyBindingMixin) key).setPressed(pressed);
+    private void setKeyPressed(KeyMapping key, boolean pressed) {
+        key.setDown(pressed);
     }
 
-    private boolean isKeyPressed(KeyBinding key) {
-        return ((KeyBindingMixin) key).isPressed();
+    private boolean isKeyPressed(KeyMapping key) {
+        return key.isDown();
     }
 }

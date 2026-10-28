@@ -101,8 +101,9 @@ public class KashubWebSocketServer {
             String wsKey = null;
 
             while ((line = reader.readLine()) != null && !line.isEmpty()) {
-                if (line.startsWith("Sec-WebSocket-Key:")) {
-                    wsKey = line.substring(19).trim();
+                String lower = line.toLowerCase();
+                if (lower.startsWith("sec-websocket-key:")) {
+                    wsKey = line.substring(line.indexOf(':') + 1).trim();
                 }
             }
 
@@ -171,11 +172,11 @@ public class KashubWebSocketServer {
                 case "launch":
                     handleLaunch(client, json);
                     break;
-                case "stackTrace":
-                    handleStackTrace(client, json);
-                    break;
                 case "scopes":
                     handleScopes(client, json);
+                    break;
+                case "debug_peripheral":
+                    handleDebugPeripheral(client, json);
                     break;
             }
 
@@ -209,6 +210,7 @@ public class KashubWebSocketServer {
             try {
                 client.sendMessage(gson.toJson(response));
             } catch (IOException ioException) {
+                Kashub.LOGGER.warn("Failed to send setVariable error response to WebSocket client: {}", ioException.getMessage());
             }
         }
     }
@@ -217,7 +219,7 @@ public class KashubWebSocketServer {
         String action = json.get("action").getAsString();
         int scriptId = json.has("scriptId") ? json.get("scriptId").getAsInt() : -1;
 
-        System.err.println("DEBUG SERVER: Received action '" + action + "' for scriptId " + scriptId);
+        Kashub.LOGGER.debug("DEBUG SERVER: Received action '{}' for scriptId {}", action, scriptId);
 
         DebugManager dm = DebugManager.getInstance();
 
@@ -276,7 +278,7 @@ public class KashubWebSocketServer {
             try {
                 client.sendMessage(gson.toJson(response));
             } catch (IOException e) {
-
+                Kashub.LOGGER.warn("Failed to send variables response to WebSocket client: {}", e.getMessage());
             }
         }
     }
@@ -343,6 +345,80 @@ public class KashubWebSocketServer {
             client.sendMessage(gson.toJson(response));
         } catch (Exception e) {
             Kashub.LOGGER.error("Error in handleStackTrace", e);
+        }
+    }
+
+    private void handleDebugPeripheral(WebSocketClient client, JsonObject json) {
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.level == null || mc.player == null) {
+                sendError(client, "debug_peripheral_response", "Player not in world");
+                return;
+            }
+
+            net.minecraft.world.phys.HitResult hit = mc.hitResult;
+            if (hit == null || hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                sendError(client, "debug_peripheral_response", "Not looking at a block");
+                return;
+            }
+
+            net.minecraft.world.phys.BlockHitResult blockHit = (net.minecraft.world.phys.BlockHitResult) hit;
+            net.minecraft.core.BlockPos pos = blockHit.getBlockPos();
+            Kashub.LOGGER.info("DEBUG: handleDebugPeripheral called for pos: " + pos);
+            Object peripheral = com.kasperstudios.khwrapper.KHWrapper.get().getComputerCraftPeripheral(mc.level, pos, blockHit.getDirection());
+            Kashub.LOGGER.info("DEBUG: Peripheral found: " + (peripheral != null ? peripheral.getClass().getName() : "null"));
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "debug_peripheral_response");
+            response.addProperty("success", peripheral != null);
+            response.addProperty("blockId", net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(mc.level.getBlockState(pos).getBlock()).toString());
+            response.addProperty("x", pos.getX());
+            response.addProperty("y", pos.getY());
+            response.addProperty("z", pos.getZ());
+
+            if (peripheral != null) {
+                response.addProperty("className", peripheral.getClass().getName());
+                com.google.gson.JsonArray methods = new com.google.gson.JsonArray();
+                
+                // Try to get CC:T specific info
+                try {
+                    java.lang.reflect.Method getType = peripheral.getClass().getMethod("getType");
+                    response.addProperty("peripheralType", (String) getType.invoke(peripheral));
+                    
+                    java.lang.reflect.Method getNames = peripheral.getClass().getMethod("getMethodNames");
+                    String[] names = (String[]) getNames.invoke(peripheral);
+                    if (names != null) {
+                        for (String name : names) methods.add(name);
+                    }
+                } catch (Exception e) {
+                    // Fallback for non-CC peripherals or if reflection fails
+                    for (java.lang.reflect.Method m : peripheral.getClass().getMethods()) {
+                        if (java.lang.reflect.Modifier.isPublic(m.getModifiers()) && m.getParameterCount() == 0) {
+                            methods.add(m.getName());
+                        }
+                    }
+                }
+                response.add("methods", methods);
+            } else {
+                response.addProperty("error", "No peripheral found at this position");
+            }
+
+            client.sendMessage(gson.toJson(response));
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Error in handleDebugPeripheral", e);
+            sendError(client, "debug_peripheral_response", e.getMessage());
+        }
+    }
+
+    private void sendError(WebSocketClient client, String type, String message) {
+        try {
+            JsonObject response = new JsonObject();
+            response.addProperty("type", type);
+            response.addProperty("success", false);
+            response.addProperty("error", message);
+            client.sendMessage(gson.toJson(response));
+        } catch (IOException ignored) {
+            Kashub.LOGGER.debug("Failed to send error response to WebSocket client: {}", ignored.getMessage());
         }
     }
 
@@ -492,6 +568,7 @@ public class KashubWebSocketServer {
             try {
                 socket.close();
             } catch (IOException ignored) {
+                Kashub.LOGGER.debug("Error closing WebSocket client connection: {}", ignored.getMessage());
             }
         }
     }

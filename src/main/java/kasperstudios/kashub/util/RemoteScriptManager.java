@@ -3,32 +3,25 @@ package kasperstudios.kashub.util;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
-
+import com.kasperstudios.khwrapper.KHWrapper;
 import kasperstudios.kashub.network.payload.NetworkingPayloads;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-
-import net.minecraft.util.Identifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class RemoteScriptManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteScriptManager.class);
     private static final RemoteScriptManager INSTANCE = new RemoteScriptManager();
     private final Gson gson = new Gson();
-
-    public static final Identifier CHANNEL = Identifier.of("kashub", "script_mgmt");
 
     // Callbacks
     private Consumer<List<String>> onListReceived;
     private Consumer<String> onActionResponse;
-    private Consumer<String> onScriptContentReceived; // Not really supported by current plugin protocol?
-    // Wait, plugin "Run" executes it. Plugin "List" lists it. Plugin "Save" saves
-    // it.
-    // Does Plugin "Read" exist?
-    // Checking ScriptNetworkHandler: 0=List, 1=Save, 2=Delete, 3=Run.
-    // It does NOT have a "Read" (Get Content) action yet.
-    // I need to add that to plugin if I want to edit files.
+    private Consumer<String> onScriptContentReceived; 
+    private Consumer<List<kasperstudios.kashub.gui.ServerCommandMetadata>> onMetadataReceived;
 
     private RemoteScriptManager() {
     }
@@ -73,8 +66,6 @@ public class RemoteScriptManager {
         sendAction(4, gson.toJson(json));
     }
 
-    private Consumer<List<kasperstudios.kashub.gui.ServerCommandMetadata>> onMetadataReceived;
-
     public void fetchMetadata(Consumer<List<kasperstudios.kashub.gui.ServerCommandMetadata>> callback) {
         this.onMetadataReceived = callback;
         sendAction(5, "{}");
@@ -91,7 +82,7 @@ public class RemoteScriptManager {
                         }.getType());
                         onListReceived.accept(scripts);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LOGGER.error("Failed to parse script list", e);
                         onListReceived.accept(new ArrayList<>());
                     }
                     onListReceived = null;
@@ -119,7 +110,7 @@ public class RemoteScriptManager {
                                 }.getType());
                         onMetadataReceived.accept(meta);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LOGGER.error("Failed to parse server command metadata", e);
                         onMetadataReceived.accept(new ArrayList<>());
                     }
                     onMetadataReceived = null;
@@ -129,6 +120,6 @@ public class RemoteScriptManager {
     }
 
     private void sendAction(int action, String json) {
-        ClientPlayNetworking.send(new NetworkingPayloads.ScriptMgmtPayload((byte) action, json));
+        KHWrapper.sendPacket(new NetworkingPayloads.ScriptMgmtPayload((byte) action, json));
     }
 }

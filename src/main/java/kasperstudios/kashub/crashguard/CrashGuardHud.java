@@ -1,10 +1,9 @@
 package kasperstudios.kashub.crashguard;
 
 import kasperstudios.kashub.crashguard.CrashGuard.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import java.util.Map;
 
 public class CrashGuardHud {
@@ -38,17 +37,17 @@ public class CrashGuardHud {
         posY = y;
     }
 
-    public static void render(DrawContext context, float tickDelta) {
+    public static void render(GuiGraphics context, float tickDelta) {
         if (!enabled) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
         CrashGuard guard = CrashGuard.getInstance();
         GlobalStats global = guard.getGlobalStats();
         Map<String, ScriptStats> scripts = guard.getStats();
 
-        TextRenderer textRenderer = client.textRenderer;
+        Font textRenderer = client.font;
 
         int x = posX;
         int y = posY;
@@ -58,10 +57,10 @@ public class CrashGuardHud {
         if (minimized) {
 
             String status = getGlobalStatusIcon(global, scripts);
-            int width = textRenderer.getWidth(status) + padding * 2;
+            int width = textRenderer.width(status) + padding * 2;
 
             context.fill(x, y, x + width, y + lineHeight + padding * 2, COLOR_BG);
-            context.drawText(textRenderer, status, x + padding, y + padding, getGlobalStatusColor(global, scripts), true);
+            context.drawString(textRenderer, status, x + padding, y + padding, getGlobalStatusColor(global, scripts), true);
             return;
         }
 
@@ -71,13 +70,13 @@ public class CrashGuardHud {
         context.fill(x, y, x + width, y + height, COLOR_BG);
 
         String title = "[CrashGuard] " + global.strictness.name();
-        context.drawText(textRenderer, title, x + padding, y + padding, COLOR_TEXT, true);
+        context.drawString(textRenderer, title, x + padding, y + padding, COLOR_TEXT, true);
         y += lineHeight;
 
         String globalLine = String.format("CPU:%dms Act:%d/s Scripts:%d",
             global.totalCpuTimeMs, global.totalActionsPerSec, global.activeScripts);
         int globalColor = global.totalCpuTimeMs > 20 ? COLOR_WARNING : COLOR_TEXT;
-        context.drawText(textRenderer, globalLine, x + padding, y + padding, globalColor, true);
+        context.drawString(textRenderer, globalLine, x + padding, y + padding, globalColor, true);
         y += lineHeight;
 
         context.fill(x + padding, y + padding, x + width - padding, y + padding + 1, 0x40FFFFFF);
@@ -94,12 +93,12 @@ public class CrashGuardHud {
             String line = String.format("%s %s CPU:%dms %d/s",
                 icon, name, stats.cpuTimeMs, stats.actionsPerSec);
 
-            context.drawText(textRenderer, line, x + padding, y + padding, color, true);
+            context.drawString(textRenderer, line, x + padding, y + padding, color, true);
             y += lineHeight;
         }
 
         if (scripts.isEmpty()) {
-            context.drawText(textRenderer, "  No active scripts", x + padding, y + padding, 0xFF888888, true);
+            context.drawString(textRenderer, "  No active scripts", x + padding, y + padding, 0xFF888888, true);
         }
     }
 

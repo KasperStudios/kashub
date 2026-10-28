@@ -2,6 +2,7 @@ package kasperstudios.kashub.core.commands;
 
 import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Metadata;
 import kasperstudios.kashub.core.Interpreter;
 
 import java.util.List;
@@ -23,7 +24,18 @@ public class ElseCommand implements Command {
 
     @Override
     public String getRegex() {
-        return "^else\\s*\\{$";
+        return "^(?:\\}\\s*)?else\\s*\\{\\s*$";
+    }
+
+    @Override
+    public Metadata getMetadata() {
+        return new Metadata(
+                "else",
+                "Flow",
+                getRegex(),
+                "else { ... }",
+                "Fallback block executed when the preceding if/else if condition evaluated to false.",
+                List.of());
     }
 
     @Override

@@ -17,10 +17,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"kasperstudios.kashub.Kashub"
+			"kasperstudios.kashub.fabric.KasHubFabricBootstrap"
 		],
 		"client": [
-			"kasperstudios.kashub.client.KashubClient"
+			"kasperstudios.kashub.fabric.KashubFabricClientBootstrap"
 		]
 	},
 	"mixins": [
@@ -28,7 +28,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.16.0",
-		"minecraft": "~1.21.1",
+		"minecraft": ">=1.21.1",
 		"java": ">=21",
 		"fabric-api": ">=0.100.0"
 	}

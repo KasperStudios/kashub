@@ -1,6 +1,10 @@
 package kasperstudios.kashub.core.types;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TypedValue {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TypedValue.class);
     private final String value;
     private final KHType type;
     private final KHType declaredType;
@@ -41,7 +45,9 @@ public class TypedValue {
         try {
             Double.parseDouble(value.replace(',', '.'));
             return KHType.NUMBER;
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+            LOGGER.debug("Value '{}' is not a plain number, checking other types", value);
+        }
 
         String[] parts = value.split("[,\\s]+");
         if (parts.length == 3) {

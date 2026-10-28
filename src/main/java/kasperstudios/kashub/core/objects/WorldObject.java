@@ -3,15 +3,17 @@ package kasperstudios.kashub.core.objects;
 import kasperstudios.kashub.core.Value;
 import kasperstudios.kashub.core.Callable;
 import kasperstudios.kashub.services.modpack.CustomCraftingManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import kasperstudios.kashub.core.ExecutionOrigin;
 
-import java.util.*;
-
-public class WorldObject extends Value {
+public class WorldObject extends Value implements Documentable {
 
     public WorldObject() {
         super(createMethods());
@@ -27,35 +29,41 @@ public class WorldObject extends Value {
             int y = args.get(1).asInt();
             int z = args.get(2).asInt();
 
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null)
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null)
                 return Value.NULL;
 
             BlockPos pos = new BlockPos(x, y, z);
-            String id = Registries.BLOCK.getId(client.world.getBlockState(pos).getBlock()).toString();
+            String id = BuiltInRegistries.BLOCK.getKey(client.level.getBlockState(pos).getBlock()).toString();
             return Value.of(id);
         }));
 
         methods.put("getTime", Value.of((Callable) (ctx, args) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null)
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null)
                 return Value.of(0);
-            return Value.of(client.world.getTimeOfDay());
+            return Value.of(client.level.getDayTime());
         }));
 
         methods.put("getWeather", Value.of((Callable) (ctx, args) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null)
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null)
                 return Value.of("unknown");
-            if (client.world.isThundering())
+            if (client.level.isThundering())
                 return Value.of("thunder");
-            if (client.world.isRaining())
+            if (client.level.isRaining())
                 return Value.of("rain");
             return Value.of("clear");
         }));
 
         // Recipes (Legacy CraftCommand)
         methods.put("defineRecipe", Value.of((Callable) (ctx, args) -> {
+            if (!kasperstudios.kashub.config.KashubConfig.getInstance().allowWorldModification) {
+                throw new SecurityException("Access Denied: World modification is disabled by server/config.");
+            }
+            if (ctx.getOrigin() != ExecutionOrigin.SERVER) {
+                throw new SecurityException("Access Denied: world.defineRecipe requires SERVER origin (Root/System level).");
+            }
             // world.defineRecipe("shaped", "id", "AAA", " B ", " ", "A:stick", "B:diamond",
             // "result:diamond_shovel", 1)
             if (args.size() < 2)
@@ -122,6 +130,47 @@ public class WorldObject extends Value {
             return Value.FALSE;
         }));
 
+        // 2D Heading-Rotated Dynamic Radar
+        methods.put("radar", Value.of((Callable) (ctx, args) -> {
+            int radius = args.isEmpty() ? 10 : args.get(0).asInt();
+            String radar = kasperstudios.kashub.services.PerceptionService.getInstance().render2DRadar(radius);
+            return Value.of(radar);
+        }));
+
+        // 3D First-Person ASCII Raymarching View
+        methods.put("viewAscii", Value.of((Callable) (ctx, args) -> {
+            int w = args.isEmpty() ? 36 : args.get(0).asInt();
+            int h = args.size() > 1 ? args.get(1).asInt() : 18;
+            float fov = args.size() > 2 ? (float) args.get(2).asDouble() : 70.0f;
+            String view = kasperstudios.kashub.services.PerceptionService.getInstance().render3DViewAscii(w, h, fov);
+            return Value.of(view);
+        }));
+
+        methods.put("visor", methods.get("viewAscii"));
+
         return methods;
+    }
+
+    @Override
+    public String getObjectName() {
+        return "world";
+    }
+
+    @Override
+    public String getObjectDescription() {
+        return "Access world data such as blocks, time, weather, and dynamic spatial perception (radar, 3D ASCII visor).";
+    }
+
+    @Override
+    public Map<String, String> getMethodDescriptions() {
+        Map<String, String> docs = new java.util.LinkedHashMap<>();
+        docs.put("getBlock(x, y, z)", "Returns the ID of the block at the specified coordinates.");
+        docs.put("getTime()", "Returns the current world time.");
+        docs.put("getWeather()", "Returns the current weather as a string: 'thunder', 'rain', or 'clear'.");
+        docs.put("radar([radius=10])", "Generates a 2D heading-rotated ASCII radar with line-of-sight wall shadows and entity gaze arrows.");
+        docs.put("viewAscii([w=36, h=18, fov=70])", "Renders a 3D first-person ASCII raymarched view from player eyes with depth shading and crosshair targeting.");
+        docs.put("visor([w, h, fov])", "Alias for viewAscii().");
+        docs.put("defineRecipe(type, id, ...)", "Registers or removes a custom recipe (requires SERVER origin).");
+        return docs;
     }
 }

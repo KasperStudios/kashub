@@ -7,6 +7,10 @@ import kasperstudios.kashub.debug.ProfilerManager;
 
 public class ProfilerEndpoint {
 
+    private static final String KEY_ERROR = "error";
+    private static final String KEY_SUCCESS = "success";
+    private static final String KEY_MESSAGE = "message";
+
     public static void handleStatus(HttpExchange exchange, Gson gson) {
         try {
             ProfilerManager profiler = ProfilerManager.getInstance();
@@ -21,7 +25,7 @@ public class ProfilerEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -31,13 +35,13 @@ public class ProfilerEndpoint {
             ProfilerManager.getInstance().start();
 
             JsonObject response = new JsonObject();
-            response.addProperty("success", true);
-            response.addProperty("message", "Profiler started");
+            response.addProperty(KEY_SUCCESS, true);
+            response.addProperty(KEY_MESSAGE, "Profiler started");
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -47,13 +51,13 @@ public class ProfilerEndpoint {
             ProfilerManager.getInstance().stop();
 
             JsonObject response = new JsonObject();
-            response.addProperty("success", true);
-            response.addProperty("message", "Profiler stopped");
+            response.addProperty(KEY_SUCCESS, true);
+            response.addProperty(KEY_MESSAGE, "Profiler stopped");
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -63,13 +67,13 @@ public class ProfilerEndpoint {
             ProfilerManager.getInstance().clear();
 
             JsonObject response = new JsonObject();
-            response.addProperty("success", true);
-            response.addProperty("message", "Profiler data cleared");
+            response.addProperty(KEY_SUCCESS, true);
+            response.addProperty(KEY_MESSAGE, "Profiler data cleared");
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -82,7 +86,7 @@ public class ProfilerEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, report);
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -93,7 +97,7 @@ public class ProfilerEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, json);
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -107,7 +111,7 @@ public class ProfilerEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, tracing);
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -134,14 +138,14 @@ public class ProfilerEndpoint {
             }
 
             JsonObject response = new JsonObject();
-            response.addProperty("success", true);
-            response.addProperty("message", "Profile saved to logs/kashub/profiler/");
+            response.addProperty(KEY_SUCCESS, true);
+            response.addProperty(KEY_MESSAGE, "Profile saved to logs/kashub/profiler/");
             response.addProperty("format", format);
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }

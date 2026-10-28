@@ -14,6 +14,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 public class ProfilerManager {
+    private static final String TIMESTAMP_FORMAT = "yyyy-MM-dd_HH-mm-ss";
+    private static final String PROFILER_LOG_DIR = "profiler";
+
     private static ProfilerManager instance;
     private final Map<String, CommandStats> stats = new ConcurrentHashMap<>();
     private volatile boolean isEnabled = true;
@@ -235,10 +238,10 @@ public class ProfilerManager {
     }
 
     public void saveReport(String filename) throws IOException {
-        Path logsDir = Paths.get("logs", "kashub", "profiler");
+        Path logsDir = Paths.get("logs", "kashub", PROFILER_LOG_DIR);
         Files.createDirectories(logsDir);
 
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
         Path reportPath = logsDir.resolve(filename + "_" + timestamp + ".txt");
 
         Files.writeString(reportPath, generateReport());
@@ -246,10 +249,10 @@ public class ProfilerManager {
     }
 
     public void saveJSON(String filename) throws IOException {
-        Path logsDir = Paths.get("logs", "kashub", "profiler");
+        Path logsDir = Paths.get("logs", "kashub", PROFILER_LOG_DIR);
         Files.createDirectories(logsDir);
 
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
         Path jsonPath = logsDir.resolve(filename + "_" + timestamp + ".json");
 
         Files.writeString(jsonPath, exportToJSON());
@@ -257,10 +260,10 @@ public class ProfilerManager {
     }
 
     public void saveChromeTracing(String filename) throws IOException {
-        Path logsDir = Paths.get("logs", "kashub", "profiler");
+        Path logsDir = Paths.get("logs", "kashub", PROFILER_LOG_DIR);
         Files.createDirectories(logsDir);
 
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
         Path tracePath = logsDir.resolve(filename + "_" + timestamp + "_trace.json");
 
         Files.writeString(tracePath, exportToChromeTracing());

@@ -1,0 +1,8 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "kashub:gui/implant_slot_bg"
+    }
+  ]
+}

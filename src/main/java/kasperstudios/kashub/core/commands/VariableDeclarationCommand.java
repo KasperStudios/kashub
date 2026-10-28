@@ -4,6 +4,7 @@ import kasperstudios.kashub.core.Parser;
 import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.core.Context;
 import kasperstudios.kashub.core.Value;
+import kasperstudios.kashub.core.Metadata;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -25,7 +26,18 @@ public class VariableDeclarationCommand implements Command {
 
     @Override
     public String getRegex() {
-        return "^(let|var)\\s+([a-zA-Z0-9_]+)\\s*=\\s*(.+)$";
+        return "^(let|var)\\s+([a-zA-Z0-9_]+)(?:\\s*=\\s*(.+))?$";
+    }
+
+    @Override
+    public Metadata getMetadata() {
+        return new Metadata(
+                "let",
+                "Core",
+                getRegex(),
+                "let name = expression",
+                "Declares a variable in the current lexical scope with optional initial value.",
+                List.of("name", "value"));
     }
 
     @Override
@@ -34,7 +46,7 @@ public class VariableDeclarationCommand implements Command {
         if (m.find()) {
             String name = m.group(2);
             String expr = m.group(3);
-            Value value = Parser.evaluate(expr, ctx);
+            Value value = expr != null ? Parser.evaluate(expr, ctx) : Value.NULL;
             ctx.declareVariable(name, value);
         }
     }

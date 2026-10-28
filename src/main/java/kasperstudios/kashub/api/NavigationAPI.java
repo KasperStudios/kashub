@@ -1,11 +1,11 @@
 package kasperstudios.kashub.api;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 public class NavigationAPI {
     private static NavigationAPI instance;
@@ -46,13 +46,13 @@ public class NavigationAPI {
         }
         
         // Clear all movement keys
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client != null && client.player != null) {
             client.execute(() -> {
-                client.options.forwardKey.setPressed(false);
-                client.options.backKey.setPressed(false);
-                client.options.leftKey.setPressed(false);
-                client.options.rightKey.setPressed(false);
+                client.options.keyUp.setDown(false);
+                client.options.keyDown.setDown(false);
+                client.options.keyLeft.setDown(false);
+                client.options.keyRight.setDown(false);
             });
         }
     }
@@ -61,16 +61,16 @@ public class NavigationAPI {
         Runnable moveTask = new Runnable() {
             @Override
             public void run() {
-                MinecraftClient client = MinecraftClient.getInstance();
+                Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
-                    ClientPlayerEntity player = client.player;
+                    LocalPlayer player = client.player;
                     if (player == null || !moving.get() || target == null) {
                         stopMovement();
                         return;
                     }
 
-                    Vec3d playerPos = player.getPos();
-                    Vec3d targetVec = Vec3d.ofCenter(target);
+                    Vec3 playerPos = player.position();
+                    Vec3 targetVec = Vec3.atCenterOf(target);
                     double distance = playerPos.distanceTo(targetVec);
 
                     // Check if reached target
@@ -80,37 +80,37 @@ public class NavigationAPI {
                     }
 
                     // Calculate direction
-                    Vec3d direction = targetVec.subtract(playerPos).normalize();
+                    Vec3 direction = targetVec.subtract(playerPos).normalize();
                     
                     // Look towards target
                     double dx = targetVec.x - playerPos.x;
                     double dz = targetVec.z - playerPos.z;
                     float targetYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
-                    player.setYaw(targetYaw);
+                    player.setYRot(targetYaw);
                     
                     // Calculate forward/backward movement based on current yaw
-                    double yaw = Math.toRadians(player.getYaw());
-                    Vec3d lookDir = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
-                    double forwardDot = direction.dotProduct(lookDir);
+                    double yaw = Math.toRadians(player.getYRot());
+                    Vec3 lookDir = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw));
+                    double forwardDot = direction.dot(lookDir);
                     
                     // Calculate strafe movement
-                    Vec3d strafeDir = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
-                    double strafeDot = direction.dotProduct(strafeDir);
+                    Vec3 strafeDir = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
+                    double strafeDot = direction.dot(strafeDir);
                     
                     // Press keys based on direction
-                    client.options.forwardKey.setPressed(forwardDot > 0.1);
-                    client.options.backKey.setPressed(forwardDot < -0.1);
-                    client.options.leftKey.setPressed(strafeDot < -0.1);
-                    client.options.rightKey.setPressed(strafeDot > 0.1);
+                    client.options.keyUp.setDown(forwardDot > 0.1);
+                    client.options.keyDown.setDown(forwardDot < -0.1);
+                    client.options.keyLeft.setDown(strafeDot < -0.1);
+                    client.options.keyRight.setDown(strafeDot > 0.1);
 
                     if (moving.get()) {
                         scheduler.schedule(this, 50, TimeUnit.MILLISECONDS);
                     } else {
                         // Clear all keys when stopped
-                        client.options.forwardKey.setPressed(false);
-                        client.options.backKey.setPressed(false);
-                        client.options.leftKey.setPressed(false);
-                        client.options.rightKey.setPressed(false);
+                        client.options.keyUp.setDown(false);
+                        client.options.keyDown.setDown(false);
+                        client.options.keyLeft.setDown(false);
+                        client.options.keyRight.setDown(false);
                     }
                 });
             }

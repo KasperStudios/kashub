@@ -2,13 +2,22 @@ package kasperstudios.kashub.core;
 
 import kasperstudios.kashub.api.NavigationAPI;
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-
-import java.util.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Task {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Task.class);
     private final int id;
     private final String name;
     private final String code;
@@ -20,14 +29,13 @@ public class Task {
     private long lastTickTime;
     private String lastError;
     private int priority;
-    private int currentLine;
     private int executedCommands;
 
     private final Context context;
     private Thread thread;
     private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
-    public Task(int id, String name, String code, Set<String> tags, Type type) {
+    public Task(int id, String name, String code, Set<String> tags, Type type, ExecutionOrigin origin, List<String> args, boolean sudo, boolean su) {
         this.id = id;
         this.name = name;
         this.code = code;
@@ -37,12 +45,21 @@ public class Task {
         this.lastTickTime = startTime;
         this.state = State.RUNNING;
         this.priority = 0;
-        this.currentLine = 0;
         this.executedCommands = 0;
 
         this.context = new Context();
+        this.context.setOrigin(origin != null ? origin : ExecutionOrigin.USER);
+        this.context.setSudo(sudo);
+        this.context.setSu(su);
         this.context.setVariable("SCRIPT_NAME", Value.of(name));
-        this.context.setVariable("SCRIPT_PATH", Value.of(name + ".kashub"));
+        this.context.setVariable("SCRIPT_PATH", Value.of(name + ".kh"));
+        
+        // Pass arguments to the script
+        List<Value> argValues = new ArrayList<>();
+        if (args != null) {
+            for (String arg : args) argValues.add(Value.of(arg));
+        }
+        this.context.setVariable("args", Value.of(argValues));
     }
 
     public void setVariable(String name, String value) {
@@ -77,21 +94,41 @@ public class Task {
         thread.start();
 
         ScriptLogger.getInstance().info("Task " + id + " (" + name + ") started in background thread");
+        broadcastStateChange();
+    }
+
+    private void broadcastStateChange() {
+        try {
+            kasperstudios.kashub.api.server.KashubAPIServer.broadcast(
+                new kasperstudios.kashub.api.server.events.TaskStateChangeEvent(
+                    id, name, state.name().toLowerCase(), System.currentTimeMillis()
+                )
+            );
+        } catch (Throwable ignored) {}
     }
 
     private void execute() {
         try {
-            List<String> lines = Arrays.asList(code.split("\\r?\\n"));
+            List<String> lines = Arrays.asList(code.split("\n"));
             Interpreter.executeBlock(lines, context);
 
             if (!isStopped.get()) {
                 state = State.STOPPED;
+                broadcastStateChange();
             }
         } catch (Exception e) {
             state = State.ERROR;
             lastError = e.getMessage();
             ScriptLogger.getInstance().error("Task " + id + " (" + name + ") error: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Task {} ({}) execution error", id, name, e);
+            broadcastStateChange();
+            try {
+                kasperstudios.kashub.api.server.KashubAPIServer.broadcast(
+                    new kasperstudios.kashub.api.server.events.ScriptErrorEvent(
+                        id, e.getMessage(), 0, System.currentTimeMillis()
+                    )
+                );
+            } catch (Throwable ignored) {}
         }
     }
 
@@ -99,6 +136,7 @@ public class Task {
         if (state == State.RUNNING) {
             state = State.PAUSED;
             ScriptLogger.getInstance().info("Task " + id + " (" + name + ") paused");
+            broadcastStateChange();
         }
     }
 
@@ -106,12 +144,14 @@ public class Task {
         if (state == State.PAUSED) {
             state = State.RUNNING;
             ScriptLogger.getInstance().info("Task " + id + " (" + name + ") resumed");
+            broadcastStateChange();
         }
     }
 
     public void stop() {
         isStopped.set(true);
         state = State.STOPPED;
+        broadcastStateChange();
 
         if (thread != null && thread.isAlive()) {
             thread.interrupt();
@@ -121,30 +161,31 @@ public class Task {
 
         // Clean up navigation and player input
         NavigationAPI.getInstance().stopMovement();
+        kasperstudios.kashub.services.PathfindingService.getInstance().stop();
         
         // Clear player input and keys on main thread
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client != null) {
             client.execute(() -> {
-                ClientPlayerEntity player = client.player;
+                LocalPlayer player = client.player;
                 if (player != null && player.input != null) {
-                    player.input.movementForward = 0;
-                    player.input.movementSideways = 0;
-                    player.input.pressingForward = false;
-                    player.input.pressingBack = false;
-                    player.input.pressingLeft = false;
-                    player.input.pressingRight = false;
+                    player.input.forwardImpulse = 0;
+                    player.input.leftImpulse = 0;
+                    player.input.up = false;
+                    player.input.down = false;
+                    player.input.left = false;
+                    player.input.right = false;
                     player.input.jumping = false;
-                    player.input.sneaking = false;
+                    player.input.shiftKeyDown = false;
                 }
                 
                 // Also clear key bindings
-                client.options.forwardKey.setPressed(false);
-                client.options.backKey.setPressed(false);
-                client.options.leftKey.setPressed(false);
-                client.options.rightKey.setPressed(false);
-                client.options.jumpKey.setPressed(false);
-                client.options.sneakKey.setPressed(false);
+                client.options.keyUp.setDown(false);
+                client.options.keyDown.setDown(false);
+                client.options.keyLeft.setDown(false);
+                client.options.keyRight.setDown(false);
+                client.options.keyJump.setDown(false);
+                client.options.keyShift.setDown(false);
             });
         }
 
@@ -193,7 +234,7 @@ public class Task {
     }
 
     public int getCurrentLine() {
-        return currentLine;
+        return context.getCurrentLine();
     }
 
     public int getExecutedCommands() {

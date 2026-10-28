@@ -27,7 +27,7 @@ public class ValidateEndpoint {
     
     // Known object names from V2 API
     private static final Set<String> KNOWN_OBJECTS = new HashSet<>(Arrays.asList(
-        "player", "inventory", "world", "scanner", "vision", "game", "w2p"
+        "player", "inventory", "world", "scanner", "vision", "game"
     ));
 
     public static void handle(HttpExchange exchange, Gson gson) {

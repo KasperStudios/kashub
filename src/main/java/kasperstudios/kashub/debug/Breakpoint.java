@@ -1,6 +1,10 @@
 package kasperstudios.kashub.debug;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Breakpoint {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Breakpoint.class);
     private final int line;
     private boolean enabled;
     private BreakpointType type;
@@ -115,7 +119,7 @@ public class Breakpoint {
                 }
             }
         } catch (Exception e) {
-
+            LOGGER.warn("Failed to evaluate hit condition '{}': {}", hitCondition, e.getMessage());
         }
 
         return true;

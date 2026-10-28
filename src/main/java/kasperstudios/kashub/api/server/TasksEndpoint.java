@@ -13,6 +13,10 @@ import java.util.stream.Collectors;
 
 public class TasksEndpoint {
 
+    private static final String TASK_NOT_FOUND = "{\"error\":\"Task not found\"}";
+    private static final String KEY_SUCCESS = "success";
+    private static final String KEY_MESSAGE = "message";
+
     private static final Pattern TASK_ID_PATTERN = Pattern.compile("/api/tasks/(\\d+)/");
 
     public static void handleList(HttpExchange exchange, Gson gson) {
@@ -49,8 +53,8 @@ public class TasksEndpoint {
             TaskManager.getInstance().stop(taskId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Task " + taskId + " stopped");
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_MESSAGE, "Task " + taskId + " stopped");
             response.put("task", taskToMap(task));
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
@@ -74,8 +78,8 @@ public class TasksEndpoint {
             TaskManager.getInstance().pause(taskId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Task " + taskId + " paused");
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_MESSAGE, "Task " + taskId + " paused");
             response.put("task", taskToMap(task));
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
@@ -99,8 +103,8 @@ public class TasksEndpoint {
             TaskManager.getInstance().resume(taskId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Task " + taskId + " resumed");
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_MESSAGE, "Task " + taskId + " resumed");
             response.put("task", taskToMap(task));
 
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));

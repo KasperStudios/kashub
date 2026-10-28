@@ -1,0 +1,60 @@
+// ==========================================
+// KasHub 1.0.0-FSR Comprehensive Engine Test
+// ==========================================
+
+system.print("=== [KasHub Engine Test Suite Started] ===")
+
+// 1. Primitive types & variables
+let x = 10
+let y = 20
+let sum = x + y
+system.print("[1/8] Arithmetic test: 10 + 20 = " + sum)
+
+// 2. Control flow (if/else, loops)
+let passedFlow = false
+if (sum == 30) {
+    passedFlow = true
+}
+system.print("[2/8] Control flow (if): " + passedFlow)
+
+let count = 0
+for (let i = 0; i < 5; i = i + 1) {
+    count = count + 1
+}
+system.print("[2/8] Control flow (for loop): count = " + count)
+
+// 3. Functions
+fn testAdd(a, b) {
+    return a + b
+}
+let res = testAdd(15, 25)
+system.print("[3/8] Custom function test: testAdd(15, 25) = " + res)
+
+// 4. Math object
+let sq = math.sqrt(64)
+let rnd = math.random(100)
+system.print("[4/8] Math test: sqrt(64) = " + sq + ", random(100) = " + rnd)
+
+// 5. Game object & FullBright
+system.print("[5/8] Activating FullBright...")
+game.fullBright()
+system.print("[5/8] FullBright activated successfully!")
+
+// 6. Player object status
+let pName = player.getName()
+let pHealth = player.getHealth()
+let pX = player.getX()
+let pY = player.getY()
+let pZ = player.getZ()
+system.print("[6/8] Player: " + pName + " | HP: " + pHealth + " | Pos: " + pX + ", " + pY + ", " + pZ)
+
+// 7. Inventory object
+let mainItem = player.getMainHand()
+system.print("[7/8] Main hand item: " + mainItem)
+
+// 8. World & Vision
+let time = world.getTime()
+let entities = vision.getEntities(10)
+system.print("[8/8] World time: " + time + " | Nearby entities (10 blocks): " + entities.size())
+
+system.print("=== [KasHub Engine Test Suite Completed Successfully!] ===")

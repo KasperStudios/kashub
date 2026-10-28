@@ -1,21 +1,26 @@
 package kasperstudios.kashub.core.objects;
 
 import kasperstudios.kashub.core.Value;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import kasperstudios.kashub.core.Callable;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.World;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * ScannerObject - OO wrapper for scanner functionality.
  * Usage: scanner.blocks("diamond_ore", radius=32)
  */
-public class ScannerObject extends Value {
+public class ScannerObject extends Value implements Documentable {
+
+    private static final String KEY_DIST = "dist";
 
     public ScannerObject() {
         super(createMethods());
@@ -28,13 +33,13 @@ public class ScannerObject extends Value {
             String type = !args.isEmpty() ? args.get(0).asString() : "*";
             int radius = args.size() > 1 ? args.get(1).asInt() : 32;
 
-            MinecraftClient client = MinecraftClient.getInstance();
-            ClientPlayerEntity player = client.player;
+            Minecraft client = Minecraft.getInstance();
+            LocalPlayer player = client.player;
             if (player == null)
                 return Value.NULL;
 
-            World world = player.getWorld();
-            BlockPos playerPos = player.getBlockPos();
+            Level world = player.level();
+            BlockPos playerPos = player.blockPosition();
             List<Value> results = new ArrayList<>();
 
             int chunkRadius = (radius / 16) + 1;
@@ -50,8 +55,8 @@ public class ScannerObject extends Value {
 
             // Phase 2: Sort by distance
             results.sort((a, b) -> {
-                double d1 = a.getMember("dist").asDouble();
-                double d2 = b.getMember("dist").asDouble();
+                double d1 = a.getMember(KEY_DIST).asDouble();
+                double d2 = b.getMember(KEY_DIST).asDouble();
                 return Double.compare(d1, d2);
             });
 
@@ -85,20 +90,26 @@ public class ScannerObject extends Value {
             String type = !args.isEmpty() ? args.get(0).asString() : "living";
             int radius = args.size() > 1 ? args.get(1).asInt() : 32;
 
-            MinecraftClient client = MinecraftClient.getInstance();
-            ClientPlayerEntity player = client.player;
+            Minecraft client = Minecraft.getInstance();
+            LocalPlayer player = client.player;
             if (player == null)
                 return Value.NULL;
 
-            net.minecraft.util.math.Box box = player.getBoundingBox().expand(radius);
-            List<net.minecraft.entity.Entity> entities = player.getWorld().getOtherEntities(player, box);
+            net.minecraft.world.phys.AABB box = player.getBoundingBox().inflate(radius);
+            List<net.minecraft.world.entity.Entity> entities = player.level().getEntities(player, box);
             List<Value> results = new ArrayList<>();
 
-            for (net.minecraft.entity.Entity entity : entities) {
-                String entityId = Registries.ENTITY_TYPE.getId(entity.getType()).getPath();
+            for (net.minecraft.world.entity.Entity entity : entities) {
+                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
                 
-                if (!type.equals("*") && !type.equals("all") && !entityId.contains(type))
-                    continue;
+                boolean match = false;
+                if (type.equals("*") || type.equals("all")) match = true;
+                else if (type.equals("living") && entity instanceof net.minecraft.world.entity.LivingEntity) match = true;
+                else if (type.equals("monsters") && entity instanceof net.minecraft.world.entity.monster.Monster) match = true;
+                else if (type.equals("players") && entity instanceof net.minecraft.world.entity.player.Player) match = true;
+                else if (entityId.contains(type)) match = true;
+
+                if (!match) continue;
 
                 Map<String, Value> entityData = new HashMap<>();
                 entityData.put("type", Value.of(entityId));
@@ -106,32 +117,59 @@ public class ScannerObject extends Value {
                 entityData.put("x", Value.of(entity.getX()));
                 entityData.put("y", Value.of(entity.getY()));
                 entityData.put("z", Value.of(entity.getZ()));
-                entityData.put("dist", Value.of(player.distanceTo(entity)));
+                entityData.put(KEY_DIST, Value.of(player.distanceTo(entity)));
                 
-                if (entity instanceof net.minecraft.entity.LivingEntity living) {
+                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
                     entityData.put("health", Value.of(living.getHealth()));
                 }
+                
+                // Internal reference for combat methods
+                entityData.put("_entity", Value.of(entity));
                 
                 results.add(Value.of(entityData));
             }
 
             // Sort by distance
             results.sort((a, b) -> {
-                double d1 = a.getMember("dist").asDouble();
-                double d2 = b.getMember("dist").asDouble();
+                double d1 = a.getMember(KEY_DIST).asDouble();
+                double d2 = b.getMember(KEY_DIST).asDouble();
                 return Double.compare(d1, d2);
             });
 
             return Value.of(results);
         }));
 
+        methods.put("getBlock", Value.of((Callable) (ctx, args) -> {
+            if (args.size() < 3) return Value.NULL;
+            BlockPos pos = new BlockPos(args.get(0).asInt(), args.get(1).asInt(), args.get(2).asInt());
+            Minecraft client = Minecraft.getInstance();
+            if (client.player == null) return Value.NULL;
+            return Value.of(com.kasperstudios.khwrapper.KHWrapper.get().getBlockId(client.player.level().getBlockState(pos).getBlock()));
+        }));
+
+        methods.put("isSolid", Value.of((Callable) (ctx, args) -> {
+            if (args.size() < 3) return Value.FALSE;
+            BlockPos pos = new BlockPos(args.get(0).asInt(), args.get(1).asInt(), args.get(2).asInt());
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null) return Value.FALSE;
+            return Value.of(client.level.getBlockState(pos).isSolid());
+        }));
+
+        methods.put("isAir", Value.of((Callable) (ctx, args) -> {
+            if (args.size() < 3) return Value.FALSE;
+            BlockPos pos = new BlockPos(args.get(0).asInt(), args.get(1).asInt(), args.get(2).asInt());
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null) return Value.FALSE;
+            return Value.of(client.level.getBlockState(pos).isAir());
+        }));
+
         return methods;
     }
 
-    private static void scanChunk(World world, ChunkPos chunkPos, BlockPos playerPos, String targetType, int radius,
+    private static void scanChunk(Level world, ChunkPos chunkPos, BlockPos playerPos, String targetType, int radius,
             List<Value> results) {
-        int startX = chunkPos.getStartX();
-        int startZ = chunkPos.getStartZ();
+        int startX = chunkPos.getMinBlockX();
+        int startZ = chunkPos.getMinBlockZ();
 
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
@@ -142,9 +180,9 @@ public class ScannerObject extends Value {
                 if (distXZ > radius)
                     continue;
 
-                for (int y = world.getBottomY(); y <= world.getTopY(); y++) {
+                for (int y = world.getMinBuildHeight(); y <= world.getMaxBuildHeight(); y++) {
                     BlockPos pos = new BlockPos(worldX, y, worldZ);
-                    String blockId = Registries.BLOCK.getId(world.getBlockState(pos).getBlock()).getPath();
+                    String blockId = com.kasperstudios.khwrapper.KHWrapper.get().getBlockId(world.getBlockState(pos).getBlock());
 
                     if (targetType.equals("*") || blockId.contains(targetType)) {
                         Map<String, Value> block = new HashMap<>();
@@ -152,11 +190,32 @@ public class ScannerObject extends Value {
                         block.put("y", Value.of(pos.getY()));
                         block.put("z", Value.of(pos.getZ()));
                         block.put("id", Value.of(blockId));
-                        block.put("dist", Value.of(Math.sqrt(pos.getSquaredDistance(playerPos))));
+                        block.put(KEY_DIST, Value.of(Math.sqrt(pos.distSqr(playerPos))));
                         results.add(Value.of(block));
                     }
                 }
             }
         }
+    }
+
+    @Override
+    public String getObjectName() {
+        return "scanner";
+    }
+
+    @Override
+    public String getObjectDescription() {
+        return "Environmental scanner for locating blocks and entities nearby.";
+    }
+
+    @Override
+    public Map<String, String> getMethodDescriptions() {
+        Map<String, String> docs = new java.util.LinkedHashMap<>();
+        docs.put("blocks(type, [radius])", "Scans for blocks matching 'type' within the given radius (default 32). Use '*' for all blocks. Returns a list of block maps sorted by distance.");
+        docs.put("entities(type, [radius])", "Scans for entities matching 'type' within the given radius (default 32). Types: '*', 'living', 'monsters', 'players', or entity ID. Returns a list of entity maps.");
+        docs.put("getBlock(x, y, z)", "Returns the block ID string at the specified coordinates.");
+        docs.put("isSolid(x, y, z)", "Returns true if the block at the specified coordinates is solid.");
+        docs.put("isAir(x, y, z)", "Returns true if the block at the specified coordinates is air.");
+        return docs;
     }
 }

@@ -3,20 +3,22 @@ package kasperstudios.kashub.network;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.kasperstudios.khwrapper.KHWrapper;
+import com.kasperstudios.khwrapper.IPacketPayload;
+import com.kasperstudios.khwrapper.IPacketContext;
+import com.kasperstudios.khwrapper.NetworkRegistration;
 import kasperstudios.kashub.Kashub;
-import kasperstudios.kashub.core.TaskManager;
-import kasperstudios.kashub.core.Task;
-import kasperstudios.kashub.network.dto.ServerConfig;
 import kasperstudios.kashub.network.payload.NetworkingPayloads;
-import kasperstudios.kashub.util.ScriptLogger;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.client.MinecraftClient;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 public class NetworkingManager {
     private static final NetworkingManager INSTANCE = new NetworkingManager();
     private final Gson gson = new Gson();
+    private boolean initialized = false;
+
+    private static final Map<String, BiConsumer<IPacketPayload, IPacketContext>> CLIENT_HANDLERS = new HashMap<>();
 
     private NetworkingManager() {
     }
@@ -25,115 +27,137 @@ public class NetworkingManager {
         return INSTANCE;
     }
 
-    public void initialize() {
-        // Register Payload Types
-        PayloadTypeRegistry.playC2S().register(NetworkingPayloads.HandshakePayload.ID,
-                NetworkingPayloads.HandshakePayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(NetworkingPayloads.LogPayload.ID, NetworkingPayloads.LogPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(NetworkingPayloads.ConfigPayload.ID,
-                NetworkingPayloads.ConfigPayload.CODEC);
-
-        // Script Mgmt (Bidirectional)
-        PayloadTypeRegistry.playC2S().register(NetworkingPayloads.ScriptMgmtPayload.ID,
-                NetworkingPayloads.ScriptMgmtPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(NetworkingPayloads.ScriptMgmtPayload.ID,
-                NetworkingPayloads.ScriptMgmtPayload.CODEC);
-
-        // Script Execution (S2C)
-        PayloadTypeRegistry.playS2C().register(NetworkingPayloads.ScriptExecutionPayload.ID,
-                NetworkingPayloads.ScriptExecutionPayload.CODEC);
-
-        // Send Handshake on Join
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            sendHandshake(client);
-        });
-
-        // Reset logic on Disconnect
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            ServerModeManager.getInstance().switchToLocal();
-        });
-
-        // Register Config Receiver
-        ClientPlayNetworking.registerGlobalReceiver(NetworkingPayloads.ConfigPayload.ID, (payload, context) -> {
-            String json = payload.json();
-
-            // Handle on client thread
-            context.client().execute(() -> {
-                try {
-                    JsonObject root = gson.fromJson(json, JsonObject.class);
-
-                    if (root.has("config")) {
-                        ServerConfig config = gson.fromJson(root.get("config"), ServerConfig.class);
-                        ServerModeManager.getInstance().switchToServerControlled(config);
-
-                        String serverName = root.has("serverName")
-                                ? root.get("serverName").getAsString()
-                                : "Server";
-
-                        ScriptLogger.getInstance().info(
-                                "KasHub: Config received from " + serverName + ". Switched to SERVER_CONTROLLED mode.");
-                    } else {
-                        Kashub.LOGGER.warn("KasHub: Received config packet without 'config' object");
-                    }
-                } catch (JsonSyntaxException e) {
-                    Kashub.LOGGER.error("KasHub: Failed to parse server config JSON", e);
-                    ScriptLogger.getInstance()
-                            .error("KasHub: Received invalid config from server. Remaining in LOCAL mode.");
-                } catch (Exception e) {
-                    Kashub.LOGGER.error("KasHub: Error processing server config", e);
-                }
-            });
-        });
-        // Register Script Execution Receiver
-        ClientPlayNetworking.registerGlobalReceiver(NetworkingPayloads.ScriptExecutionPayload.ID,
-                (payload, context) -> {
-                    context.client().execute(() -> {
-                        // Execute script
-                        // Check security? Server forced it.
-                        // TODO: check allowCheatMode if script uses restricted features?
-                        // For now, trust the server.
-                        try {
-                            // v0.9.0: Use ScriptTasks for server scripts
-                            TaskManager.getInstance()
-                                    .startScript(payload.scriptName(), payload.content(),
-                                            java.util.Collections.singleton("server_pushed"),
-                                            kasperstudios.kashub.core.Type.REMOTE);
-
-                            ScriptLogger.getInstance().info("Started server script: " + payload.scriptName());
-                        } catch (Exception e) {
-                            ScriptLogger.getInstance().error(
-                                    "Failed to execute server script " + payload.scriptName() + ": " + e.getMessage());
-                        }
-                    });
-                });
-
-        // Register Script Management Response Receiver (from plugin)
-        // Register Script Management Response Receiver (from plugin)
-        ClientPlayNetworking.registerGlobalReceiver(NetworkingPayloads.ScriptMgmtPayload.ID,
-                (payload, context) -> {
-                    context.client().execute(() -> {
-                        kasperstudios.kashub.util.RemoteScriptManager.getInstance().handleMessage(payload.action(),
-                                payload.data());
-                    });
-                });
+    public static void setClientHandler(String id, BiConsumer<IPacketPayload, IPacketContext> handler) {
+        CLIENT_HANDLERS.put(id, handler);
     }
 
-    private void sendHandshake(MinecraftClient client) {
-        if (client.player == null)
-            return;
+    public synchronized void initialize() {
+        if (initialized) return;
+        initialized = true;
 
+        // --- C2S PACKETS (Server-side handlers) ---
+
+        // Register Handshake (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.HandshakePayload.ID,
+            NetworkingPayloads.HandshakePayload::read,
+            null // Sent by client, server handler added if needed elsewhere
+        ));
+
+        // Register Log (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.LogPayload.ID,
+            NetworkingPayloads.LogPayload::read,
+            null
+        ));
+
+        // Computer Link (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.ComputerLinkPayload.ID,
+            NetworkingPayloads.ComputerLinkPayload::read,
+            NetworkingHandlers::handleComputerLink
+        ));
+
+        // CC Script Push (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.CCScriptPushPayload.ID,
+            NetworkingPayloads.CCScriptPushPayload::read,
+            NetworkingHandlers::handleCCScriptPush
+        ));
+
+        // CC Terminal Input (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.CCTerminalInputPayload.ID,
+            NetworkingPayloads.CCTerminalInputPayload::read,
+            NetworkingHandlers::handleCCTerminalInput
+        ));
+
+        // CC File Read Request (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.CCFileReadRequestPayload.ID,
+            NetworkingPayloads.CCFileReadRequestPayload::read,
+            NetworkingHandlers::handleCCFileReadRequest
+        ));
+
+        // Peripheral Scan Request (C2S)
+        KHWrapper.register(NetworkRegistration.c2s(
+            NetworkingPayloads.PeripheralScanRequestPayload.ID,
+            NetworkingPayloads.PeripheralScanRequestPayload::read,
+            NetworkingHandlers::handlePeripheralScanRequest
+        ));
+
+
+        // --- S2C PACKETS (Client-side handlers via proxy) ---
+
+        registerS2C(NetworkingPayloads.ConfigPayload.ID, NetworkingPayloads.ConfigPayload::read);
+        registerS2C(NetworkingPayloads.ScriptExecutionPayload.ID, NetworkingPayloads.ScriptExecutionPayload::read);
+        registerS2C(NetworkingPayloads.BlackoutPayload.ID, NetworkingPayloads.BlackoutPayload::read);
+        registerS2C(NetworkingPayloads.InjectionStatusPayload.ID, NetworkingPayloads.InjectionStatusPayload::read);
+        registerS2C(NetworkingPayloads.ImplantSyncPayload.ID, NetworkingPayloads.ImplantSyncPayload::read);
+        registerS2C(NetworkingPayloads.VisualEffectPayload.ID, NetworkingPayloads.VisualEffectPayload::read);
+        registerS2C(NetworkingPayloads.CCFileListPayload.ID, NetworkingPayloads.CCFileListPayload::read);
+        registerS2C(NetworkingPayloads.CCTerminalOutputPayload.ID, NetworkingPayloads.CCTerminalOutputPayload::read);
+        registerS2C(NetworkingPayloads.CCFileContentPayload.ID, NetworkingPayloads.CCFileContentPayload::read);
+        registerS2C(NetworkingPayloads.PeripheralScanResultPayload.ID, NetworkingPayloads.PeripheralScanResultPayload::read);
+
+        // --- BIDIRECTIONAL PACKETS ---
+
+        KHWrapper.register(NetworkRegistration.bidirectional(
+            NetworkingPayloads.ScriptMgmtPayload.ID,
+            NetworkingPayloads.ScriptMgmtPayload::read,
+            (packet, context) -> {
+                // Server-side
+                NetworkingHandlers.handleScriptMgmt(packet, context);
+                // Client-side proxy
+                BiConsumer<IPacketPayload, IPacketContext> clientHandler = CLIENT_HANDLERS.get(NetworkingPayloads.ScriptMgmtPayload.ID);
+                if (clientHandler != null) clientHandler.accept(packet, context);
+            }
+        ));
+
+
+
+        // --- Connection Events ---
+
+        KHWrapper.onPlayerJoin(this::onPlayerJoin);
+        KHWrapper.onPlayerLeave(this::onPlayerLeave);
+    }
+
+    private void registerS2C(String id, java.util.function.Function<com.kasperstudios.khwrapper.IPacketBuffer, IPacketPayload> decoder) {
+        KHWrapper.register(NetworkRegistration.s2c(id, decoder, (packet, context) -> {
+            BiConsumer<IPacketPayload, IPacketContext> handler = CLIENT_HANDLERS.get(id);
+            if (handler != null) {
+                handler.accept(packet, context);
+            }
+        }));
+    }
+
+    private void onPlayerJoin() {
+        if (KHWrapper.get().isClientSide()) {
+            // Delay handshake slightly to ensure networking is stable
+            new Thread(() -> {
+                try {
+                    Thread.sleep(1000);
+                    sendHandshake();
+                } catch (InterruptedException e) {
+                    Kashub.LOGGER.error("Handshake delay interrupted", e);
+                }
+            }).start();
+        }
+    }
+
+    private void onPlayerLeave() {
+        if (KHWrapper.get().isClientSide()) {
+            ServerModeManager.getInstance().switchToLocal();
+        }
+    }
+
+    private void sendHandshake() {
         try {
             JsonObject json = new JsonObject();
-            json.addProperty("modId", NetworkingConstants.MOD_ID);
-            json.addProperty("version", Kashub.VERSION);
-            json.addProperty("clientId", client.player.getUuid().toString());
-
-            // Telemetry
-            json.addProperty("platform", System.getProperty("os.name")); // Simple OS name
-            json.addProperty("modLoader", "Fabric"); // Hardcoded for Fabric mod
-            json.addProperty("deviceSpec", Runtime.getRuntime().availableProcessors() + " cores, "
-                    + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB RAM");
-
+            json.addProperty("modId", "kashub");
+            json.addProperty("version", "1.0.0");
+            json.addProperty("platform", System.getProperty("os.name"));
+            
             JsonObject caps = new JsonObject();
             caps.addProperty("supportsServerConfig", true);
             caps.addProperty("supportsCommandBlocking", true);
@@ -142,25 +166,38 @@ public class NetworkingManager {
 
             json.add("capabilities", caps);
 
-            ClientPlayNetworking.send(new NetworkingPayloads.HandshakePayload(gson.toJson(json)));
+            KHWrapper.sendPacket(new NetworkingPayloads.HandshakePayload(gson.toJson(json)));
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to send handshake", e);
         }
     }
 
     public void sendLog(String type, String data) {
-        if (MinecraftClient.getInstance().getNetworkHandler() == null)
-            return;
-
         try {
             JsonObject json = new JsonObject();
             json.addProperty("type", type);
             json.addProperty("data", data);
             json.addProperty("time", System.currentTimeMillis());
 
-            ClientPlayNetworking.send(new NetworkingPayloads.LogPayload(gson.toJson(json)));
+            KHWrapper.sendPacket(new NetworkingPayloads.LogPayload(gson.toJson(json)));
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to send log packet", e);
+        }
+    }
+
+    public void sendCCTerminalInput(int computerId, String input) {
+        try {
+            KHWrapper.sendPacket(new NetworkingPayloads.CCTerminalInputPayload(computerId, input));
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Failed to send CC terminal input", e);
+        }
+    }
+
+    public void sendCCScriptPush(int computerId, String filename, String content) {
+        try {
+            KHWrapper.sendPacket(new NetworkingPayloads.CCScriptPushPayload(computerId, filename, content));
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Failed to send CC script push", e);
         }
     }
 }

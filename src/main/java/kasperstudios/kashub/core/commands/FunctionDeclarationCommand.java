@@ -26,6 +26,17 @@ public class FunctionDeclarationCommand implements Command {
     }
 
     @Override
+    public Metadata getMetadata() {
+        return new Metadata(
+                "fn",
+                "Core",
+                getRegex(),
+                "fn name(arg1, arg2) { ... }",
+                "Declares a reusable named function with parameters and return value.",
+                List.of("name", "arguments"));
+    }
+
+    @Override
     public void execute(Context ctx, String line, List<String> blockBody) throws Exception {
         Matcher m = getMatcher(line);
         if (m.find()) {
@@ -40,7 +51,7 @@ public class FunctionDeclarationCommand implements Command {
         }
     }
 
-    public static class Function {
+    public static class Function implements Callable {
         public final String name;
         public final List<String> argNames;
         public final List<String> body;
@@ -51,10 +62,12 @@ public class FunctionDeclarationCommand implements Command {
             this.body = body;
         }
 
+        @Override
         public Value call(Context parentCtx, List<Value> args) {
-            Context innerCtx = new Context(parentCtx);
-            for (int i = 0; i < argNames.size() && i < args.size(); i++) {
-                innerCtx.declareVariable(argNames.get(i), args.get(i));
+            Context innerCtx = new Context(parentCtx, true);
+            for (int i = 0; i < argNames.size(); i++) {
+                Value val = (i < args.size()) ? args.get(i) : Value.NULL;
+                innerCtx.declareVariable(argNames.get(i), val);
             }
             Interpreter.executeBlock(body, innerCtx);
             return innerCtx.returnValue;

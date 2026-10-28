@@ -2,6 +2,7 @@ package kasperstudios.kashub.core.commands;
 
 import kasperstudios.kashub.core.Command;
 import kasperstudios.kashub.core.Context;
+import kasperstudios.kashub.core.Metadata;
 import java.util.List;
 
 public class BreakCommand implements Command {
@@ -18,6 +19,17 @@ public class BreakCommand implements Command {
     @Override
     public String getRegex() {
         return "^break$";
+    }
+
+    @Override
+    public Metadata getMetadata() {
+        return new Metadata(
+                "break",
+                "Flow",
+                getRegex(),
+                "break",
+                "Immediately breaks out of the innermost while or for loop.",
+                List.of());
     }
 
     @Override

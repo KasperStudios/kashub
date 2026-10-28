@@ -2,11 +2,10 @@ package kasperstudios.kashub.services.modpack;
 
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -184,7 +183,7 @@ public class CustomCraftingManager {
      * @param inventory The crafting inventory (3x3 grid)
      * @return The result ItemStack if a recipe matches, or ItemStack.EMPTY
      */
-    public ItemStack matchRecipe(net.minecraft.inventory.RecipeInputInventory inventory) {
+    public ItemStack matchRecipe(net.minecraft.world.inventory.CraftingContainer inventory) {
         // Try shaped recipes first
         for (CustomRecipe recipe : recipes.values()) {
             if (recipe.getType() == RecipeType.SHAPED) {
@@ -209,7 +208,7 @@ public class CustomCraftingManager {
     /**
      * Check if a shaped recipe matches the crafting grid.
      */
-    private boolean matchesShapedRecipe(CustomRecipe recipe, net.minecraft.inventory.RecipeInputInventory inventory) {
+    private boolean matchesShapedRecipe(CustomRecipe recipe, net.minecraft.world.inventory.CraftingContainer inventory) {
         String[] pattern = recipe.getPattern();
         Map<Character, Item> ingredients = recipe.getShapedIngredients();
         
@@ -221,7 +220,7 @@ public class CustomCraftingManager {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 int slotIndex = row * 3 + col;
-                ItemStack stackInSlot = inventory.getStack(slotIndex);
+                ItemStack stackInSlot = inventory.getItem(slotIndex);
                 
                 char patternChar = pattern[row].length() > col ? pattern[row].charAt(col) : ' ';
                 
@@ -250,7 +249,7 @@ public class CustomCraftingManager {
     /**
      * Check if a shapeless recipe matches the crafting grid.
      */
-    private boolean matchesShapelessRecipe(CustomRecipe recipe, net.minecraft.inventory.RecipeInputInventory inventory) {
+    private boolean matchesShapelessRecipe(CustomRecipe recipe, net.minecraft.world.inventory.CraftingContainer inventory) {
         List<Item> requiredItems = recipe.getShapelessIngredients();
         
         if (requiredItems == null) {
@@ -259,8 +258,8 @@ public class CustomCraftingManager {
         
         // Count items in inventory
         Map<Item, Integer> inventoryItems = new HashMap<>();
-        for (int i = 0; i < inventory.size(); i++) {
-            ItemStack stack = inventory.getStack(i);
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty()) {
                 inventoryItems.put(stack.getItem(), inventoryItems.getOrDefault(stack.getItem(), 0) + 1);
             }
@@ -292,12 +291,12 @@ public class CustomCraftingManager {
      */
     private Item getItemFromId(String itemId) {
         try {
-            Identifier id = Identifier.tryParse(itemId);
+            ResourceLocation id = ResourceLocation.tryParse(itemId);
             if (id == null) {
                 // Try with minecraft namespace
-                id = Identifier.of("minecraft", itemId);
+                id = ResourceLocation.fromNamespaceAndPath("minecraft", itemId);
             }
-            return Registries.ITEM.get(id);
+            return BuiltInRegistries.ITEM.get(id);
         } catch (Exception e) {
             return null;
         }

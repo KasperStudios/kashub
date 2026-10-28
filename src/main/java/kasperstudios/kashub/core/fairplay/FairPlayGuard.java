@@ -2,16 +2,16 @@ package kasperstudios.kashub.core.fairplay;
 
 import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.network.ServerModeManager;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * FairPlayGuard enforces rules to prevent cheating when cheats are disabled.
@@ -50,30 +50,30 @@ public class FairPlayGuard {
      * - Must be visible (Line of Sight).
      * - Glass/Water considered transparent (Visual raycast).
      */
-    public static boolean validateBlockReach(PlayerEntity player, BlockPos targetPos) {
+    public static boolean validateBlockReach(Player player, BlockPos targetPos) {
         if (!isFairPlayEnforced())
             return true;
 
-        Vec3d cameraPos = player.getCameraPosVec(1.0f);
-        Vec3d targetCenter = targetPos.toCenterPos();
+        Vec3 cameraPos = player.getEyePosition(1.0f);
+        Vec3 targetCenter = targetPos.getCenter();
 
         // 1. Distance Check
         double reach = getReachDistance(player);
-        if (cameraPos.squaredDistanceTo(targetCenter) > reach * reach) {
+        if (cameraPos.distanceToSqr(targetCenter) > reach * reach) {
             return false;
         }
 
         // 2. Line of Sight Check (Raycast)
         // FluidHandling.NONE -> See through water
         // ShapeType.VISUAL -> See through glass/grass, hit solid blocks
-        RaycastContext context = new RaycastContext(
+        ClipContext context = new ClipContext(
                 cameraPos,
                 targetCenter,
-                RaycastContext.ShapeType.VISUAL,
-                RaycastContext.FluidHandling.NONE,
+                ClipContext.Block.VISUAL,
+                ClipContext.Fluid.NONE,
                 player);
 
-        BlockHitResult hit = player.getWorld().raycast(context);
+        BlockHitResult hit = player.level().clip(context);
 
         // Success if we hit ANY part of the target block, or if we didn't hit anything
         // blocking us (unlikely for block check but safe)
@@ -89,34 +89,34 @@ public class FairPlayGuard {
      * Validates reach and visibility for Entity interaction (Attack/Interact).
      * Uses ProjectileUtil for precise bounding box checking.
      */
-    public static boolean validateEntityReach(PlayerEntity player, Entity targetEntity) {
+    public static boolean validateEntityReach(Player player, Entity targetEntity) {
         if (!isFairPlayEnforced())
             return true;
         if (targetEntity == null)
             return false;
 
         double reach = getReachDistance(player);
-        Vec3d cameraPos = player.getCameraPosVec(1.0f);
-        Vec3d rotationVec = player.getRotationVec(1.0f);
-        Vec3d endPos = cameraPos.add(rotationVec.multiply(reach));
+        Vec3 cameraPos = player.getEyePosition(1.0f);
+        Vec3 rotationVec = player.getViewVector(1.0f);
+        Vec3 endPos = cameraPos.add(rotationVec.scale(reach));
 
         // 1. Broad Phase: Bounding Box expansion
-        Box box = player.getBoundingBox().stretch(rotationVec.multiply(reach)).expand(1.0D, 1.0D, 1.0D);
+        AABB box = player.getBoundingBox().expandTowards(rotationVec.scale(reach)).inflate(1.0D, 1.0D, 1.0D);
 
         // 2. Narrow Phase: Entity Raycast
-        EntityHitResult hit = ProjectileUtil.raycast(
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
                 player,
                 cameraPos,
                 endPos,
                 box,
-                (entity) -> !entity.isSpectator() && entity.canHit(),
+                (entity) -> !entity.isSpectator() && entity.isPickable(),
                 reach * reach);
 
         // Success only if the raycast explicitly hit our target
         return hit != null && hit.getEntity() == targetEntity;
     }
 
-    private static double getReachDistance(PlayerEntity player) {
+    private static double getReachDistance(Player player) {
         // In future: read attribute 'generic.block_interaction_range'
         return DEFAULT_REACH;
     }

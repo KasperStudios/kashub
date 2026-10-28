@@ -21,6 +21,9 @@ import java.util.Map;
 
 public class DebugEndpoint {
 
+    private static final String KEY_SCRIPT_ID = "scriptId";
+    private static final String KEY_ERROR = "error";
+
     private static final int SCOPE_LOCAL = 1;
     private static final int SCOPE_GLOBAL = 2;
     private static final int SCOPE_EVENT = 3;
@@ -29,11 +32,11 @@ public class DebugEndpoint {
     public static void handleScopes(HttpExchange exchange, Gson gson) {
         try {
             String query = exchange.getRequestURI().getQuery();
-            int scriptId = extractIntParam(query, "scriptId", -1);
+            int scriptId = extractIntParam(query, KEY_SCRIPT_ID, -1);
 
             if (scriptId == -1) {
                 JsonObject error = new JsonObject();
-                error.addProperty("error", "Missing scriptId parameter");
+                error.addProperty(KEY_ERROR, "Missing scriptId parameter");
                 KashubAPIServer.sendResponse(exchange, 400, gson.toJson(error));
                 return;
             }
@@ -76,7 +79,7 @@ public class DebugEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -85,11 +88,11 @@ public class DebugEndpoint {
         try {
             String query = exchange.getRequestURI().getQuery();
             int variablesReference = extractIntParam(query, "variablesReference", 0);
-            int scriptId = extractIntParam(query, "scriptId", -1);
+            int scriptId = extractIntParam(query, KEY_SCRIPT_ID, -1);
 
             if (variablesReference == 0) {
                 JsonObject error = new JsonObject();
-                error.addProperty("error", "Missing variablesReference parameter");
+                error.addProperty(KEY_ERROR, "Missing variablesReference parameter");
                 KashubAPIServer.sendResponse(exchange, 400, gson.toJson(error));
                 return;
             }
@@ -134,7 +137,7 @@ public class DebugEndpoint {
                     // v0.9.0: Use EnvironmentVariableProvider for environment variables
                     for (Map.Entry<String, Environment.Variable> entry : Environment
                             .getInstance().getVariableDefinitions().entrySet()) {
-                        String value = entry.getValue().getValue();
+                        String value = entry.getValue().getValue().asString();
                         String type = DebugVariable.inferType(value);
                         variables.add(new DebugVariable("$" + entry.getKey(), value, type));
                     }
@@ -142,7 +145,7 @@ public class DebugEndpoint {
 
                 default:
                     JsonObject error = new JsonObject();
-                    error.addProperty("error", "Invalid variablesReference: " + variablesReference);
+                    error.addProperty(KEY_ERROR, "Invalid variablesReference: " + variablesReference);
                     KashubAPIServer.sendResponse(exchange, 400, gson.toJson(error));
                     return;
             }
@@ -153,7 +156,7 @@ public class DebugEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -164,7 +167,7 @@ public class DebugEndpoint {
             JsonObject request = gson.fromJson(body, JsonObject.class);
 
             String expression = request.get("expression").getAsString();
-            int scriptId = request.has("scriptId") ? request.get("scriptId").getAsInt() : -1;
+            int scriptId = request.has(KEY_SCRIPT_ID) ? request.get(KEY_SCRIPT_ID).getAsInt() : -1;
 
             Map<String, String> variables = scriptId != -1
                     ? DebugManager.getInstance().getVariables(scriptId)
@@ -186,7 +189,7 @@ public class DebugEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -194,11 +197,11 @@ public class DebugEndpoint {
     public static void handleStackTrace(HttpExchange exchange, Gson gson) {
         try {
             String query = exchange.getRequestURI().getQuery();
-            int scriptId = extractIntParam(query, "scriptId", -1);
+            int scriptId = extractIntParam(query, KEY_SCRIPT_ID, -1);
 
             if (scriptId == -1) {
                 JsonObject error = new JsonObject();
-                error.addProperty("error", "Missing scriptId parameter");
+                error.addProperty(KEY_ERROR, "Missing scriptId parameter");
                 KashubAPIServer.sendResponse(exchange, 400, gson.toJson(error));
                 return;
             }
@@ -234,7 +237,7 @@ public class DebugEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }
@@ -246,7 +249,7 @@ public class DebugEndpoint {
 
             String name = request.get("name").getAsString();
             String value = request.get("value").getAsString();
-            int scriptId = request.has("scriptId") ? request.get("scriptId").getAsInt() : -1;
+            int scriptId = request.has(KEY_SCRIPT_ID) ? request.get(KEY_SCRIPT_ID).getAsInt() : -1;
             String scope = request.has("scope") ? request.get("scope").getAsString() : "local";
 
             if (scope.equals("local") && scriptId != -1) {
@@ -268,7 +271,7 @@ public class DebugEndpoint {
             KashubAPIServer.sendResponse(exchange, 200, gson.toJson(response));
         } catch (Exception e) {
             JsonObject error = new JsonObject();
-            error.addProperty("error", e.getMessage());
+            error.addProperty(KEY_ERROR, e.getMessage());
             KashubAPIServer.sendResponse(exchange, 500, gson.toJson(error));
         }
     }

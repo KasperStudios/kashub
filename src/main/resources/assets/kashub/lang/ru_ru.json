@@ -1,6 +1,19 @@
 {
   "item.kashub.teleport_staff": "Посох телепортации",
   "category.kashub.main": "Kashub мод",
-  "key.kashub.openmenu": "Открыть меню",
-  "key.kashub.stopscripts": "Остановить скрипты"
+  "category.kashub": "Kashub",
+  "key.kashub.open_editor": "Открыть редактор",
+  "key.kashub.stop_scripts": "Остановить скрипты",
+  "key.kashub.menu": "Нейро-интерфейс",
+  "item.kashub.neuro_implant_t1": "Нейро-имплант (Тир 1)",
+  "item.kashub.neuro_implant_t2": "Нейро-имплант (Тир 2)",
+  "item.kashub.neuro_implant.tier": "Уровень: %d",
+  "item.kashub.neuro_implant.instruction": "§e[ Поместите в нейро-слот для активации ]",
+  "item.kashub.neuro_implant.desc.t1": "Базовый доступ к KasHub API и автоматизации.",
+  "item.kashub.neuro_implant.desc.t2": "Расширенный доступ. Поддержка ComputerCraft:Т.",
+  "item.kashub.neuro_implant.warning": "ВНИМАНИЕ: Требуется хирургическая установка.",
+  "item.kashub.neuro_implant.t2_requires_cc": "Ошибка: Нейро-ядро V2 требует установленного ComputerCraft!",
+  "message.kashub.no_implant": "Ошибка: Нейро-связь не обнаружена. Установите имплант.",
+  "message.kashub.slot_occupied": "Ошибка: Нейро-слот уже занят!",
+  "message.kashub.link_established": "§bНейро-связь установлена с Computer #%d"
 }

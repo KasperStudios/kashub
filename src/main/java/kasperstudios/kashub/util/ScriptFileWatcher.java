@@ -5,7 +5,7 @@ import kasperstudios.kashub.config.KashubConfig;
 import kasperstudios.kashub.core.Task;
 import kasperstudios.kashub.core.TaskManager;
 import kasperstudios.kashub.core.State;
-import net.fabricmc.loader.api.FabricLoader;
+import com.kasperstudios.khwrapper.KHWrapper;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -24,7 +24,7 @@ public class ScriptFileWatcher {
     private boolean running = false;
 
     private ScriptFileWatcher() {
-        this.scriptsDir = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("scripts");
+        this.scriptsDir = KHWrapper.get().getConfigDir().resolve("kashub").resolve("scripts");
     }
 
     public static ScriptFileWatcher getInstance() {
@@ -259,7 +259,7 @@ public class ScriptFileWatcher {
                             FileTime lastModified = Files.getLastModifiedTime(path);
                             fileTimestamps.put(scriptName, lastModified);
                         } catch (IOException e) {
-
+                            Kashub.LOGGER.warn("Failed to read last modified time for script: {}", path, e);
                         }
                     });
         } catch (IOException e) {

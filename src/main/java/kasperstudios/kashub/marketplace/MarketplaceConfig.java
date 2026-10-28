@@ -2,13 +2,16 @@ package kasperstudios.kashub.marketplace;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import com.kasperstudios.khwrapper.KHWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.*;
 
 public class MarketplaceConfig {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MarketplaceConfig.class);
     private static MarketplaceConfig instance;
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("marketplace.json");
+    private static final Path CONFIG_PATH = KHWrapper.get().getConfigDir().resolve("kashub").resolve("marketplace.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final String DEFAULT_REPOSITORY = "https://github.com/kasperstudios/kashub-scripts";
@@ -53,7 +56,7 @@ public class MarketplaceConfig {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load marketplace config: " + e.getMessage());
+            LOGGER.error("Failed to load marketplace config: {}", e.getMessage());
         }
 
         MarketplaceConfig config = new MarketplaceConfig();
@@ -67,7 +70,7 @@ public class MarketplaceConfig {
             String json = GSON.toJson(this);
             Files.write(CONFIG_PATH, json.getBytes());
         } catch (Exception e) {
-            System.err.println("Failed to save marketplace config: " + e.getMessage());
+            LOGGER.error("Failed to save marketplace config: {}", e.getMessage());
         }
     }
 

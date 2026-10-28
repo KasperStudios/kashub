@@ -5,12 +5,11 @@ import kasperstudios.kashub.core.TaskManager;
 import kasperstudios.kashub.core.Interpreter;
 import kasperstudios.kashub.core.Context;
 import kasperstudios.kashub.core.Type;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import com.kasperstudios.khwrapper.KHWrapper;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -18,9 +17,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ScriptManager {
-    private static final Path SCRIPTS_DIR = FabricLoader.getInstance().getConfigDir().resolve("kashub")
+    private static final Path SCRIPTS_DIR = KHWrapper.getConfigDir().resolve("kashub")
             .resolve("scripts");
-    private static final Path SERVER_SCRIPTS_DIR = FabricLoader.getInstance().getConfigDir().resolve("kashub")
+    private static final Path SERVER_SCRIPTS_DIR = KHWrapper.getConfigDir().resolve("kashub")
             .resolve("modpack_scripts");
 
     private static List<String> cachedSystemScripts = null;
@@ -67,6 +66,22 @@ public class ScriptManager {
                 return Files.readString(scriptFile, StandardCharsets.UTF_8);
             }
 
+            // Fallback: search recursively in subdirectories (e.g. examples/example_combat.kh)
+            if (Files.exists(SCRIPTS_DIR)) {
+                try (var stream = Files.walk(SCRIPTS_DIR, 3)) {
+                    var found = stream
+                            .filter(p -> Files.isRegularFile(p) && p.getFileName().toString().equals(filename))
+                            .findFirst();
+                    if (found.isPresent()) {
+                        return Files.readString(found.get(), StandardCharsets.UTF_8);
+                    }
+                } catch (IOException ignored) {}
+            }
+
+            // Fallback to server script
+            String serverContent = loadServerScript(baseName);
+            if (serverContent != null) return serverContent;
+
             return null;
         } catch (Exception e) {
             Kashub.LOGGER.error("Failed to load script: " + name, e);
@@ -76,17 +91,17 @@ public class ScriptManager {
 
     public static String loadSystemScript(String name) {
         try {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client.getResourceManager() == null) {
                 return null;
             }
 
             String path = name.contains("/") ? "scripts/" + name + ".kh" : "scripts/" + name + ".kh";
-            Identifier id = Identifier.of(Kashub.MOD_ID, path);
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(Kashub.MOD_ID, path);
             Optional<Resource> resourceOpt = client.getResourceManager().getResource(id);
 
             if (resourceOpt.isPresent()) {
-                try (InputStream is = resourceOpt.get().getInputStream();
+                try (InputStream is = resourceOpt.get().open();
                         BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().collect(Collectors.joining("\n"));
                 }
@@ -112,7 +127,16 @@ public class ScriptManager {
             return true;
         }
 
-        return baseName.startsWith("example_") || baseName.startsWith("system_");
+        // Just in case cache isn't populated, check common fallbacks
+        List<String> fallbacks = List.of(
+            "example_vision", "example_http", "example_input", "example_animations",
+            "example_tasks", "example_ore_detector", "example_music",
+            "example_basic", "example_building", "example_combat", "example_farming",
+            "example_mining", "example_autocraft", "example_autotrade", "example_events",
+            "example_pathfind_advanced", "example_scanner_advanced", "example_deepslate_miner",
+            "example_area_clearer");
+        
+        return fallbacks.contains(baseName) || baseName.startsWith("system_core_");
     }
 
     public static Type getScriptType(String name) {
@@ -180,14 +204,14 @@ public class ScriptManager {
 
         List<String> scripts = new ArrayList<>();
         try {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client != null && client.getResourceManager() != null) {
                 ResourceManager resourceManager = client.getResourceManager();
 
-                Map<Identifier, Resource> foundResources = resourceManager.findResources("scripts",
+                Map<ResourceLocation, Resource> foundResources = resourceManager.listResources("scripts",
                         id -> id.getPath().endsWith(".kh"));
 
-                for (Identifier id : foundResources.keySet()) {
+                for (ResourceLocation id : foundResources.keySet()) {
 
                     if (!id.getNamespace().equals(Kashub.MOD_ID)) {
                         continue;
@@ -274,16 +298,16 @@ public class ScriptManager {
      * Check if player has operator permissions (can edit server scripts)
      */
     public static boolean isOperator() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null)
             return false;
 
         // In singleplayer, always allow
-        if (client.isInSingleplayer())
+        if (client.isLocalServer())
             return true;
 
         // In multiplayer, check if player has permission level 2+ (operator)
-        return client.player.hasPermissionLevel(2);
+        return client.player.hasPermissions(2);
     }
 
     /**

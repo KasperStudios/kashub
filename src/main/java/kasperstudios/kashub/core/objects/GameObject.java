@@ -1,19 +1,20 @@
 package kasperstudios.kashub.core.objects;
 
 import kasperstudios.kashub.core.Value;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
 import kasperstudios.kashub.core.Callable;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.SimpleOption;
-
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GameObject extends Value {
+public class GameObject extends Value implements Documentable {
 
     public GameObject() {
         super(createMethods());
     }
+
+    public static boolean fullBrightEnabled = false;
 
     private static Map<String, Value> createMethods() {
         Map<String, Value> methods = new HashMap<>();
@@ -22,12 +23,14 @@ public class GameObject extends Value {
             if (args.isEmpty())
                 return Value.FALSE;
             double gamma = args.get(0).asDouble();
-            setGammaDirectly(MinecraftClient.getInstance().options.getGamma(), gamma);
+            fullBrightEnabled = (gamma > 1.0);
+            setGammaDirectly(Minecraft.getInstance().options.gamma(), gamma);
             return Value.TRUE;
         }));
 
         methods.put("fullBright", Value.of((Callable) (ctx, args) -> {
-            setGammaDirectly(MinecraftClient.getInstance().options.getGamma(), 100.0);
+            fullBrightEnabled = true;
+            setGammaDirectly(Minecraft.getInstance().options.gamma(), 100.0);
             return Value.TRUE;
         }));
 
@@ -35,21 +38,54 @@ public class GameObject extends Value {
             if (args.isEmpty())
                 return Value.FALSE;
             int fov = args.get(0).asInt();
-            MinecraftClient.getInstance().options.getFov().setValue(fov);
+            Minecraft.getInstance().options.fov().set(fov);
             return Value.TRUE;
         }));
 
         return methods;
     }
 
-    private static void setGammaDirectly(SimpleOption<Double> gammaOption, double value) {
+    private static void setGammaDirectly(OptionInstance<Double> gammaOption, double value) {
         try {
-            Field valueField = SimpleOption.class.getDeclaredField("value");
+            // Direct field access via AccessWidener: OptionInstance.value
+            gammaOption.value = value;
+            return;
+        } catch (Throwable ignored) {}
+
+        // Fallback: Reflection
+        try {
+            Field valueField = OptionInstance.class.getDeclaredField("value");
             valueField.setAccessible(true);
             valueField.set(gammaOption, value);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            // If reflection fails, just use normal setValue (will be clamped)
-            gammaOption.setValue(Math.min(value, 1.0));
-        }
+            return;
+        } catch (Throwable ignored) {}
+
+        try {
+            Field valueField = OptionInstance.class.getDeclaredField("field_37862");
+            valueField.setAccessible(true);
+            valueField.set(gammaOption, value);
+            return;
+        } catch (Throwable ignored) {}
+
+        gammaOption.set(value);
+    }
+
+    @Override
+    public String getObjectName() {
+        return "game";
+    }
+
+    @Override
+    public String getObjectDescription() {
+        return "Client-side game settings and rendering utilities.";
+    }
+
+    @Override
+    public Map<String, String> getMethodDescriptions() {
+        Map<String, String> docs = new java.util.LinkedHashMap<>();
+        docs.put("setGamma(value)", "Sets the game's brightness/gamma level directly.");
+        docs.put("fullBright()", "Sets the game's gamma to maximum for full visibility.");
+        docs.put("setFov(value)", "Changes the player's Field of View (FOV).");
+        return docs;
     }
 }

@@ -183,7 +183,9 @@ public class CrashGuardLogger {
                             long size = Files.size(path);
                             long lines = Files.lines(path).count();
                             stats.put(name, new LogStats(size, (int) lines));
-                        } catch (IOException ignored) {}
+                        } catch (IOException ignored) {
+                            LOGGER.warn("Failed to read stats for log file: {}", path, ignored);
+                        }
                     });
             }
         } catch (IOException e) {

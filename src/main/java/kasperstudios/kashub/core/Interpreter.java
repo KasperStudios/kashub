@@ -1,8 +1,6 @@
 package kasperstudios.kashub.core;
 
 import kasperstudios.kashub.util.ScriptLogger;
-import net.minecraft.client.MinecraftClient;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,19 +18,24 @@ public class Interpreter {
             ctx.setVariable("inventory", new kasperstudios.kashub.core.objects.InventoryObject());
             ctx.setVariable("world", new kasperstudios.kashub.core.objects.WorldObject());
             ctx.setVariable("game", new kasperstudios.kashub.core.objects.GameObject());
-            ctx.setVariable("w2p", new kasperstudios.kashub.core.objects.W2PObject());
+            ctx.setVariable("Terminal", new kasperstudios.kashub.core.objects.TerminalObject());
+            ctx.setVariable("VFS", new kasperstudios.kashub.core.objects.VfsObject());
 
-            // Legacy global functions (kept for backward compatibility)
+            // Global methods
             ctx.setVariable("print", Value.of((Callable) (c, args) -> {
-                String msg = args.isEmpty() ? "" : args.get(0).asString();
-                ScriptLogger.getInstance().info("[Script] " + msg);
+                String msg = args.isEmpty() ? "" : args.get(0).toString();
+                ScriptLogger.getInstance().info(msg);
                 return Value.NULL;
             }));
 
             ctx.setVariable("wait", Value.of((Callable) (c, args) -> {
-                long ms = args.isEmpty() ? 0 : (long) args.get(0).asDouble();
-                if (ms > 0)
-                    Thread.sleep(ms);
+                if (!args.isEmpty()) {
+                    try {
+                        Thread.sleep((long) args.get(0).asDouble());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 return Value.NULL;
             }));
 
@@ -40,11 +43,11 @@ public class Interpreter {
                 if (args.isEmpty())
                     return Value.NULL;
                 String msg = args.get(0).asString();
-                MinecraftClient client = MinecraftClient.getInstance();
-                if (client.player != null)
-                    client.player.networkHandler.sendChatMessage(msg);
+                com.kasperstudios.khwrapper.KHWrapper.get().sendChat(msg);
                 return Value.NULL;
             }));
+
+            ctx.setVariable("time", Value.of((Callable) (c, args) -> Value.of((double) System.currentTimeMillis())));
 
             // Math Object (Global Helper)
             Map<String, Value> mathMethods = new java.util.HashMap<>();
@@ -93,8 +96,17 @@ public class Interpreter {
                 return Value.of((double) Math.round(value));
             }));
             mathMethods.put("random", Value.of((Callable) (c, args) -> {
-                return Value.of(Math.random());
+                if (args.isEmpty()) return Value.of(Math.random());
+                double max = args.get(0).asDouble();
+                return Value.of(Math.random() * max);
             }));
+            
+            ctx.setVariable("random", Value.of((Callable) (c, args) -> {
+                if (args.isEmpty()) return Value.of(Math.random());
+                double max = args.get(0).asDouble();
+                return Value.of(Math.floor(Math.random() * max));
+            }));
+            
             mathMethods.put("pow", Value.of((Callable) (c, args) -> {
                 if (args.size() < 2)
                     return Value.of(0);
@@ -102,7 +114,9 @@ public class Interpreter {
                 double exponent = args.get(1).asDouble();
                 return Value.of(Math.pow(base, exponent));
             }));
+
             ctx.setVariable("Math", Value.of(mathMethods));
+            ctx.setVariable("math", Value.of(mathMethods));
 
             // Tag Object (Global Helper)
             Map<String, Value> tagMethods = new java.util.HashMap<>();
@@ -127,8 +141,13 @@ public class Interpreter {
             ctx.setVariable("tag", Value.of(tagMethods));
         }
 
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i).trim();
+        List<String> processedLines = preprocessComments(lines);
+
+        for (int i = 0; i < processedLines.size(); i++) {
+            if (ctx.shouldStop || Thread.currentThread().isInterrupted()) break;
+            
+            ctx.setCurrentLine(i + 1);
+            String line = processedLines.get(i).trim();
             if (line.isEmpty() || line.startsWith("//"))
                 continue;
 
@@ -139,13 +158,19 @@ public class Interpreter {
 
             List<String> blockBody = null;
             if (line.endsWith("{")) {
-                BlockResult block = extractBlock(lines, i + 1);
+                BlockResult block = extractBlock(processedLines, i + 1);
                 blockBody = block.content;
-                i = block.endIndex;
+                i = block.endIndex - 1;
             }
 
             try {
                 if (cmd != null) {
+                    if (cmd.requiresSu() && !ctx.hasSu()) {
+                        throw new SecurityException("Access Denied: Command '" + cmd.getName() + "' requires 'su' (driver/kernel) privileges.");
+                    }
+                    if (cmd.requiresSudo() && !ctx.hasSudo()) {
+                        throw new SecurityException("Access Denied: Command '" + cmd.getName() + "' requires 'sudo' privileges.");
+                    }
                     cmd.execute(ctx, line, blockBody);
                 } else {
                     // Fallback: execute as expression statement
@@ -171,15 +196,69 @@ public class Interpreter {
 
         while (i < lines.size() && braceDepth > 0) {
             String line = lines.get(i);
-            for (char c : line.toCharArray()) {
-                if (c == '{')
-                    braceDepth++;
-                if (c == '}')
-                    braceDepth--;
+            boolean inDoubleQuote = false;
+            boolean inSingleQuote = false;
+            boolean inBlockComment = false;
+            boolean escaped = false;
+
+            char[] chars = line.toCharArray();
+            for (int j = 0; j < chars.length; j++) {
+                char c = chars[j];
+
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\' && !inBlockComment) {
+                    escaped = true;
+                    continue;
+                }
+
+                if (!inBlockComment && c == '"' && !inSingleQuote) {
+                    inDoubleQuote = !inDoubleQuote;
+                    continue;
+                }
+                if (!inBlockComment && c == '\'' && !inDoubleQuote) {
+                    inSingleQuote = !inSingleQuote;
+                    continue;
+                }
+
+                if (!inDoubleQuote && !inSingleQuote) {
+                    if (!inBlockComment && c == '/' && j + 1 < chars.length && chars[j + 1] == '*') {
+                        inBlockComment = true;
+                        j++;
+                        continue;
+                    }
+
+                    if (inBlockComment && c == '*' && j + 1 < chars.length && chars[j + 1] == '/') {
+                        inBlockComment = false;
+                        j++;
+                        continue;
+                    }
+
+                    if (inBlockComment) continue;
+
+                    if (c == '/' && j + 1 < chars.length && chars[j + 1] == '/') {
+                        break;
+                    }
+
+                    if (c == '{') {
+                        braceDepth++;
+                    }
+                    if (c == '}') {
+                        braceDepth--;
+                    }
+
+                    if (braceDepth == 0) break;
+                }
             }
-            if (braceDepth > 0)
+
+            if (braceDepth > 0) {
                 blockContent.add(line);
+            }
             i++;
+            if (braceDepth == 0) break;
         }
         return new BlockResult(blockContent, i - 1);
     }
@@ -192,5 +271,69 @@ public class Interpreter {
             this.content = content;
             this.endIndex = endIndex;
         }
+    }
+
+    private static List<String> preprocessComments(List<String> lines) {
+        List<String> result = new ArrayList<>();
+        boolean inBlockComment = false;
+        for (String raw : lines) {
+            StringBuilder sb = new StringBuilder();
+            boolean inDoubleQuote = false;
+            boolean inSingleQuote = false;
+            boolean escaped = false;
+            char[] chars = raw.toCharArray();
+
+            for (int j = 0; j < chars.length; j++) {
+                char c = chars[j];
+
+                if (escaped) {
+                    escaped = false;
+                    if (!inBlockComment) sb.append(c);
+                    continue;
+                }
+
+                if (c == '\\' && !inBlockComment) {
+                    escaped = true;
+                    sb.append(c);
+                    continue;
+                }
+
+                if (!inBlockComment && c == '"' && !inSingleQuote) {
+                    inDoubleQuote = !inDoubleQuote;
+                    sb.append(c);
+                    continue;
+                }
+                if (!inBlockComment && c == '\'' && !inDoubleQuote) {
+                    inSingleQuote = !inSingleQuote;
+                    sb.append(c);
+                    continue;
+                }
+
+                if (!inDoubleQuote && !inSingleQuote) {
+                    if (inBlockComment) {
+                        if (c == '*' && j + 1 < chars.length && chars[j + 1] == '/') {
+                            inBlockComment = false;
+                            j++;
+                        }
+                        continue;
+                    }
+
+                    if (c == '/' && j + 1 < chars.length && chars[j + 1] == '/') {
+                        break;
+                    }
+                    if (c == '/' && j + 1 < chars.length && chars[j + 1] == '*') {
+                        inBlockComment = true;
+                        j++;
+                        continue;
+                    }
+
+                    sb.append(c);
+                } else {
+                    sb.append(c);
+                }
+            }
+            result.add(sb.toString());
+        }
+        return result;
     }
 }

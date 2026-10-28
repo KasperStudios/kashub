@@ -2,14 +2,27 @@ package kasperstudios.kashub.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import com.kasperstudios.khwrapper.KHWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class KashubConfig {
+    private static final int DEFAULT_SCRIPT_TIMEOUT = 30000;
+    private static final int DEFAULT_MAX_LOOP_ITERATIONS = 10000;
+    private static final int DEFAULT_API_PORT = 25566;
+    private static final int DEFAULT_WS_PORT = 25567;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(KashubConfig.class);
     private static KashubConfig instance;
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("kashub").resolve("config.json");
+    private static final Path CONFIG_PATH = KHWrapper.get().getConfigDir().resolve("kashub").resolve("config.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public String editorTheme = "dracula";
@@ -21,18 +34,17 @@ public class KashubConfig {
 
     public int maxScriptsPerTick = 10;
     public int maxCommandsPerScript = 1000;
-    public int scriptTimeout = 30000;
+    public int scriptTimeout = DEFAULT_SCRIPT_TIMEOUT;
     public boolean allowCheats = false;
     public List<String> whitelistedCommands = new ArrayList<>();
     public List<String> blacklistedCommands = new ArrayList<>();
 
     public boolean sandboxMode = true;
-    public int maxLoopIterations = 10000;
+    public int maxLoopIterations = DEFAULT_MAX_LOOP_ITERATIONS;
     public boolean allowFileAccess = false;
     public boolean allowNetworkAccess = false;
     public boolean allowEval = false;
 
-    public boolean allowAiIntegration = false;
     
     // v0.9.0 - Discord Rich Presence
     public boolean discordRpcEnabled = true;
@@ -47,23 +59,21 @@ public class KashubConfig {
     public List<String> disabledCommands = new ArrayList<>();
     public boolean clientEnforcement = true;
 
-    public enum AiProvider {
-        OFF, GROQ, MEGALLM, CUSTOM
-    }
+    // v1.0.0-FSR - Access Policy
+    public String accessPolicy = "SURVIVAL"; // SURVIVAL, CASUAL
+    public boolean neuroImplantGating = true;
+    public double maxInteractionRange = 5.0; // Hand reach based
 
-    public AiProvider aiProvider = AiProvider.OFF;
-    public String aiApiKey = "";
-    public String aiBaseUrl = "";
-    public String aiModel = "";
-    public boolean aiEnableTools = true;
-    public boolean aiEnableGui = true;
-    public int aiMaxTokens = 2000;
-    public double aiTemperature = 0.7;
-    public int aiContextMaxLength = 8000;
 
     public boolean allowUserScriptsEdit = true;
     public boolean allowDangerousCommands = false;
     public boolean allowSystemScriptsCopy = true;
+
+    // v1.0.0-FSR - Granular Permissions
+    public boolean allowWorldModification = true;
+    public boolean allowInventoryControl = true;
+    public boolean allowPlayerControl = true;
+    public boolean allowCCTBridge = true;
 
     public float guiScale = 1.0f;
     public int openEditorKey = 75;
@@ -81,17 +91,22 @@ public class KashubConfig {
     public String logLevel = "INFO";
     public boolean logToFile = true;
     public boolean logToChat = false;
+    public boolean logToTerminal = true;
+    public boolean printToChat = true;
+    public boolean printToTerminal = true;
 
     public int editorLeftPanelWidth = 200;
     public int editorRightPanelWidth = 250;
     public boolean editorShowDebugPanel = false;
 
     public boolean apiEnabled = true;
-    public int apiPort = 25566;
-    public int apiWebSocketPort = 25567;
+    public int apiPort = DEFAULT_API_PORT;
+    public int apiWebSocketPort = DEFAULT_WS_PORT;
     public boolean apiRequireAuth = false;
 
     public String lastOpenedScript = null;
+    public List<String> openTabs = new ArrayList<>();
+    public int activeTabIndex = 0;
 
     public Map<Integer, String> scriptKeybinds = new HashMap<>();
 
@@ -304,7 +319,7 @@ public class KashubConfig {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load config: " + e.getMessage());
+            LOGGER.error("Failed to load config: {}", e.getMessage());
         }
 
         KashubConfig config = new KashubConfig();
@@ -318,7 +333,7 @@ public class KashubConfig {
             String json = GSON.toJson(this);
             Files.write(CONFIG_PATH, json.getBytes());
         } catch (Exception e) {
-            System.err.println("Failed to save config: " + e.getMessage());
+            LOGGER.error("Failed to save config: {}", e.getMessage());
         }
     }
 
@@ -340,9 +355,16 @@ public class KashubConfig {
         this.logLevel = loaded.logLevel;
         this.logToFile = loaded.logToFile;
         this.logToChat = loaded.logToChat;
+        this.logToTerminal = loaded.logToTerminal;
+        this.printToChat = loaded.printToChat;
+        this.printToTerminal = loaded.printToTerminal;
         if (loaded.scriptKeybinds != null) {
             this.scriptKeybinds = new HashMap<>(loaded.scriptKeybinds);
         }
+        if (loaded.openTabs != null) {
+            this.openTabs = new ArrayList<>(loaded.openTabs);
+        }
+        this.activeTabIndex = loaded.activeTabIndex;
     }
 
     public void setScriptKeybind(int keyCode, String scriptName) {

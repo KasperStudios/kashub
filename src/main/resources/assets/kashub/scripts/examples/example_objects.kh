@@ -1,0 +1,39 @@
+// Kashub Object Showcase - V2 Syntax
+// Demonstrates all available object methods
+
+print "=== V2 Object Showcase ==="
+
+// ============ PLAYER OBJECT ============
+print "--- Player Methods ---"
+
+let health = player.getHealth()
+let pos = player.getPos()
+
+print "Health: " + health + "/20"
+print "Position: (" + pos.x + ", " + pos.y + ", " + pos.z + ")"
+
+// ============ VISION OBJECT ============
+print "--- Vision Methods ---"
+
+// Find nearest entity
+let nearestHostile = vision.nearest("hostile", 40)
+if (nearestHostile != null) {
+    print "Nearest hostile: " + nearestHostile.type
+    print "Distance: " + nearestHostile.distance
+} else {
+    print "No hostiles nearby"
+}
+
+// ============ INVENTORY OBJECT ============
+print "--- Inventory Methods ---"
+
+// Check inventory status
+let emptySlots = inventory.getEmptySlots()
+print "Empty slots: " + emptySlots
+
+// Count specific items
+let diamondCount = inventory.count("diamond")
+print "Diamonds in inventory: " + diamondCount
+
+print "=== Showcase Complete ==="
+print "Tip: Use these objects to build powerful automation scripts!"

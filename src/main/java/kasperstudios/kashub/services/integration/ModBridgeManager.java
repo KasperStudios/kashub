@@ -2,8 +2,8 @@ package kasperstudios.kashub.services.integration;
 
 import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.util.ScriptLogger;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
+import com.kasperstudios.khwrapper.KHWrapper;
+import com.kasperstudios.khwrapper.PlatformModInfo;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -26,10 +26,12 @@ public class ModBridgeManager {
     
     private final Map<String, ModInfo> loadedMods;
     private final Map<String, Object> modInstances;
+    private final Map<String, Method> methodCache;
     
     private ModBridgeManager() {
         this.loadedMods = new ConcurrentHashMap<>();
         this.modInstances = new ConcurrentHashMap<>();
+        this.methodCache = new ConcurrentHashMap<>();
         discoverMods();
     }
     
@@ -48,11 +50,10 @@ public class ModBridgeManager {
      * Discover all loaded mods.
      */
     private void discoverMods() {
-        Collection<ModContainer> mods = FabricLoader.getInstance().getAllMods();
-        for (ModContainer mod : mods) {
-            String modId = mod.getMetadata().getId();
-            String modName = mod.getMetadata().getName();
-            String version = mod.getMetadata().getVersion().getFriendlyString();
+        for (PlatformModInfo mod : KHWrapper.get().getAllMods()) {
+            String modId = mod.getId();
+            String modName = mod.getName();
+            String version = mod.getVersion();
             
             ModInfo info = new ModInfo(modId, modName, version);
             loadedMods.put(modId, info);
@@ -93,46 +94,113 @@ public class ModBridgeManager {
     public Object callModMethod(String className, String methodName, Object... args) {
         try {
             Class<?> clazz = Class.forName(className);
-            
-            // Find method by name and argument count
-            Method method = null;
-            for (Method m : clazz.getDeclaredMethods()) {
-                if (m.getName().equals(methodName) && m.getParameterCount() == args.length) {
-                    method = m;
-                    break;
-                }
-            }
+            return callModMethodOnClass(clazz, null, methodName, args);
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Failed to call mod method on class: " + className + "." + methodName, e);
+            return null;
+        }
+    }
+
+    /**
+     * Call a method on a specific target object via reflection.
+     * 
+     * @param target The object to call the method on
+     * @param methodName Method name to call
+     * @param args Method arguments
+     * @return Method result or null
+     */
+    public Object callModMethod(Object target, String methodName, Object... args) {
+        if (target == null) return null;
+        return callModMethodOnClass(target.getClass(), target, methodName, args);
+    }
+
+    private Object callModMethodOnClass(Class<?> clazz, Object target, String methodName, Object... args) {
+        try {
+            String cacheKey = clazz.getName() + ":" + methodName + ":" + args.length;
+            Method method = methodCache.get(cacheKey);
             
             if (method == null) {
-                ScriptLogger.getInstance().error("Method not found: " + methodName);
-                return null;
+                // Find method by name and argument count
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.getName().equals(methodName) && m.getParameterCount() == args.length) {
+                        method = m;
+                        break;
+                    }
+                }
+                
+                if (method == null) {
+                    // Try superclasses
+                    for (Method m : clazz.getMethods()) {
+                        if (m.getName().equals(methodName) && m.getParameterCount() == args.length) {
+                            method = m;
+                            break;
+                        }
+                    }
+                }
+
+                if (method == null) {
+                    // Return null and let caller handle it, avoids log spam in tick loops
+                    return null;
+                }
+                
+                method.setAccessible(true);
+                methodCache.put(cacheKey, method);
             }
             
-            method.setAccessible(true);
-            
-            // Try to get instance or call static method
-            Object instance = modInstances.get(className);
+            Object instance = target;
             if (instance == null && !java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-                // Try to get singleton instance
-                try {
-                    Method getInstance = clazz.getMethod("getInstance");
-                    instance = getInstance.invoke(null);
-                    modInstances.put(className, instance);
-                } catch (Exception e) {
-                    // Try to create new instance
-                    instance = clazz.getDeclaredConstructor().newInstance();
-                    modInstances.put(className, instance);
+                String className = clazz.getName();
+                // Try to get instance from cache or create
+                instance = modInstances.get(className);
+                if (instance == null) {
+                    try {
+                        Method getInstance = clazz.getMethod("getInstance");
+                        instance = getInstance.invoke(null);
+                        modInstances.put(className, instance);
+                    } catch (Exception e) {
+                        instance = clazz.getDeclaredConstructor().newInstance();
+                        modInstances.put(className, instance);
+                    }
                 }
             }
             
             return method.invoke(instance, args);
             
         } catch (Exception e) {
-            Kashub.LOGGER.error("Failed to call mod method: " + className + "." + methodName, e);
+            Kashub.LOGGER.error("Failed to call mod method: " + methodName, e);
             return null;
         }
     }
     
+    /**
+     * Get a field value from a specific object instance via reflection.
+     */
+    public Object getModField(Object target, String fieldName) {
+        if (target == null) return null;
+        try {
+            Class<?> clazz = target.getClass();
+            java.lang.reflect.Field field = null;
+            
+            // Try to find field in class or superclasses
+            Class<?> current = clazz;
+            while (current != null && field == null) {
+                try {
+                    field = current.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException e) {
+                    current = current.getSuperclass();
+                }
+            }
+            
+            if (field == null) return null;
+            
+            field.setAccessible(true);
+            return field.get(target);
+        } catch (Exception e) {
+            Kashub.LOGGER.error("Failed to get mod field: " + target.getClass().getName() + "." + fieldName, e);
+            return null;
+        }
+    }
+
     /**
      * Get a field value from a mod's class via reflection.
      */

@@ -6,13 +6,15 @@ import kasperstudios.kashub.Kashub;
 import kasperstudios.kashub.api.server.events.ScriptOutputEvent;
 import kasperstudios.kashub.core.Task;
 import kasperstudios.kashub.core.TaskManager;
-import net.minecraft.client.MinecraftClient;
-
+import net.minecraft.client.Minecraft;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class RunEndpoint {
+
+    private static final String KEY_SUCCESS = "success";
+    private static final String KEY_ERROR = "error";
 
     public static void handle(HttpExchange exchange, Gson gson) {
         try {
@@ -27,11 +29,11 @@ public class RunEndpoint {
                 return;
             }
 
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) {
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("error", "Player not in world");
+                response.put(KEY_SUCCESS, false);
+                response.put(KEY_ERROR, "Player not in world");
                 KashubAPIServer.sendResponse(exchange, 400, gson.toJson(response));
                 return;
             }
@@ -41,8 +43,8 @@ public class RunEndpoint {
 
             if (errorCount > 0) {
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("error", "Script has " + errorCount + " error(s)");
+                response.put(KEY_SUCCESS, false);
+                response.put(KEY_ERROR, "Script has " + errorCount + " error(s)");
                 response.put("errors", errors);
                 KashubAPIServer.sendResponse(exchange, 400, gson.toJson(response));
                 return;
@@ -73,7 +75,7 @@ public class RunEndpoint {
                 Task task = future.get(5, TimeUnit.SECONDS);
 
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", true);
+                response.put(KEY_SUCCESS, true);
                 response.put("taskId", task.getId());
                 response.put("message", "Script started successfully");
                 response.put("state", task.getState().toString());
@@ -82,8 +84,8 @@ public class RunEndpoint {
 
             } catch (Exception e) {
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("error", e.getMessage());
+                response.put(KEY_SUCCESS, false);
+                response.put(KEY_ERROR, e.getMessage());
                 KashubAPIServer.sendResponse(exchange, 500, gson.toJson(response));
             }
 
