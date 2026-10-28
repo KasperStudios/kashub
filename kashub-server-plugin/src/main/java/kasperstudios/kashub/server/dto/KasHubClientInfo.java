@@ -8,6 +8,7 @@ public class KasHubClientInfo {
     private String platform = "Unknown";
     private String modLoader = "Unknown";
     private String deviceSpec = "Unknown";
+    private long lastSeen = System.currentTimeMillis();
 
     public KasHubClientInfo(String version, List<String> capabilities, String platform, String modLoader) {
         this.version = version;

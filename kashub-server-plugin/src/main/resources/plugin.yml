@@ -1,9 +1,9 @@
-name: KasHubServer
-version: ${version}
+name: KasHubServerPlugin
+version: 1.0.0-FSR
 main: kasperstudios.kashub.server.KasHubServerPlugin
 api-version: 1.21
 authors: [KasperStudios]
-description: Server-side controller for KasHub mod.
+description: Official KasHub Server-side bridge for remote execution and scripting.
 
 commands:
   kashub:

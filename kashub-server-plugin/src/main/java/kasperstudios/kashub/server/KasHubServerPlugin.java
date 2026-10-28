@@ -42,12 +42,12 @@ public class KasHubServerPlugin extends JavaPlugin {
         // Register Commands
         this.getCommand("kashub").setExecutor(new KasHubCommand(this));
 
-        getLogger().info("KasHub Server Plugin enabled!");
+        getLogger().info("KasHub v1.0.0-FSR Server Bridge enabled!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("KasHub Server Plugin disabled.");
+        getLogger().info("KasHub Server Bridge disabled.");
     }
 
     public static KasHubServerPlugin getInstance() {
